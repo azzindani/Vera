@@ -6,6 +6,13 @@ rust-version.workspace = true
 description = "Embedding providers. Pinned remote client plus a deterministic stub."
 
 [dependencies]
+async-trait = "0.1.91"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.19"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tokio = { version = "1.53.0", features = ["macros", "rt-multi-thread"] }
