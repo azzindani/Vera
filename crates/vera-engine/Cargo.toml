@@ -1,0 +1,11 @@
+[package]
+name = "vera-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Routing layers and fusion. Pure domain logic with zero MCP imports."
+
+[dependencies]
+
+[lints]
+workspace = true

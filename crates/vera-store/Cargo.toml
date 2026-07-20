@@ -1,0 +1,11 @@
+[package]
+name = "vera-store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Postgres and pgvector access. The only crate that talks to the database."
+
+[dependencies]
+
+[lints]
+workspace = true

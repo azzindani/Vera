@@ -1,0 +1,38 @@
+project: Vera
+version: 0.0.1
+
+stack:
+  runtime: rust
+  services: []
+
+stages:
+  fast:
+    - static
+    - unit
+  full:
+    - static
+    - unit
+    - container
+    - integration
+  preflight:
+    - static
+    - unit
+    - container
+    - integration
+    - security
+
+gates:
+  coverage: 70
+  image_size_mb: 200
+  critical_vulns: 0
+
+standards:
+  # Corpus location · unset → Pipeline's own cache.
+  # Run `pipeline standards fetch`, or point at a local clone:
+  # source: /path/to/Standards
+  project_type: MCP server
+  languages: [rust]
+  surfaces:
+    - Command line
+  # `pipeline_standards.pin` records the corpus commit here
+  pin: 5a5b5d0f35dfd75f040215bc1b7a73b57236fbf8

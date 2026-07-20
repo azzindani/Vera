@@ -1,0 +1,20 @@
+# Build artifacts
+target/
+node_modules/
+dist/
+build/
+
+# Pipeline runtime data
+.pipeline/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Env
+.env
+.env.local
+*.pem
+*.key

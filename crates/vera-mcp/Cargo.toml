@@ -1,0 +1,11 @@
+[package]
+name = "vera-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "MCP tool surface and transports. No domain logic."
+
+[dependencies]
+
+[lints]
+workspace = true

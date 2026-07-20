@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pipeline": {
+      "command": "pipeline",
+      "args": ["mcp", "--transport", "stdio"]
+    }
+  }
+}

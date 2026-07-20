@@ -1,0 +1,11 @@
+[package]
+name = "vera-embed"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Embedding providers. Pinned remote client plus a deterministic stub."
+
+[dependencies]
+
+[lints]
+workspace = true
