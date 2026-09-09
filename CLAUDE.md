@@ -291,44 +291,71 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    selective, so this figure is probably inflated. It needs the real corpus
    before any BM25 optimisation is justified.
 
-5. **Recall now behaves like a real curve** — it did not before, because routing
-   was barely pruning:
+5. **Recall now behaves like a real curve** — it did not before, because
+   routing was barely pruning. Post-fix, on the √N-clustered 200K corpus:
 
-   | probe | rows | recall@10 | routing recall | top-1 | speedup |
+   | probe | rows/query | % of corpus | recall@10 | top-1 | speedup |
    |---|---|---|---|---|---|
-   | 1 | 360 | 77.3% | 36.3% | 95.0% | 4.3× |
-   | 2 | 716 | 91.7% | 51.2% | 96.7% | 4.4× |
-   | 5 | 1,856 | **99.8%** | 59.5% | 100% | **4.4×** |
-   | 20 | 7,858 | 100% | 61.3% | 100% | 4.0× |
-   | 50 | 19,530 | 100% | 63.2% | 100% | 3.3× |
+   | 1 | 414 | 0.21% | 76.0% | 97.5% | 4.7× |
+   | 2 | 821 | 0.41% | 90.2% | 100% | 4.7× |
+   | **5** | **2,088** | **1.0%** | **99.8%** | 100% | **4.7×** |
+   | 10 | 4,353 | 2.2% | 100% | 100% | 4.4× |
 
-   **probe=5 is the knee** — 99.8% recall at 0.9% of the corpus scanned. The
-   documented default of 5 is right on this corpus.
+   **probe=5 is the knee** — 99.8% recall while touching 1% of the corpus. The
+   documented default of 5 is right here. Speedup is flat to probe=5 and falls
+   after, because the BM25 floor (finding 4) dominates until the scan re-grows.
 
-6. **Routing recall is ~60%, but the measurement needs refining before it is
-   trusted.** It is computed against the *fused* exhaustive baseline, and part
-   of that baseline is by construction not dense-reachable — a document BM25
-   found on an exact term match may sit nowhere near the query vector, so no
-   amount of probing would reach it. Measured this way the number understates
-   routing. A clean measure needs a **dense-only baseline**, or real labels.
-   What it does say is that the fused result set leans heavily on the keyword
-   half.
+6. **Routing works; layer-1 was the problem.** Two measurement errors hid this.
+   Routing recall was scored against the **fused** exhaustive baseline, part of
+   which is by construction not dense-reachable — a document BM25 found on an
+   exact term match may sit nowhere near the query vector, so no probe count
+   reaches it. And it conflated a routing miss with a **layer-1 rejection**,
+   which produces an empty probe set and scores zero for a completely different
+   reason. Scoring against a true **dense-only** baseline and reporting
+   rejection separately:
 
-7. **k-means imbalance is real but not pathological at √N.** Sizes run p10 148 /
+   | probe | route/D | L1-rej | recall@10 |
+   |---|---|---|---|
+   | 1 | 53.0% | 0% | 76.0% |
+   | 2 | 79.2% | 0% | 90.2% |
+   | 5 | **99.8%** | 0% | **99.8%** |
+   | 10 | **100%** | 0% | 100% |
+
+   At probe=5 routing finds essentially **every** dense top-10 result. The
+   earlier claim that "dense routing reaches only ~68% and BM25 carries recall"
+   was an artifact of both errors and is withdrawn.
+
+7. **The layer-1 threshold was calibrated on documents and applied to queries.**
+   It was p1 of the row-to-anchor cosine distribution — which implies 1%
+   rejection but measured **5% on the 20K corpus and 10% on the 200K**. A query
+   is not a row: it is *near* a row, and that displacement moves it further from
+   the anchor than any document sits, so the row distribution systematically
+   understates how far a real query can fall. The threshold is now
+   `p1 − margin·(p50 − p1)`, extrapolating one step further down the tail.
+   Measured effect: **L1-rej 10% → 0%**, and route/D at probe=5 rose 89.8% →
+   99.8% as the masked queries came back.
+
+   ! Erring low is the safe direction. A false reject loses the query and
+   answers `success: true` with nothing, which no caller can distinguish from an
+   empty corpus. A false accept returns weak results carrying a low `confidence`
+   the agent can act on. The margin is config, and the full distribution is
+   stored in corpus metadata — so retuning is a config change, ✗ a re-ingest.
+
+8. **k-means imbalance is real but not pathological at √N.** Sizes run p10 148 /
    p50 395 / p90 981 / max 1085 against a mean of 447 — a 2.4× spread, versus
    25× at 20 clusters. Two singleton clusters come from empty-cluster reseeding,
    since k=447 exceeds the fixture's 200 latent topics. The largest cluster
    still sets both the RAM ceiling and worst-case probe latency, so split-on-size
    remains worth having.
 
-8. **The OOM guarantee holds, measured.** Peak RSS over a 903 MB corpus
+9. **The OOM guarantee holds, measured.** Peak RSS over a 903 MB corpus
    (820 MB of vectors) is **7 MB at probe=1 and 7 MB at probe=20** — identical.
    RAM is independent of `clusters_probed`, as `ARCHITECTURE.md` §4 claims.
    The streaming scan API is what makes this structural rather than a
    convention: `scan_cluster` hands the visitor a borrowed, reused buffer, so
    retaining a cluster would have to be written as a visible copy.
 
-9. **Recall is still not measured on real data.** Every number above comes from
+10. **Recall is still not measured on real data.** Every number above comes from
    a synthetic corpus whose vocabulary is 50 words and whose topic structure was
    generated to be findable. It is enough to show the *mechanism* works and to
    catch the mis-clustering; it cannot say whether routing pays on Indonesian

@@ -172,9 +172,6 @@ fn cmd_synth(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 fn cmd_info(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let path = required(args, "--corpus")?;
     let store = SqliteStore::open(&path)?;
-    // Second read-only handle: the engine takes ownership of the first, and the
-    // dense baseline needs raw scan access the tool surface deliberately lacks.
-    let raw = SqliteStore::open(&path)?;
     let space = store.corpus_space()?;
     let domains = store.domains()?;
     let largest = store.largest_cluster_rows()?;
@@ -384,18 +381,17 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     // EVAL.md §3: recall@k is the primary metric, routing recall is the
     // diagnostic that says which half to fix, MRR is ranking quality.
     println!(
-        "{:>6}  {:>9}  {:>9}  {:>9}  {:>8}  {:>10}  {:>8}  {:>8}  {:>6}  {:>6}",
+        "{:>6}  {:>9}  {:>9}  {:>9}  {:>8}  {:>10}  {:>8}  {:>8}  {:>6}  {:>6}  {:>6}",
         "probe", "p50 ms", "p95 ms", "p99 ms", "speedup", "rows/query", "recall", "route/D",
-        "L1-rej", "top-1"
+        "L1-rej", "MRR", "top-1"
     );
-    println!("{}", "-".repeat(100));
+    println!("{}", "-".repeat(110));
 
     for probe in &probes {
         let mut times = Vec::with_capacity(queries.len());
         let mut stage = StageTotals::default();
         let mut rows_scanned = 0usize;
         let mut recall_sum = 0.0f32;
-        let mut routing_sum = 0.0f32;
         let mut dense_routing_sum = 0.0f32;
         // ! Counted separately. A query layer-1 rejects has an empty probe set,
         // so it scores 0 routing recall — but the cause is domain detection, not
@@ -415,7 +411,6 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 rejected += 1;
             }
             let probed: HashSet<i32> = out.probed.iter().map(|p| p.cluster_id).collect();
-            routing_sum += routing_recall(baseline, &cluster_of, &probed, k);
             dense_routing_sum += routing_recall(dense, &cluster_of, &probed, k);
             mrr_sum += reciprocal_rank(&ids, baseline);
             if top1_hit(&ids, baseline) {
@@ -427,8 +422,6 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         let n = queries.len().max(1);
         #[allow(clippy::cast_precision_loss)]
         let recall = recall_sum / n as f32;
-        #[allow(clippy::cast_precision_loss)]
-        let routing = routing_sum / n as f32;
         #[allow(clippy::cast_precision_loss)]
         let dense_routing = dense_routing_sum / n as f32;
         #[allow(clippy::cast_precision_loss)]
@@ -445,7 +438,7 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
         println!(
             "{probe:>6}  {:>9.2}  {:>9.2}  {:>9.2}  {:>7.1}×  {:>10}  {:>7.1}%  {:>7.1}%  \
-             {:>5.1}%  {:>5.1}%",
+             {:>5.1}%  {:>6.3}  {:>5.1}%",
             lat.p50(),
             lat.p95(),
             lat.p99(),
@@ -454,6 +447,7 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             recall * 100.0,
             dense_routing * 100.0,
             reject_rate * 100.0,
+            mrr,
             top1_rate * 100.0
         );
     }
