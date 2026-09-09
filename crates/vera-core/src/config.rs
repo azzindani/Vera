@@ -32,6 +32,22 @@ pub struct EmbeddingSpace {
     /// the same model with a different instruction is a different space.
     #[serde(default)]
     pub query_instruction: String,
+    /// Provider ids proven to reproduce this space by the offline cosine
+    /// round-trip preflight (`EMBEDDING.md` §4.5).
+    ///
+    /// ! An **allowlist**, ✗ a single pin, and that is the whole point.
+    /// `EMBEDDING.md` §5 and `LOOPHOLES.md` §4 are one dilemma: pinning a single
+    /// provider for consistency makes its outage fatal, but failing over to an
+    /// arbitrary host silently changes the vector space. The resolution is to
+    /// validate the fallback *offline, in advance*, and let exactly those hosts
+    /// serve. Which one is primary is a runtime choice ([`ProviderConfig`]);
+    /// which ones are *permitted* is a property of the corpus, recorded here.
+    ///
+    /// ! Empty means "this corpus predates provider validation", which is
+    /// permitted with a warning rather than refused — see
+    /// [`assert_provider_validated`](Self::assert_provider_validated).
+    #[serde(default)]
+    pub validated_providers: Vec<String>,
 }
 
 const fn yes() -> bool {
@@ -47,6 +63,7 @@ impl EmbeddingSpace {
             dim: 4096,
             normalized: true,
             query_instruction: DEFAULT_QUERY_INSTRUCTION.to_owned(),
+            validated_providers: Vec::new(),
         }
     }
 
@@ -58,6 +75,7 @@ impl EmbeddingSpace {
             dim: 1024,
             normalized: true,
             query_instruction: DEFAULT_QUERY_INSTRUCTION.to_owned(),
+            validated_providers: Vec::new(),
         }
     }
 
@@ -99,7 +117,66 @@ impl EmbeddingSpace {
         }
         Ok(())
     }
+
+    /// Refuse a provider this corpus never validated · `EMBEDDING.md` §5,
+    /// `LOOPHOLES.md` §4, `CLAUDE.md` §7 rule 7.
+    ///
+    /// ! Enforced only when the corpus **declares** an allowlist. A corpus built
+    /// before validation existed records none, and refusing it would break every
+    /// existing index to guard against a risk the operator has not yet opted
+    /// into. Once one provider is validated, the list becomes closed: an unknown
+    /// host is then a hard failure, because at that point silence means someone
+    /// pointed a validated corpus at an unproven provider.
+    ///
+    /// This is the check that makes a *fallback* safe. Failover picks the next
+    /// id from the same list, so an outage cannot widen the space.
+    ///
+    /// # Errors
+    /// [`UnvalidatedProvider`] naming the ids that were proven.
+    pub fn assert_provider_validated(&self, provider_id: &str) -> Result<(), UnvalidatedProvider> {
+        if self.validated_providers.is_empty()
+            || self.validated_providers.iter().any(|p| p == provider_id)
+        {
+            return Ok(());
+        }
+        Err(UnvalidatedProvider {
+            attempted: provider_id.to_owned(),
+            validated: self.validated_providers.clone(),
+        })
+    }
+
+    /// Whether this corpus has been pinned to any provider at all.
+    ///
+    /// ! Surfaced so startup can *warn* about the unpinned case rather than let
+    /// it pass in silence — an un-enforced guarantee that nobody knows is
+    /// un-enforced is the failure mode this whole document set is shaped around.
+    #[must_use]
+    pub fn provider_is_pinned(&self) -> bool {
+        !self.validated_providers.is_empty()
+    }
 }
+
+/// A provider that was never validated against the corpus's vector space.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnvalidatedProvider {
+    pub attempted: String,
+    pub validated: Vec<String>,
+}
+
+impl std::fmt::Display for UnvalidatedProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "embedding provider '{}' was never validated against this corpus · \
+             validated providers are [{}] · a wrong-space embedding is worse than \
+             a brief outage · refusing",
+            self.attempted,
+            self.validated.join(", ")
+        )
+    }
+}
+
+impl std::error::Error for UnvalidatedProvider {}
 
 /// The query side and the corpus side disagree about the vector space.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -308,6 +385,83 @@ impl Default for ConcurrencyConfig {
     }
 }
 
+/// Which embedding host serves queries, and what it must prove to keep serving.
+///
+/// ! Separate from [`EmbeddingSpace`] on purpose. The space is a property of the
+/// **corpus** — recorded at ingest, identical on every replica, changed only by
+/// re-embedding. Which host answers *today* is a property of the **deployment**,
+/// and it changes during an outage. Merging them would make failover look like a
+/// corpus change, which is exactly the confusion `EMBEDDING.md` §5 warns about.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProviderConfig {
+    /// The pinned primary. Must appear in
+    /// [`EmbeddingSpace::validated_providers`] when the corpus declares any.
+    #[serde(default = "default_provider_id")]
+    pub primary: String,
+    /// The single pre-validated fallback (`EMBEDDING.md` §5).
+    ///
+    /// ! One, ✗ a list of "whatever is up". Every candidate costs an offline
+    /// round-trip preflight to validate, and an unvalidated fallback is the
+    /// failure this field exists to make impossible.
+    #[serde(default)]
+    pub fallback: Option<String>,
+    /// Minimum cosine the startup canary must reach against the stored
+    /// reference vector before the engine will serve (`EMBEDDING.md` §4.6).
+    #[serde(default = "default_canary_threshold")]
+    pub canary_threshold: f32,
+    /// Attempts against the primary before failover · a blip is not an outage,
+    /// and switching hosts is the more expensive answer.
+    #[serde(default = "default_max_retries")]
+    pub max_retries: u32,
+}
+
+fn default_provider_id() -> String {
+    "openrouter/exacto".to_owned()
+}
+const fn default_canary_threshold() -> f32 {
+    0.999
+}
+const fn default_max_retries() -> u32 {
+    3
+}
+
+impl Default for ProviderConfig {
+    fn default() -> Self {
+        Self {
+            primary: default_provider_id(),
+            fallback: None,
+            canary_threshold: default_canary_threshold(),
+            max_retries: default_max_retries(),
+        }
+    }
+}
+
+impl ProviderConfig {
+    /// The hosts this deployment may use, primary first.
+    #[must_use]
+    pub fn candidates(&self) -> Vec<&str> {
+        let mut out = vec![self.primary.as_str()];
+        out.extend(self.fallback.as_deref());
+        out
+    }
+
+    /// Check every host this deployment could reach against the corpus's
+    /// allowlist, ✗ only the one in use.
+    ///
+    /// ! Checked at **startup**, for the fallback too. Validating only the
+    /// primary would pass boot and fail during the outage the fallback exists
+    /// for — the one moment nobody is watching a config error.
+    ///
+    /// # Errors
+    /// [`UnvalidatedProvider`] for the first host the corpus does not permit.
+    pub fn assert_all_validated(&self, space: &EmbeddingSpace) -> Result<(), UnvalidatedProvider> {
+        for id in self.candidates() {
+            space.assert_provider_validated(id)?;
+        }
+        Ok(())
+    }
+}
+
 /// Bounds on `fetch(depth="full")`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReadConfig {
@@ -339,6 +493,8 @@ pub struct Config {
     pub concurrency: ConcurrencyConfig,
     #[serde(default)]
     pub read: ReadConfig,
+    #[serde(default)]
+    pub provider: ProviderConfig,
 }
 
 impl Default for Config {
@@ -349,6 +505,7 @@ impl Default for Config {
             search: SearchConfig::default(),
             concurrency: ConcurrencyConfig::default(),
             read: ReadConfig::default(),
+            provider: ProviderConfig::default(),
         }
     }
 }
@@ -470,6 +627,97 @@ mod tests {
         // f32 working copy is 2x the halfvec on-disk figure; still bounded.
         let peak = c.peak_ram_bytes(3_000_000_000, 10_000);
         assert!(peak < 4_000_000_000, "peak {peak} exceeded the 8 GB profile");
+    }
+
+    fn validated(ids: &[&str]) -> EmbeddingSpace {
+        EmbeddingSpace {
+            validated_providers: ids.iter().map(|s| (*s).to_owned()).collect(),
+            ..EmbeddingSpace::qwen3_06b()
+        }
+    }
+
+    #[test]
+    fn an_unvalidated_provider_is_refused_once_the_corpus_pins_any() {
+        // ! CLAUDE.md §7 rule 7. The failure being prevented is not an outage —
+        // it is serving *through* one, from a host whose vectors live somewhere
+        // else, with every result still looking plausible.
+        let space = validated(&["openrouter/exacto"]);
+        assert!(space.assert_provider_validated("openrouter/exacto").is_ok());
+        let err = space.assert_provider_validated("together").unwrap_err();
+        assert_eq!(err.attempted, "together");
+        assert!(err.to_string().contains("worse than"), "{err}");
+    }
+
+    #[test]
+    fn a_corpus_that_pins_nothing_permits_anything_but_says_so() {
+        // ! Refusing here would break every corpus built before validation
+        // existed. `provider_is_pinned` is what lets startup warn instead.
+        let space = EmbeddingSpace::qwen3_06b();
+        assert!(!space.provider_is_pinned());
+        assert!(space.assert_provider_validated("anything at all").is_ok());
+    }
+
+    #[test]
+    fn the_fallback_is_validated_at_startup_not_during_the_outage() {
+        // ! EMBEDDING.md §5. Checking only the primary passes boot and fails at
+        // the exact moment the fallback is needed.
+        let space = validated(&["openrouter/exacto"]);
+        let cfg = ProviderConfig {
+            primary: "openrouter/exacto".to_owned(),
+            fallback: Some("some-other-host".to_owned()),
+            ..ProviderConfig::default()
+        };
+        let err = cfg.assert_all_validated(&space).unwrap_err();
+        assert_eq!(err.attempted, "some-other-host");
+
+        let ok = ProviderConfig {
+            fallback: None,
+            ..cfg
+        };
+        assert!(ok.assert_all_validated(&space).is_ok());
+    }
+
+    #[test]
+    fn a_validated_pair_lets_failover_stay_inside_the_space() {
+        let space = validated(&["openrouter/exacto", "deepinfra"]);
+        let cfg = ProviderConfig {
+            primary: "openrouter/exacto".to_owned(),
+            fallback: Some("deepinfra".to_owned()),
+            ..ProviderConfig::default()
+        };
+        assert!(cfg.assert_all_validated(&space).is_ok());
+        assert_eq!(cfg.candidates(), ["openrouter/exacto", "deepinfra"]);
+    }
+
+    #[test]
+    fn the_provider_pin_survives_a_config_round_trip() {
+        let c = Config::from_toml(
+            r#"
+            [embedding]
+            model_id = "qwen/qwen3-embedding-0.6b"
+            dim = 1024
+            validated_providers = ["openrouter/exacto", "deepinfra"]
+
+            [provider]
+            primary = "openrouter/exacto"
+            fallback = "deepinfra"
+            "#,
+        )
+        .unwrap();
+        assert!(c.provider.assert_all_validated(&c.embedding).is_ok());
+        assert!((c.provider.canary_threshold - 0.999).abs() < 1e-6);
+    }
+
+    #[test]
+    fn the_provider_list_is_not_part_of_the_space_equality_check() {
+        // ! Deliberate. The corpus is embedded on a GPU box and queries come
+        // from an API host; requiring those ids to match would reject the
+        // architecture EMBEDDING.md §2 actually describes. Space equality is
+        // about geometry — model, width, normalization — and the allowlist is a
+        // separate, one-directional permission check.
+        let corpus = validated(&["gpu/local-qwen3"]);
+        let engine = validated(&["openrouter/exacto"]);
+        assert!(engine.assert_matches(&corpus).is_ok());
     }
 
     #[test]

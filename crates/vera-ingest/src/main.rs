@@ -36,7 +36,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
   vera-ingest import  --source <db> --table <name> --out <db>
                       --id-col <c> --body-col <c> --vector-col <c>
                       [--vector-format f32le|f64le|json]  (default f32le)
-                      [--model <id>] [--dim N] [--no-normalize]
+                      [--model <id>] [--dim N] [--no-normalize] [--provider <id>]
                       [--title-col <c>] [--url-col <c>] [--page-col <c>]
                       [--section-col <c>] [--heading-col <c>] [--identifier-col <c>]
                       [--domain <id>] [--description <text>]
@@ -376,11 +376,18 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         vectors.bytes() as f64 / 1e9
     );
 
+    // ! Recorded, ✗ inferred. `--provider` names the host whose vectors these
+    // are, and it becomes the corpus's allowlist: the engine will then refuse
+    // any other host at startup (`EMBEDDING.md` §5). Omitting it leaves the
+    // corpus unpinned, which is permitted and warned about — the alternative
+    // would be to guess a provider id, and a guessed pin enforces nothing while
+    // looking like it does.
     let space = EmbeddingSpace {
         model_id: flag(args, "--model").unwrap_or_else(|| "unknown/unspecified".to_owned()),
         dim: parsed(args, "--dim", dim)?,
         normalized: should_normalize,
         query_instruction: vera_core::DEFAULT_QUERY_INSTRUCTION.to_owned(),
+        validated_providers: flag(args, "--provider").into_iter().collect(),
     };
     if space.dim != dim {
         return Err(format!(
@@ -394,6 +401,12 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         eprintln!(
             "WARNING: no --model given · the corpus will record 'unknown/unspecified' and the \
              engine cannot verify a query is embedded in the same space"
+        );
+    }
+    if !space.provider_is_pinned() {
+        eprintln!(
+            "WARNING: no --provider given · the corpus records no validated provider, so the \
+             engine will accept any embedding host at startup (EMBEDDING.md §5)"
         );
     }
 
@@ -435,6 +448,35 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         report.anchor.p1, report.anchor.p50, report.anchor.p95
     );
     println!("domain_threshold:  {:.4} (calibrated)", report.anchor.threshold);
+    println!();
+    // ! Printed at import, ✗ only at benchmark time. This is the operator's one
+    // chance to see, before spending hours on measurements, whether the source
+    // has the lexical structure those measurements assume.
+    let p = &report.profile;
+    println!("corpus profile:");
+    println!(
+        "  vocabulary       {} terms · {:.0}% hapax · mean IDF {:.2}",
+        p.vocabulary,
+        p.hapax_fraction * 100.0,
+        p.mean_idf
+    );
+    println!(
+        "  Zipf slope       {:.2}  (natural language ≈ −1.0)",
+        p.zipf_slope
+    );
+    println!(
+        "  doc length       mean {:.0} · p50 {} · p95 {} tokens",
+        p.mean_doc_tokens, p.p50_doc_tokens, p.p95_doc_tokens
+    );
+    println!(
+        "  identifiers      {:.1}% of rows · {} distinct · {} documents",
+        p.identifier_density * 100.0,
+        p.distinct_identifiers,
+        p.distinct_documents
+    );
+    if let Some(caveat) = p.keyword_caveat() {
+        println!("  ! BM25 UNREPRESENTATIVE · {caveat}");
+    }
     Ok(())
 }
 

@@ -144,6 +144,52 @@ impl SqliteStore {
     pub fn with_connection<T>(&self, f: impl FnOnce(&Connection) -> T) -> T {
         f(&self.conn.lock().expect("store lock poisoned"))
     }
+
+    /// Every chunk id grouped by the identifier it carries, up to `limit`
+    /// distinct identifiers.
+    ///
+    /// ! Inherent on the backend, ✗ on [`ChunkStore`], because it is **ground
+    /// truth for the eval harness**, not a query-path operation. It reads the
+    /// whole identifier column, which is precisely the corpus-wide scan the
+    /// routing architecture exists to avoid — exposing it through the trait
+    /// would put it one autocomplete away from the request path.
+    ///
+    /// It exists so exact-match recall (`EVAL.md` §3) can be measured without
+    /// asking the engine's own lookup what the right answer is. What is under
+    /// test lives above the store: identifier extraction, the routing bypass
+    /// ordering, and whether fusion keeps the hit.
+    ///
+    /// # Errors
+    /// Backend failure.
+    pub fn identifier_index(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<(String, Vec<String>)>, StoreError> {
+        let conn = self.conn.lock().expect("store lock poisoned");
+        let mut stmt = conn.prepare(
+            "SELECT identifier, id FROM chunks WHERE identifier IS NOT NULL \
+             ORDER BY identifier, id",
+        )?;
+        let mut rows = stmt.query([])?;
+        let mut out: Vec<(String, Vec<String>)> = Vec::new();
+        while let Some(row) = rows.next()? {
+            let identifier: String = row.get(0)?;
+            let id: String = row.get(1)?;
+            match out.last_mut() {
+                // Ordered by identifier, so equal keys arrive together and the
+                // grouping needs no map — and no map means no memory
+                // proportional to the corpus when `limit` is small.
+                Some((key, ids)) if *key == identifier => ids.push(id),
+                _ => {
+                    if out.len() >= limit {
+                        break;
+                    }
+                    out.push((identifier, vec![id]));
+                }
+            }
+        }
+        Ok(out)
+    }
 }
 
 fn read_space(conn: &Connection) -> Result<EmbeddingSpace, StoreError> {
@@ -451,6 +497,7 @@ mod tests {
             dim: 4,
             normalized: false,
             query_instruction: String::new(),
+            validated_providers: Vec::new(),
         };
         let store = SqliteStore::create(dir.path().join("c.db"), &space).unwrap();
         store.with_connection(|conn| {

@@ -15,9 +15,9 @@
 
 use vera_index::{IngestRow, Matrix, Rng};
 
-/// Indonesian-regulation-flavored vocabulary · gives BM25 something real to
-/// score and produces queries that overlap bodies the way genuine ones do.
-const VOCAB: &[&str] = &[
+/// Roots the generated vocabulary is built from · Indonesian-regulation flavor,
+/// so a body is readable when a test fails.
+const ROOTS: &[&str] = &[
     "wajib", "pajak", "sanksi", "administrasi", "ketentuan", "umum", "tata", "cara",
     "perpajakan", "penghasilan", "badan", "orang", "pribadi", "tarif", "pengenaan",
     "pemungutan", "penyetoran", "pelaporan", "keberatan", "banding", "surat", "teguran",
@@ -25,9 +25,115 @@ const VOCAB: &[&str] = &[
     "daerah", "pusat", "menteri", "keuangan", "direktorat", "jenderal", "peraturan",
     "pelaksanaan", "perubahan", "pencabutan", "berlaku", "kewajiban", "hak", "subjek",
     "objek", "dasar", "pengurangan", "fasilitas", "insentif", "pembukuan", "pencatatan",
+    "putusan", "gugatan", "sengketa", "pengadilan", "hakim", "saksi", "bukti", "dakwaan",
+    "kontrak", "perjanjian", "pihak", "klausul", "wanprestasi", "ganti", "rugi", "somasi",
 ];
 
+const PREFIXES: &[&str] = &["", "me", "pe", "ber", "ter", "di", "ke", "se", "peng", "meng"];
+const SUFFIXES: &[&str] = &["", "an", "kan", "nya", "i", "annya"];
+
 const DOC_TYPES: &[&str] = &["UU", "PP", "PERPRES", "PMK", "PERMEN"];
+
+/// A vocabulary whose term frequencies follow **Zipf's law**.
+///
+/// ! This is the fixture's single most consequential dial for the keyword half,
+/// and the benchmark ran without it for a long time. With a closed 50-word
+/// vocabulary every term appears in nearly every row, so `ln(N/df) ≈ 0`: an
+/// 8-term `OR` matches most of the corpus, FTS5 degenerates into a full scan,
+/// and the 291 ms it cost was recorded as "BM25 is 72% of query time"
+/// (`METRICS.md` §2.3). That number describes the fixture, ✗ the engine, and
+/// **both directions of error were live**: a real corpus could be far faster
+/// (selective terms touch few postings) or far slower (500× the rows).
+///
+/// Real text obeys `df(rank) ∝ rank^−s` with `s ≈ 1`. Under it most terms are
+/// rare, most query terms prune hard, and the inverted index does the job it
+/// exists to do. Sweeping `s` toward 0 recovers the old fixture, so the
+/// sensitivity of every keyword number to this assumption is now measurable
+/// rather than assumed.
+#[derive(Debug, Clone)]
+pub struct Vocabulary {
+    terms: Vec<String>,
+    /// Cumulative sampling weights · `cdf[i]` is `P(rank <= i)`.
+    cdf: Vec<f32>,
+}
+
+impl Vocabulary {
+    /// Build `size` terms whose sampling weight is `1 / (rank + 1)^exponent`.
+    #[must_use]
+    pub fn zipf(size: usize, exponent: f32) -> Self {
+        let size = size.max(1);
+        let mut terms = Vec::with_capacity(size);
+        // ! Deduplicated, ✗ assumed distinct. Morphological composition
+        // genuinely collides — `wajib`+`an` can equal another root outright —
+        // and a duplicated term would be sampled at two different ranks, so the
+        // realised frequency distribution would stop being the one the exponent
+        // describes. The vocabulary *size* is the dial; it has to be exact.
+        let mut seen = std::collections::HashSet::new();
+        'outer: for suffix in SUFFIXES {
+            for prefix in PREFIXES {
+                for root in ROOTS {
+                    if terms.len() == size {
+                        break 'outer;
+                    }
+                    let term = format!("{prefix}{root}{suffix}");
+                    if seen.insert(term.clone()) {
+                        terms.push(term);
+                    }
+                }
+            }
+        }
+        // Past composition the strings stop mattering; only the count does.
+        let mut i = 0usize;
+        while terms.len() < size {
+            let term = format!("{}{i}", ROOTS[i % ROOTS.len()]);
+            if seen.insert(term.clone()) {
+                terms.push(term);
+            }
+            i += 1;
+        }
+
+        #[allow(clippy::cast_precision_loss)]
+        let weights: Vec<f32> = (0..size)
+            .map(|r| ((r + 1) as f32).powf(-exponent))
+            .collect();
+        let total: f32 = weights.iter().sum();
+        let mut cdf = Vec::with_capacity(size);
+        let mut running = 0.0f32;
+        for w in &weights {
+            running += w / total;
+            cdf.push(running);
+        }
+        // Guard the last bucket against float drift so `sample` cannot fall off
+        // the end for a draw of 0.9999999.
+        if let Some(last) = cdf.last_mut() {
+            *last = 1.0;
+        }
+        Self { terms, cdf }
+    }
+
+    /// Draw one term index, Zipf-distributed.
+    #[must_use]
+    pub fn sample(&self, rng: &mut Rng) -> usize {
+        let u = rng.unit();
+        match self
+            .cdf
+            .binary_search_by(|c| c.partial_cmp(&u).unwrap_or(std::cmp::Ordering::Equal))
+        {
+            Ok(i) | Err(i) => i.min(self.cdf.len() - 1),
+        }
+    }
+
+    #[must_use]
+    pub fn term(&self, i: usize) -> &str {
+        &self.terms[i.min(self.terms.len() - 1)]
+    }
+
+    #[must_use]
+    #[allow(dead_code, reason = "part of the fixture surface; exercised by tests")]
+    pub fn len(&self) -> usize {
+        self.terms.len()
+    }
+}
 
 /// Shape of a synthetic corpus.
 #[derive(Debug, Clone)]
@@ -52,6 +158,19 @@ pub struct SynthConfig {
     /// layer-1 anchor — is near zero and points nowhere, which makes domain
     /// detection look broken when it is the fixture that is unrealistic.
     pub anisotropy: f32,
+    /// Distinct terms in the generated vocabulary.
+    ///
+    /// ! The keyword half's equivalent of `spread`. See [`Vocabulary`] for what
+    /// the old closed 50-word vocabulary did to every BM25 measurement.
+    pub vocabulary: usize,
+    /// Zipf exponent · `1.0` is natural language, `0.0` is a uniform vocabulary
+    /// (the old fixture, kept reachable so the sensitivity can be measured).
+    pub zipf: f32,
+    /// Tokens per body. Real regulation chunks run longer; BM25
+    /// length-normalizes, so this is a factor in its own right (`FACTORS.md`).
+    pub body_tokens: usize,
+    /// Terms that characterise one topic · the lexical half of topic structure.
+    pub topic_terms: usize,
     pub seed: u64,
 }
 
@@ -63,6 +182,10 @@ impl Default for SynthConfig {
             topics: 200,
             spread: 0.35,
             anisotropy: 0.7,
+            vocabulary: 20_000,
+            zipf: 1.0,
+            body_tokens: 18,
+            topic_terms: 64,
             seed: 0xC0FFEE,
         }
     }
@@ -88,6 +211,19 @@ pub fn generate(cfg: &SynthConfig) -> (Vec<IngestRow>, Matrix) {
         centers.push(&mix(&base, &noise, cfg.anisotropy));
     }
 
+    // ! The lexical structure, built once. Topic term lists are themselves
+    // Zipf-drawn, so topics **share their common words and diverge in the tail**
+    // — which is what real topical text does, and what makes a rare query term
+    // genuinely diagnostic of a topic while a common one is not.
+    let vocab = Vocabulary::zipf(cfg.vocabulary, cfg.zipf);
+    let topic_terms: Vec<Vec<usize>> = (0..cfg.topics.max(1))
+        .map(|_| {
+            (0..cfg.topic_terms.max(1))
+                .map(|_| vocab.sample(&mut rng))
+                .collect()
+        })
+        .collect();
+
     let mut vectors = Matrix::with_capacity(cfg.dim, cfg.rows);
     let mut rows = Vec::with_capacity(cfg.rows);
 
@@ -98,17 +234,18 @@ pub fn generate(cfg: &SynthConfig) -> (Vec<IngestRow>, Matrix) {
         let noise = random_unit(cfg.dim, &mut rng);
         vectors.push(&mix(center, &noise, 1.0 - cfg.spread));
 
-        // Body words drawn from a topic-biased slice of the vocabulary, so
-        // keyword and dense signals correlate the way they do in real text.
-        let base = topic * 7 % VOCAB.len();
-        let body: Vec<&str> = (0..18)
-            .map(|w| {
-                let pick = if rng.unit() < 0.6 {
-                    (base + w * 3) % VOCAB.len()
+        // Half the tokens come from this topic's term list and half from the
+        // corpus-wide Zipf draw, so keyword and dense signals correlate the way
+        // they do in real text without the lexical signal becoming a giveaway.
+        let terms = &topic_terms[topic];
+        let body: Vec<&str> = (0..cfg.body_tokens.max(1))
+            .map(|_| {
+                let pick = if rng.unit() < 0.5 {
+                    terms[rng.below(terms.len())]
                 } else {
-                    rng.below(VOCAB.len())
+                    vocab.sample(&mut rng)
                 };
-                VOCAB[pick]
+                vocab.term(pick)
             })
             .collect();
 
@@ -124,7 +261,14 @@ pub fn generate(cfg: &SynthConfig) -> (Vec<IngestRow>, Matrix) {
 
         rows.push(IngestRow {
             id: format!("chunk-{i:08}"),
-            body: format!("{} nomor {} tentang {}", body.join(" "), i % 500, VOCAB[base]),
+            // ! Nothing but sampled terms. An earlier version appended
+            // "nomor {i % 500} tentang …", and those 500 numeric literals were
+            // near-uniformly distributed across the corpus — highly selective
+            // tokens injected outside the vocabulary model. They made a
+            // deliberately uniform fixture *profile* as though it had real term
+            // selectivity, which is the precise measurement error this fixture
+            // work exists to remove.
+            body: body.join(" "),
             source_title: format!("Dokumen {}", topic),
             source_url: format!("https://peraturan.example/doc-{topic}.pdf"),
             locator_page: Some((i % 400) as i32 + 1),
@@ -181,6 +325,8 @@ fn normalize(v: &mut [f32]) {
 mod tests {
     use super::*;
 
+    use vera_core::ProfileBuilder;
+
     fn cfg(rows: usize) -> SynthConfig {
         SynthConfig {
             rows,
@@ -189,7 +335,101 @@ mod tests {
             spread: 0.2,
             anisotropy: 0.7,
             seed: 7,
+            ..SynthConfig::default()
         }
+    }
+
+    fn profile(cfg: &SynthConfig) -> vera_core::CorpusProfile {
+        let (rows, _) = generate(cfg);
+        let mut b = ProfileBuilder::new();
+        for r in &rows {
+            b.observe(&r.body, &r.source_url, r.identifier.as_deref());
+        }
+        b.finish()
+    }
+
+    #[test]
+    fn the_generated_corpus_is_zipfian_and_its_keyword_numbers_transfer() {
+        // ! The fixture bug this replaces. `METRICS.md` §2.3 recorded BM25 at
+        // 72% of query time over a 50-word vocabulary where every term matched
+        // most of the corpus — a full scan reported as an index lookup. A corpus
+        // the profiler calls representative is the precondition for that number
+        // meaning anything.
+        let p = profile(&SynthConfig { rows: 20_000, ..cfg(0) });
+        assert!(p.zipf_slope < -0.5, "slope {}", p.zipf_slope);
+        assert!(p.mean_idf > 2.0, "mean idf {}", p.mean_idf);
+        assert!(
+            p.keyword_metrics_are_representative(),
+            "{:?}",
+            p.keyword_caveat()
+        );
+    }
+
+    #[test]
+    fn a_uniform_vocabulary_reproduces_the_old_fixture_and_is_flagged() {
+        // ! The dial has to reach the broken case, or the sensitivity of every
+        // keyword number to this assumption stays unmeasurable.
+        let p = profile(&SynthConfig {
+            rows: 20_000,
+            vocabulary: 50,
+            zipf: 0.0,
+            ..cfg(0)
+        });
+        assert!(p.vocabulary <= 50);
+        // 18 tokens drawn uniformly from 50 terms puts the average term in ~30%
+        // of rows — `ln(1/0.3) ≈ 1.2`, an order of magnitude below what real
+        // text gives, and nowhere near enough for an inverted index to prune.
+        assert!(p.mean_idf < 2.0, "mean idf {}", p.mean_idf);
+        assert!(p.zipf_slope > -0.5, "slope {} · should be near flat", p.zipf_slope);
+        assert!(!p.keyword_metrics_are_representative());
+    }
+
+    #[test]
+    fn zipf_sampling_concentrates_on_the_head_without_abandoning_the_tail() {
+        let v = Vocabulary::zipf(1_000, 1.0);
+        let mut rng = Rng::new(11);
+        let mut counts = vec![0usize; v.len()];
+        for _ in 0..100_000 {
+            counts[v.sample(&mut rng)] += 1;
+        }
+        // Rank 1 is drawn far more often than rank 100 …
+        assert!(counts[0] > counts[99] * 10, "{} vs {}", counts[0], counts[99]);
+        // … but the tail is reachable, or there would be no rare terms at all.
+        assert!(counts[999] > 0, "the tail was never sampled");
+    }
+
+    #[test]
+    fn the_vocabulary_holds_exactly_the_requested_number_of_distinct_terms() {
+        for size in [10usize, 500, 20_000] {
+            let v = Vocabulary::zipf(size, 1.0);
+            assert_eq!(v.len(), size);
+            let unique: std::collections::HashSet<&str> =
+                (0..size).map(|i| v.term(i)).collect();
+            assert_eq!(unique.len(), size, "generated terms collided at size {size}");
+        }
+    }
+
+    #[test]
+    fn topics_share_common_terms_and_differ_in_rare_ones() {
+        // ! Why topic term lists are themselves Zipf-drawn. If topics had
+        // disjoint vocabularies, any single term would identify a topic outright
+        // and the keyword half would look far better than it can be.
+        let (rows, _) = generate(&SynthConfig { rows: 4_000, topics: 8, ..cfg(0) });
+        let terms_of = |topic_url: &str| -> std::collections::HashSet<String> {
+            rows.iter()
+                .filter(|r| r.source_url == topic_url)
+                .flat_map(|r| r.body.split_whitespace().map(str::to_owned))
+                .collect()
+        };
+        let a = terms_of("https://peraturan.example/doc-0.pdf");
+        let b = terms_of("https://peraturan.example/doc-1.pdf");
+        assert!(!a.is_empty() && !b.is_empty());
+        let shared = a.intersection(&b).count();
+        assert!(shared > 0, "topics share nothing · the head is not common");
+        assert!(
+            a.difference(&b).count() > shared / 4,
+            "topics are lexically identical · no keyword signal to route on"
+        );
     }
 
     #[test]

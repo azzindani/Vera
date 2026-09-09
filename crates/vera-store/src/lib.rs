@@ -17,7 +17,7 @@
 
 pub mod sqlite;
 
-use vera_core::{AnchorStats, Chunk, EmbeddingSpace, Source};
+use vera_core::{AnchorStats, Chunk, CorpusProfile, EmbeddingSpace, Source};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -239,6 +239,22 @@ pub trait ChunkStore: Send + Sync {
     fn anchor_stats(&self, domain_id: &str) -> Result<Option<AnchorStats>, StoreError> {
         Ok(self
             .meta(&format!("anchor_stats::{domain_id}"))?
+            .and_then(|v| serde_json::from_str(&v).ok()))
+    }
+
+    /// The lexical shape this corpus recorded at build time, if any.
+    ///
+    /// ! Read back rather than re-derived. Profiling needs every body, which on
+    /// the query path is exactly the corpus-wide read the whole architecture
+    /// exists to avoid — so it is measured once at ingest and stored. `None`
+    /// means the corpus predates profiling, which a report must say out loud:
+    /// "unknown" and "representative" are not the same answer.
+    ///
+    /// # Errors
+    /// Backend failure.
+    fn corpus_profile(&self, domain_id: &str) -> Result<Option<CorpusProfile>, StoreError> {
+        Ok(self
+            .meta(&format!("corpus_profile::{domain_id}"))?
             .and_then(|v| serde_json::from_str(&v).ok()))
     }
 

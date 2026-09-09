@@ -16,5 +16,5 @@ pub mod topk;
 pub use fusion::{Fused, RankedList, reciprocal_rank_fusion};
 pub use identifier::Identifier;
 pub use routing::{DetectedDomain, ProbedCluster, detect_domain, nearest_clusters};
-pub use search::{Engine, EngineError, Probe, SearchOutcome, StageTimings};
+pub use search::{Candidates, Engine, EngineError, Probe, SearchOutcome, StageTimings};
 pub use topk::{Scored, TopK};

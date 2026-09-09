@@ -12,12 +12,14 @@
 pub mod calibration;
 pub mod config;
 pub mod contract;
+pub mod profile;
 
 pub use calibration::AnchorStats;
 pub use config::{
-    Config, ConcurrencyConfig, ConfidenceConfig, DEFAULT_QUERY_INSTRUCTION, EmbeddingSpace, ReadConfig,
-    RoutingConfig, SearchConfig, SpaceMismatch,
+    Config, ConcurrencyConfig, ConfidenceConfig, DEFAULT_QUERY_INSTRUCTION, EmbeddingSpace,
+    ProviderConfig, ReadConfig, RoutingConfig, SearchConfig, SpaceMismatch, UnvalidatedProvider,
 };
+pub use profile::{CorpusProfile, ProfileBuilder};
 pub use contract::{
     ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
     Source, SummaryPayload,

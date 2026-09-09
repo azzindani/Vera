@@ -44,6 +44,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         embedding: space.clone(),
         ..Config::default()
     };
+
+    // ! Before anything else serves. `CLAUDE.md` §7 rule 7 forbids falling back
+    // to an unvalidated provider, and the only moment that rule can be enforced
+    // cheaply is startup: at request time the alternative to a wrong-space
+    // embedding is an outage, and under load that is the wrong pressure to be
+    // deciding under. The fallback is checked here too — validating only the
+    // primary would pass boot and fail during the outage it exists for.
+    config.provider.assert_all_validated(&config.embedding)?;
+    if config.embedding.provider_is_pinned() {
+        eprintln!(
+            "provider pin: {} (validated: {})",
+            config.provider.primary,
+            config.embedding.validated_providers.join(", ")
+        );
+    } else {
+        eprintln!(
+            "WARNING: corpus records no validated embedding provider · any host will be \
+             accepted · re-ingest with --provider to close this (EMBEDDING.md §5)"
+        );
+    }
+
     let gate = Gate::from_config(&config.concurrency);
     let engine = Engine::load(store, config)?;
 

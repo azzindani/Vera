@@ -65,12 +65,53 @@ pub struct StageTimings {
     pub clusters_probed: usize,
 }
 
+/// Every candidate that reached fusion, by the list it arrived on.
+///
+/// ! Exists to make **candidate-cap loss observable** (`METRICS.md` §3.1,
+/// `LOOPHOLES.md` §7). The leaf scan keeps only `per_cluster_top_k` rows per
+/// cluster, so a correct chunk ranking 51st inside its own cluster is discarded
+/// before fusion — and no metric the harness had could see it. `recall@k` scores
+/// against a baseline that applies the *same* cap, so both sides drop the same
+/// row and recall reads 100%; `route/D` asks only whether the row sat in a
+/// probed cluster, and a row that was probed and then cut counts as a routing
+/// *success*. The loss is real, silent, and dialled by a knob nothing measures.
+///
+/// Knowing which ids survived to fusion closes that: a truth item in a probed
+/// cluster but absent from here was cut by the cap, ✗ missed by routing.
+///
+/// ! Costs no allocation on the query path. These `String`s are moved out of the
+/// candidate lists after fusion has consumed them, ✗ cloned.
+#[derive(Debug, Clone, Default)]
+pub struct Candidates {
+    pub dense: Vec<String>,
+    pub keyword: Vec<String>,
+    pub exact: Vec<String>,
+}
+
+impl Candidates {
+    /// Whether an id reached fusion at all, by any route.
+    #[must_use]
+    pub fn reached_fusion(&self, id: &str) -> bool {
+        self.dense.iter().any(|c| c == id)
+            || self.keyword.iter().any(|c| c == id)
+            || self.exact.iter().any(|c| c == id)
+    }
+
+    #[must_use]
+    pub fn total(&self) -> usize {
+        self.dense.len() + self.keyword.len() + self.exact.len()
+    }
+}
+
 /// A search, plus everything needed to explain and measure it.
 #[derive(Debug, Clone)]
 pub struct SearchOutcome {
     pub response: SearchResponse,
     pub timings: StageTimings,
     pub probed: Vec<ProbedCluster>,
+    /// What fusion was given · the input side of the ranking, kept so recall
+    /// loss can be attributed to routing, the cap, or fusion separately.
+    pub candidates: Candidates,
 }
 
 /// The stateless query engine.
@@ -246,12 +287,19 @@ impl<S: ChunkStore> Engine<S> {
                     response: SearchResponse::no_matching_domain(query_text, progress),
                     timings,
                     probed: Vec::new(),
+                    candidates: Candidates::default(),
                 });
             }
+            let response =
+                self.exact_only_response(query_text, &exact_ids, exact_matches, progress)?;
             return Ok(SearchOutcome {
-                response: self.exact_only_response(query_text, &exact_ids, exact_matches, progress)?,
+                response,
                 timings,
                 probed: Vec::new(),
+                candidates: Candidates {
+                    exact: exact_ids.into_iter().map(|s| s.id).collect(),
+                    ..Candidates::default()
+                },
             });
         };
         progress.push(format!(
@@ -346,6 +394,16 @@ impl<S: ChunkStore> Engine<S> {
         timings.fuse = t.elapsed();
         progress.push(format!("fuse:rrf {} candidates", fused.len()));
 
+        // ! Moved, ✗ cloned. `lists` borrowed these and fusion has consumed
+        // them, so recording what reached fusion costs nothing on the query
+        // path — which is what lets the diagnostic be always-on rather than a
+        // debug mode nobody remembers to enable. See `Candidates`.
+        let candidates = Candidates {
+            dense: dense.into_iter().map(|s| s.id).collect(),
+            keyword: keyword.into_iter().map(|s| s.id).collect(),
+            exact: exact_ids.into_iter().map(|s| s.id).collect(),
+        };
+
         // ── Hydrate ──────────────────────────────────────────────────────────
         let t = Instant::now();
         let results = self.hydrate(&fused)?;
@@ -381,6 +439,7 @@ impl<S: ChunkStore> Engine<S> {
             response,
             timings,
             probed,
+            candidates,
         })
     }
 

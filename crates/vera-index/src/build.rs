@@ -7,7 +7,7 @@
 //! ! Offline only. Nothing here runs while serving (`CLAUDE.md` §5 rule 6).
 
 use rusqlite::params;
-use vera_core::{AnchorStats, EmbeddingSpace};
+use vera_core::{AnchorStats, CorpusProfile, EmbeddingSpace, ProfileBuilder};
 use vera_store::{StoreError, encode_vector, sqlite::SqliteStore};
 
 use crate::{KMeans, KMeansConfig, Matrix, kmeans, kmeans::domain_anchor};
@@ -44,6 +44,9 @@ pub struct BuildReport {
     pub build_seconds: f64,
     /// Distribution of cosine(row, domain anchor) across the corpus.
     pub anchor: AnchorStats,
+    /// Lexical shape of the corpus · what decides whether a keyword measurement
+    /// taken here means anything anywhere else (`vera_core::profile`).
+    pub profile: CorpusProfile,
 }
 
 /// Measure a corpus against its layer-1 anchor.
@@ -158,6 +161,17 @@ pub fn build_corpus(
     let km: KMeans = kmeans(vectors, cfg);
     let anchor = domain_anchor(vectors);
     let anchor_stats = measure_anchor(vectors, &anchor);
+
+    // ! Profiled here, once, while the bodies are already in hand. Measuring it
+    // later means a second full pass over the corpus, and measuring it *never*
+    // is how a benchmark ends up reporting a full scan as an index lookup
+    // (`vera_core::profile`).
+    let mut profiler = ProfileBuilder::new();
+    for row in rows {
+        profiler.observe(&row.body, &row.source_url, row.identifier.as_deref());
+    }
+    let profile = profiler.finish();
+
     let store = SqliteStore::create(path, space)?;
 
     store.with_connection(|conn| -> Result<(), BuildError> {
@@ -182,6 +196,16 @@ pub fn build_corpus(
                 format!("anchor_stats::{domain_id}"),
                 serde_json::to_string(&anchor_stats)
                     .map_err(|e| BuildError::Backend(e.to_string()))?
+            ],
+        )?;
+        // ! Stored with the corpus, ✗ printed and forgotten. The caveat that
+        // qualifies every keyword number has to travel with the data, or it ends
+        // up living in a document that the next measurement does not read.
+        conn.execute(
+            "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
+            params![
+                format!("corpus_profile::{domain_id}"),
+                serde_json::to_string(&profile).map_err(|e| BuildError::Backend(e.to_string()))?
             ],
         )?;
 
@@ -252,6 +276,7 @@ pub fn build_corpus(
         largest_cluster: km.sizes.iter().copied().max().unwrap_or(0),
         build_seconds: started.elapsed().as_secs_f64(),
         anchor: anchor_stats,
+        profile,
     })
 }
 
@@ -287,6 +312,7 @@ mod tests {
             dim: 4,
             normalized: true,
             query_instruction: String::new(),
+            validated_providers: Vec::new(),
         }
     }
 

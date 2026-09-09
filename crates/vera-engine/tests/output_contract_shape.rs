@@ -17,6 +17,7 @@ fn space() -> EmbeddingSpace {
         dim: 4,
         normalized: true,
         query_instruction: String::new(),
+        validated_providers: Vec::new(),
     }
 }
 
