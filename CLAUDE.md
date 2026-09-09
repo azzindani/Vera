@@ -97,6 +97,7 @@ vera/
 │   ├── LOOPHOLES.md               ← known failure modes + their solutions
 │   ├── STANDARDS_COMPLIANCE.md    ← mapping to local_mcp STANDARDS; documented divergences
 │   ├── MULTI_DOMAIN.md            ← scaling to many domains/sources; the foundation principles
+│   ├── METRICS.md                 ← the targets · what "working" means, as falsifiable numbers
 │   └── EVAL.md                    ← the eval harness that gates retrieval quality
 │
 ├── engine/                        ← Rust MCP engine (stateless)
@@ -234,6 +235,9 @@ Every tool returns a dict with `success` first, plus `token_estimate`, `progress
 - [x] Eval harness: `vera-bench` sweeps clusters_probed reporting latency and
       recall against an exhaustive baseline
 - [ ] Hardware validation on 2 vCPU / 8 GB VPS under concurrency
+
+! **`METRICS.md` holds the targets.** The findings below are what has been *measured*;
+`METRICS.md` is what must be *achieved*, with the gap and the blocker named for each.
 
 ### Measured findings
 
