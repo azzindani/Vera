@@ -165,13 +165,24 @@ pub struct UnvalidatedProvider {
 
 impl std::fmt::Display for UnvalidatedProvider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // ! Names the remedy. This fires most often not on a genuine mismatch
+        // but on a corpus that recorded only the GPU that embedded it, while the
+        // query side legitimately runs somewhere else (`EMBEDDING.md` §2) — a
+        // configuration mistake, and an error that only says "refusing" leaves
+        // the operator to guess which of the two ids is wrong.
         write!(
             f,
             "embedding provider '{}' was never validated against this corpus · \
              validated providers are [{}] · a wrong-space embedding is worse than \
-             a brief outage · refusing",
+             a brief outage · refusing.\n\
+             If '{}' really does serve this corpus's space, record it: run the \
+             EMBEDDING.md §4.5 round-trip preflight, then re-ingest with \
+             --providers listing every validated host (the query-side ones, not \
+             only the GPU that produced the vectors). Otherwise set \
+             [provider] primary to one of the listed ids.",
             self.attempted,
-            self.validated.join(", ")
+            self.validated.join(", "),
+            self.attempted,
         )
     }
 }

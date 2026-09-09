@@ -36,7 +36,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
   vera-ingest import  --source <db> --table <name> --out <db>
                       --id-col <c> --body-col <c> --vector-col <c>
                       [--vector-format f32le|f64le|json]  (default f32le)
-                      [--model <id>] [--dim N] [--no-normalize] [--provider <id>]
+                      [--model <id>] [--dim N] [--no-normalize]
+                      [--providers <id,id>]  hosts validated to reproduce this
+                                             space · include the QUERY-side ones,
+                                             not only the GPU that embedded it
                       [--title-col <c>] [--url-col <c>] [--page-col <c>]
                       [--section-col <c>] [--heading-col <c>] [--identifier-col <c>]
                       [--hash-col <c>]   digest of the source · LOOPHOLES.md §8
@@ -386,18 +389,33 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         vectors.bytes() as f64 / 1e9
     );
 
-    // ! Recorded, ✗ inferred. `--provider` names the host whose vectors these
-    // are, and it becomes the corpus's allowlist: the engine will then refuse
-    // any other host at startup (`EMBEDDING.md` §5). Omitting it leaves the
-    // corpus unpinned, which is permitted and warned about — the alternative
-    // would be to guess a provider id, and a guessed pin enforces nothing while
+    // ! A **list**, and it must include the query-side hosts, not only the one
+    // that produced the vectors. `EMBEDDING.md` §2 embeds the corpus on a rented
+    // GPU and serves queries through OpenRouter, so those ids differ by design;
+    // recording only the producer makes the engine refuse to boot against its
+    // own corpus. What belongs here is every provider the §4.5 round-trip
+    // preflight has shown to reproduce this space.
+    //
+    // Recorded, ✗ inferred: omitting the flag leaves the corpus unpinned, which
+    // is permitted and warned about. Guessing an id would enforce nothing while
     // looking like it does.
+    let providers: Vec<String> = flag(args, "--providers")
+        .or_else(|| flag(args, "--provider"))
+        .map(|v| {
+            v.split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+
     let space = EmbeddingSpace {
         model_id: flag(args, "--model").unwrap_or_else(|| "unknown/unspecified".to_owned()),
         dim: parsed(args, "--dim", dim)?,
         normalized: should_normalize,
         query_instruction: vera_core::DEFAULT_QUERY_INSTRUCTION.to_owned(),
-        validated_providers: flag(args, "--provider").into_iter().collect(),
+        validated_providers: providers,
     };
     if space.dim != dim {
         return Err(format!(
@@ -415,7 +433,7 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     }
     if !space.provider_is_pinned() {
         eprintln!(
-            "WARNING: no --provider given · the corpus records no validated provider, so the \
+            "WARNING: no --providers given · the corpus records no validated provider, so the \
              engine will accept any embedding host at startup (EMBEDDING.md §5)"
         );
     }

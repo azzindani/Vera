@@ -308,11 +308,14 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    41× fewer rows made queries only ~2× faster, because the cost that remained
    is fixed:
 
-   | stage | share at probe=50 |
-   |---|---|
-   | layer-3 BM25 (one global query) | **72.3%** (~291 ms) |
-   | layer-3 dense scan | 27.2% (~110 ms) |
-   | routing (layers 1+2) | 0.2% |
+   | stage | 50-word fixture (probe=50) | **Zipfian fixture (probe=20)** |
+   |---|---|---|
+   | layer-3 BM25 (one global query) | 72.3% (~291 ms) | **78.9% (~232 ms)** |
+   | layer-3 dense scan | 27.2% (~110 ms) | 20.5% (~60 ms) |
+   | routing (layers 1+2) | 0.2% | 0.2% |
+
+   A realistic vocabulary cut BM25 by 20% (291 → 232 ms) and left it **more**
+   dominant, because it cut the dense scan further. See finding 11.
 
    BM25 does not vary with `clusters_probed`, so it is a **latency floor**:
    speedup peaks at 4.4× and *falls* beyond probe=10 as the scan re-grows.
@@ -324,18 +327,39 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    finding 11.
 
 5. **Recall now behaves like a real curve** — it did not before, because
-   routing was barely pruning. Post-fix, on the √N-clustered 200K corpus:
+   routing was barely pruning. On the √N-clustered 200K corpus with the
+   **Zipfian** vocabulary (200 topics, 447 clusters, 100 queries):
 
-   | probe | rows/query | % of corpus | recall@10 | top-1 | speedup |
+   | probe | rows/query | % of corpus | recall@10 | route/D | nDCG@10 | speedup |
+   |---|---|---|---|---|---|---|
+   | 1 | 436 | 0.22% | 70.4% | 54.5% | 0.775 | 6.1× |
+   | 2 | 820 | 0.41% | 86.8% | 81.2% | 0.898 | 5.9× |
+   | **5** | **2,093** | **1.0%** | **99.6%** | **99.4%** | **0.997** | **5.9×** |
+   | 10 | 4,454 | 2.2% | 100% | 100% | 1.000 | 5.5× |
+   | 20 | 9,048 | 4.5% | 100% | 100% | 1.000 | 5.0× |
+
+   **probe=5 is the knee** — 99.6% recall while touching 1% of the corpus. The
+   documented default of 5 is right here. L1-rej is 0% and top-1 is 100%
+   throughout. Speedup is flat to probe=5 and falls after, because the BM25
+   floor (finding 4) dominates until the scan re-grows.
+
+   ! nDCG is the column that earns its place at probe=1: recall is 70.4% and
+   nDCG 0.775, so the misses are concentrated in the *lower* ranks — the top of
+   the list survives aggressive pruning better than a recall number suggests.
+
+   Recall-loss decomposition at the same settings (vs the uncapped dense top-10):
+
+   | probe | found | routing | cap | fusion | by design |
    |---|---|---|---|---|---|
-   | 1 | 414 | 0.21% | 76.0% | 97.5% | 4.7× |
-   | 2 | 821 | 0.41% | 90.2% | 100% | 4.7× |
-   | **5** | **2,088** | **1.0%** | **99.8%** | 100% | **4.7×** |
-   | 10 | 4,353 | 2.2% | 100% | 100% | 4.4× |
+   | 1 | 40.8% | 44.0% | 0.0% | 1.1% | 14.1% |
+   | 5 | 45.3% | **0.6%** | **0.0%** | 0.0% | 54.1% |
+   | 20 | 45.3% | 0.0% | 0.0% | 0.0% | 54.7% |
 
-   **probe=5 is the knee** — 99.8% recall while touching 1% of the corpus. The
-   documented default of 5 is right here. Speedup is flat to probe=5 and falls
-   after, because the BM25 floor (finding 4) dominates until the scan re-grows.
+   At probe=5 routing has stopped losing anything and the cap is not binding at
+   all — clusters average 447 rows against a `per_cluster_top_k` of 50, so the
+   cap only starts to matter as clusters grow toward the 10K design point. The
+   54% "by design" is RRF preferring keyword hits, unchanged by probing, and is
+   **not** loss (finding 14).
 
 6. **Routing works; layer-1 was the problem.** Two measurement errors hid this.
    Routing recall was scored against the **fused** exhaustive baseline, part of
@@ -403,6 +427,13 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    |---|---|
    | mean IDF per term **type** | 8.68 → "average term reaches 0.02% of rows" |
    | rows an 8-term query **actually** reaches | **20,928 of 20,000** |
+
+   ! A mock Indonesian corpus imported through `vera-ingest` shows the same
+   shape for the same reason, so this is not a fixture artefact: vocabulary
+   8,010, Zipf slope −0.91, **and `yang` in 100% of rows**. Indonesian function
+   words (`yang`, `dan`, `dalam`) are in essentially every legal document, which
+   is exactly the head this finding is about. Expect the real corpus to look
+   like this.
 
    Both are correct. The type average is dominated by the rare tail, and a query
    never draws from the tail — it draws from a document's words, which are mostly
