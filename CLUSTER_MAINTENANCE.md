@@ -26,7 +26,8 @@ New chunk → embed → nearest existing centroid → append to that cluster par
 re-clustering. This is just layer-2 routing applied at write time. The default path.
 
 ### Tier 2 — Cluster split (medium, triggered by size)
-When a cluster exceeds its row cap (~10K), run local k-means (k=2) on **only that
+When a cluster exceeds its row cap (√N for the corpus, capped by the per-request RAM
+ceiling — ~10K at the 100M design point), run local k-means (k=2) on **only that
 cluster's members**, replace its centroid with two. Bounds cluster size without
 touching any other cluster. This is also the **scale hook**: splitting is how clusters
 stay ~10K instead of ballooning toward the 100K/1M sizes a production deployment might

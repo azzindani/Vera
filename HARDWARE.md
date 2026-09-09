@@ -12,7 +12,7 @@ for 2 vCPU / 8 GB; let bigger hardware benefit automatically.
 | CPU | 2 vCPU | the real ceiling under concurrency |
 | RAM | 8 GB | OOM-proof by construction (§2) |
 | Disk | fast NVMe, ~1.3 TB | full 4096 halfvec for 100M rows |
-| Corpus | ~100M chunks | across ~10K clusters of ~10K rows |
+| Corpus | ~100M chunks | across ~10K clusters of ~10K rows · **k = √N**, see `ARCHITECTURE.md` §2 |
 | Embedding | 4096-dim, halfvec | full precision, no truncation |
 
 The same image runs on local hardware (laptop/mini-PC) for personal use; more RAM/cores

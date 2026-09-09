@@ -59,6 +59,34 @@ LAYER 3   │  LEAF search (~10K rows / cluster)  │  load clusters SEQUENTIALL
 - **Layer 3 (leaf)** is a flat scan within each probed cluster. ~10K rows × 4096 is
   small enough that flat scan is fast; routing is what keeps the scanned set small.
 
+### Sizing the layers · **k = √N**
+
+The "~10K clusters of ~10K rows" above is the **100M design point**, ✗ a universal
+target. A routed query pays two costs — comparing the query against every centroid, and
+scanning the clusters it probes:
+
+```
+cost(k) = k  +  nprobe · N/k        minimised at  k = √(nprobe · N)
+```
+
+With `nprobe` a small constant that is the familiar **√N** rule, and √100M = 10,000 —
+which is why both numbers read "10K" at the design point. **They coincide only there.**
+
+| Corpus | k = √N | rows/cluster | rows scanned at nprobe=5 |
+|---|---|---|---|
+| 200K | 447 | ~447 | ~2,200  (1.1%) |
+| 750K | 866 | ~866 | ~4,300  (0.6%) |
+| 100M | 10,000 | 10,000 | 50,000  (0.05%) |
+
+! Reading "10K rows per cluster" as a target below 100M under-clusters badly: at 200K it
+yields 20 clusters, so probing 5 scans a **quarter** of the corpus and routing prunes
+about 4×. The benchmark was built that way, and its speedup numbers described the
+mis-clustering rather than the design.
+
+Cluster size is bounded from the other side too — one cluster is the per-request RAM
+ceiling — so a corpus large enough that √N rows exceeds that ceiling takes the smaller
+of the two. Split-on-size (`CLUSTER_MAINTENANCE.md` §2) is what enforces it.
+
 `clusters_probed` (how many layer-2 clusters to open, default ~5) is the central
 recall/latency/RAM dial. More clusters = safer recall, more latency, but **not** more
 RAM, because of sequential loading (§4).
