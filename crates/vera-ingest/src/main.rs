@@ -432,3 +432,103 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     println!("domain_threshold:  {:.4} (calibrated)", report.anchor.threshold);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn f32_blob(v: &[f32]) -> Vec<u8> {
+        v.iter().flat_map(|x| x.to_le_bytes()).collect()
+    }
+    fn f64_blob(v: &[f64]) -> Vec<u8> {
+        v.iter().flat_map(|x| x.to_le_bytes()).collect()
+    }
+
+    #[test]
+    fn f32_blobs_round_trip() {
+        let v = vec![0.25f32, -1.0, 3.5, 0.0];
+        let blob = f32_blob(&v);
+        assert_eq!(decode(&ValueRef::Blob(&blob), VectorFormat::F32Le).unwrap(), v);
+    }
+
+    #[test]
+    fn f64_blobs_are_narrowed_to_f32() {
+        let blob = f64_blob(&[0.25, -1.0, 3.5]);
+        let got = decode(&ValueRef::Blob(&blob), VectorFormat::F64Le).unwrap();
+        assert_eq!(got, vec![0.25f32, -1.0, 3.5]);
+    }
+
+    #[test]
+    fn json_arrays_are_accepted() {
+        let got = decode(&ValueRef::Text(b"[0.5, -0.25, 1.0]"), VectorFormat::Json).unwrap();
+        assert_eq!(got, vec![0.5f32, -0.25, 1.0]);
+    }
+
+    #[test]
+    fn a_blob_that_is_not_a_whole_number_of_floats_is_refused() {
+        // ! Refused, ✗ truncated. A short read would shift every value and the
+        // result would still cluster and still rank — silently wrong.
+        let blob = vec![0u8; 10];
+        assert!(decode(&ValueRef::Blob(&blob), VectorFormat::F32Le).is_err());
+        assert!(decode(&ValueRef::Blob(&blob), VectorFormat::F64Le).is_err());
+    }
+
+    #[test]
+    fn reading_f64_data_as_f32_yields_the_wrong_width_which_is_why_it_is_a_flag() {
+        // ! The mistake `inspect` exists to prevent: the bytes decode happily,
+        // there is no error, and the corpus is garbage. 1024 f64s read as f32
+        // give 2048 dimensions of interleaved mantissa halves.
+        let truth: Vec<f64> = (0..1024).map(|i| f64::from(i) / 1024.0).collect();
+        let blob = f64_blob(&truth);
+        let wrong = decode(&ValueRef::Blob(&blob), VectorFormat::F32Le).unwrap();
+        assert_eq!(wrong.len(), 2048, "no error is raised · only the width betrays it");
+        let right = decode(&ValueRef::Blob(&blob), VectorFormat::F64Le).unwrap();
+        assert_eq!(right.len(), 1024);
+    }
+
+    #[test]
+    fn the_format_guess_prefers_f32_and_reports_the_dimension() {
+        let blob = f32_blob(&vec![0.1; 1024]);
+        assert_eq!(
+            guess_format(&ValueRef::Blob(&blob)),
+            Some((VectorFormat::F32Le, 1024))
+        );
+    }
+
+    #[test]
+    fn the_format_guess_recognizes_json() {
+        let text = b"[0.1, 0.2, 0.3]";
+        // Below the 64-dim floor for blobs, but JSON is unambiguous.
+        assert_eq!(
+            guess_format(&ValueRef::Text(text)),
+            Some((VectorFormat::Json, 3))
+        );
+    }
+
+    #[test]
+    fn the_format_guess_declines_values_that_are_not_vectors() {
+        assert_eq!(guess_format(&ValueRef::Integer(42)), None);
+        assert_eq!(guess_format(&ValueRef::Text(b"hello world")), None);
+        // Too short to be an embedding.
+        let tiny = f32_blob(&[1.0, 2.0]);
+        assert_eq!(guess_format(&ValueRef::Blob(&tiny)), None);
+    }
+
+    #[test]
+    fn format_names_parse_with_common_aliases() {
+        assert_eq!("f32le".parse::<VectorFormat>().unwrap(), VectorFormat::F32Le);
+        assert_eq!("float32".parse::<VectorFormat>().unwrap(), VectorFormat::F32Le);
+        assert_eq!("json".parse::<VectorFormat>().unwrap(), VectorFormat::Json);
+        assert!("f16".parse::<VectorFormat>().is_err());
+    }
+
+    #[test]
+    fn normalizing_makes_a_unit_vector_and_leaves_zero_alone() {
+        let mut v = vec![3.0f32, 4.0];
+        normalize(&mut v);
+        assert!((v[0] - 0.6).abs() < 1e-6 && (v[1] - 0.8).abs() < 1e-6);
+        let mut zero = vec![0.0f32, 0.0];
+        normalize(&mut zero);
+        assert_eq!(zero, vec![0.0, 0.0], "must not divide by zero");
+    }
+}

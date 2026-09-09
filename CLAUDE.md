@@ -243,7 +243,14 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    RAM ceiling and worst-case probe latency, so the tail governs the budget.
    Split-on-size is not a later refinement.
 
-5. **Recall is not yet meaningfully measured.** The synthetic corpus returns
+5. **The OOM guarantee holds, measured.** Peak RSS over a 903 MB corpus
+   (820 MB of vectors) is **7 MB at probe=1 and 7 MB at probe=20** — identical.
+   RAM is independent of `clusters_probed`, as `ARCHITECTURE.md` §4 claims.
+   The streaming scan API is what makes this structural rather than a
+   convention: `scan_cluster` hands the visitor a borrowed, reused buffer, so
+   retaining a cluster would have to be written as a visible copy.
+
+6. **Recall is not yet meaningfully measured.** The synthetic corpus returns
    100% recall@10 at every probe level, which means it is too easy rather than
    that routing is free. A real corpus is needed before any recall claim.
 
