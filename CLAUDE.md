@@ -89,6 +89,7 @@ vera/
 │   ├── HARDWARE.md                ← RAM/disk/latency budgets; 2CPU/8GB profile; scale path
 │   ├── LOOPHOLES.md               ← known failure modes + their solutions
 │   ├── STANDARDS_COMPLIANCE.md    ← mapping to local_mcp STANDARDS; documented divergences
+│   ├── MULTI_DOMAIN.md            ← scaling to many domains/sources; the foundation principles
 │   └── EVAL.md                    ← the eval harness that gates retrieval quality
 │
 ├── engine/                        ← Rust MCP engine (stateless)
@@ -296,6 +297,35 @@ edited rather than built toward:
   cluster (~82 MB). The streaming scan makes it one *row* — measured peak RSS
   is 7 MB regardless of `clusters_probed`. The budget is correct as an upper
   bound but overstates actual use by ~4 orders of magnitude.
+
+---
+
+## 9. Scaling beyond one source
+
+Vera's reason to exist is that the predecessor system was locked to **one domain with
+one data source**. The target is many domains (legal, medical, …) and many sources
+within each (regulations, court decisions, contracts; guidelines, drug labels, ICD-10,
+literature) — each with its own metadata, provenance shape, identifier grammar,
+validity semantics and mix of retrieval methods.
+
+**`MULTI_DOMAIN.md` is the design record for that foundation.** Read it before changing
+the schema, the routing layers, or the tool surface. Its short form:
+
+1. The **source** is the unit of heterogeneity; domain is only a label.
+2. The engine never names a domain or source — any `match` on a source id is a failure.
+3. A new source is a **manifest**, not a pull request.
+4. **Rankers are fused; constraints gate routing.** A constraint applied after routing
+   is silent zero-recall.
+5. Clusters live inside a source; never cluster across sources.
+6. Fan out across sources; never argmax.
+7. **Validity is a correctness property**, not a filter option — current-only is default.
+8. The engine exposes primitives and never plans; the agent plans and never ranks.
+9. **Scale and generality are separate experiments** — one big corpus proves the first,
+   several tiny ones prove the second.
+10. Schema and storage layout are **one decision, made once** — both are paid for in
+    re-ingest.
+
+---
 
 *Upstream standard: `https://github.com/azzindani/Standards/blob/main/local_mcp/STANDARDS.md`.*
 *Where this CLAUDE.md or `docs/STANDARDS_COMPLIANCE.md` conflicts with the upstream
