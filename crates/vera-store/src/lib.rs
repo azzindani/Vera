@@ -17,7 +17,7 @@
 
 pub mod sqlite;
 
-use vera_core::{Chunk, EmbeddingSpace, Source};
+use vera_core::{AnchorStats, Chunk, EmbeddingSpace, Source};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -226,6 +226,21 @@ pub trait ChunkStore: Send + Sync {
     /// # Errors
     /// Backend failure.
     fn meta(&self, key: &str) -> Result<Option<String>, StoreError>;
+
+    /// The anchor geometry this corpus recorded at build time, if any.
+    ///
+    /// ! Preferred over [`calibrated_domain_threshold`](Self::calibrated_domain_threshold):
+    /// the stats let the engine *derive* a threshold under a tunable policy,
+    /// where the stored scalar fixes one at build time and can only be changed
+    /// by re-ingesting the corpus.
+    ///
+    /// # Errors
+    /// Backend failure.
+    fn anchor_stats(&self, domain_id: &str) -> Result<Option<AnchorStats>, StoreError> {
+        Ok(self
+            .meta(&format!("anchor_stats::{domain_id}"))?
+            .and_then(|v| serde_json::from_str(&v).ok()))
+    }
 
     /// The layer-1 threshold calibrated against this corpus's own geometry.
     ///

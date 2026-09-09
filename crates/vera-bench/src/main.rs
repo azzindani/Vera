@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 use metrics::{Latencies, recall_at_k, reciprocal_rank, routing_recall, top1_hit};
 use vera_core::{Config, EmbeddingSpace};
-use vera_engine::{Engine, Probe};
+use vera_engine::{Engine, Probe, TopK};
 use vera_index::{KMeansConfig, Rng, build_corpus};
 use vera_store::{ChunkStore, sqlite::SqliteStore};
 use synth::SynthConfig;
@@ -172,6 +172,9 @@ fn cmd_synth(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 fn cmd_info(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let path = required(args, "--corpus")?;
     let store = SqliteStore::open(&path)?;
+    // Second read-only handle: the engine takes ownership of the first, and the
+    // dense baseline needs raw scan access the tool surface deliberately lacks.
+    let raw = SqliteStore::open(&path)?;
     let space = store.corpus_space()?;
     let domains = store.domains()?;
     let largest = store.largest_cluster_rows()?;
@@ -266,6 +269,30 @@ fn sample_queries(
     Ok(queries)
 }
 
+/// The true dense-only top-k, by exhaustive scan.
+///
+/// ! Routing recall must be measured against **this**, ✗ against the fused
+/// exhaustive result. Part of the fused baseline is by construction not
+/// dense-reachable: a document BM25 found on an exact term match may sit
+/// nowhere near the query vector, so no amount of probing would ever reach it.
+/// Scoring routing against a target it cannot hit by design understates it, and
+/// the resulting number says more about the corpus's lexical overlap than about
+/// the clustering.
+fn dense_baseline(
+    store: &SqliteStore,
+    domain: &str,
+    query_vector: &[f32],
+    k: usize,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let mut top = TopK::new(k);
+    for c in store.centroids(domain)? {
+        store.scan_cluster(c.id, &mut |row| {
+            top.offer(row.id, vera_embed::cosine(query_vector, row.vector));
+        })?;
+    }
+    Ok(top.into_ranked().into_iter().map(|s| s.id).collect())
+}
+
 #[allow(clippy::too_many_lines)]
 fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let path = required(args, "--corpus")?;
@@ -280,6 +307,9 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Result<_, _>>()?;
 
     let store = SqliteStore::open(&path)?;
+    // Second read-only handle: the engine takes ownership of the first, and the
+    // dense baseline needs raw scan access the tool surface deliberately lacks.
+    let raw = SqliteStore::open(&path)?;
     let space = store.corpus_space()?;
     let domains = store.domains()?;
     let domain = domains.first().ok_or("corpus has no domain")?.id.clone();
@@ -315,6 +345,7 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     // is how many clusters were opened, so the gap is attributable to routing.
     eprintln!("running exhaustive baseline over all {total_clusters} clusters…");
     let mut baselines = Vec::with_capacity(queries.len());
+    let mut dense_truth = Vec::with_capacity(queries.len());
     let mut baseline_times = Vec::with_capacity(queries.len());
     let mut baseline_rows = 0usize;
     for q in &queries {
@@ -328,6 +359,7 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 .map(|r| r.id.clone())
                 .collect::<Vec<_>>(),
         );
+        dense_truth.push(dense_baseline(&raw, &domain, &q.vector, k)?);
     }
     let baseline_lat = Latencies::from_durations(&baseline_times);
     let baseline_rows_avg = baseline_rows / queries.len().max(1);
@@ -353,8 +385,8 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     // diagnostic that says which half to fix, MRR is ranking quality.
     println!(
         "{:>6}  {:>9}  {:>9}  {:>9}  {:>8}  {:>10}  {:>8}  {:>8}  {:>6}  {:>6}",
-        "probe", "p50 ms", "p95 ms", "p99 ms", "speedup", "rows/query", "recall", "routing",
-        "MRR", "top-1"
+        "probe", "p50 ms", "p95 ms", "p99 ms", "speedup", "rows/query", "recall", "route/D",
+        "L1-rej", "top-1"
     );
     println!("{}", "-".repeat(100));
 
@@ -364,18 +396,27 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         let mut rows_scanned = 0usize;
         let mut recall_sum = 0.0f32;
         let mut routing_sum = 0.0f32;
+        let mut dense_routing_sum = 0.0f32;
+        // ! Counted separately. A query layer-1 rejects has an empty probe set,
+        // so it scores 0 routing recall — but the cause is domain detection, not
+        // clustering, and fixing the wrong one wastes the measurement.
+        let mut rejected = 0usize;
         let mut mrr_sum = 0.0f32;
         let mut top1 = 0usize;
 
-        for (q, baseline) in queries.iter().zip(&baselines) {
+        for ((q, baseline), dense) in queries.iter().zip(&baselines).zip(&dense_truth) {
             let out = engine.search(&q.text, &q.vector, Probe::Nearest(*probe))?;
             times.push(out.timings.total);
             stage.add(&out.timings);
             rows_scanned += out.timings.rows_scanned;
             let ids: Vec<String> = out.response.results.iter().map(|r| r.id.clone()).collect();
             recall_sum += recall_at_k(&ids, baseline, k);
+            if out.response.detected_domain.is_none() {
+                rejected += 1;
+            }
             let probed: HashSet<i32> = out.probed.iter().map(|p| p.cluster_id).collect();
             routing_sum += routing_recall(baseline, &cluster_of, &probed, k);
+            dense_routing_sum += routing_recall(dense, &cluster_of, &probed, k);
             mrr_sum += reciprocal_rank(&ids, baseline);
             if top1_hit(&ids, baseline) {
                 top1 += 1;
@@ -389,6 +430,10 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         #[allow(clippy::cast_precision_loss)]
         let routing = routing_sum / n as f32;
         #[allow(clippy::cast_precision_loss)]
+        let dense_routing = dense_routing_sum / n as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let reject_rate = rejected as f32 / n as f32;
+        #[allow(clippy::cast_precision_loss)]
         let mrr = mrr_sum / n as f32;
         #[allow(clippy::cast_precision_loss)]
         let top1_rate = top1 as f32 / n as f32;
@@ -400,25 +445,31 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
         println!(
             "{probe:>6}  {:>9.2}  {:>9.2}  {:>9.2}  {:>7.1}×  {:>10}  {:>7.1}%  {:>7.1}%  \
-             {:>6.3}  {:>5.1}%",
+             {:>5.1}%  {:>5.1}%",
             lat.p50(),
             lat.p95(),
             lat.p99(),
             speedup,
             rows_scanned / n,
             recall * 100.0,
-            routing * 100.0,
-            mrr,
+            dense_routing * 100.0,
+            reject_rate * 100.0,
             top1_rate * 100.0
         );
     }
 
     println!();
     println!(
-        "recall  = fraction of the exhaustive top-{k} that routed search returned
-routing = fraction that was in a probed cluster at all · EVAL.md §3
-          routing high + recall low → fix fusion / per-cluster top-k
-          routing low               → fix clustering or raise clusters_probed"
+        "recall  = fraction of the FUSED exhaustive top-{k} that routed search returned
+          (end-to-end quality · what the caller actually gets)
+route/D = fraction of the DENSE-ONLY exhaustive top-{k} that was in a probed
+          cluster · EVAL.md §3 · this is the honest routing measure, because
+          the fused baseline contains keyword hits routing cannot reach by design
+L1-rej  = share of queries layer-1 refused outright (detected_domain: null).
+          These score 0 route/D no matter how many clusters are probed, so a
+          flat route/D across the sweep is this, not a clustering problem.
+          route/D high + recall low → fix fusion / per-cluster top-k
+          route/D low               → fix clustering or raise clusters_probed"
     );
     println!();
     println!("stage breakdown at probe={} (mean ms/query):", probes.last().copied().unwrap_or(5));

@@ -36,12 +36,13 @@ LAYER 2   │  CLUSTER routing                    │  query vs ~10K k-means cen
                             │
           ┌─────────────────┴──────────────────┐
 LAYER 3   │  LEAF search (~10K rows / cluster)  │  load clusters SEQUENTIALLY:
-          │  halfvec distance + BM25            │  scan, keep top-50, drop, next
+          │  halfvec distance only              │  scan, keep top-50, drop, next
           └─────────────────┬──────────────────┘
                             │
-                   RRF fusion of (dense ⊕ keyword), all probed clusters
-                            │
-                   + global exact-identifier hits (routing bypass)
+                   RRF fusion of three inputs:
+                     • dense      ← the routed clusters above
+                     • keyword    ← ONE global BM25 query   (§5, never per-cluster)
+                     • exact-id   ← global lookup, run BEFORE layer 1 (§8)
                             │
                    top-k results + provenance  →  agent summarizes
 ```
@@ -56,8 +57,10 @@ LAYER 3   │  LEAF search (~10K rows / cluster)  │  load clusters SEQUENTIALL
 - **Layer 2 (cluster)** is the coarse quantizer. Conceptually this is IVF: clusters =
   inverted lists, centroids = the coarse index. We implement it ourselves rather than
   using pgvector's IVF because we keep full 4096 dims (which pgvector cannot index).
-- **Layer 3 (leaf)** is a flat scan within each probed cluster. ~10K rows × 4096 is
-  small enough that flat scan is fast; routing is what keeps the scanned set small.
+- **Layer 3 (leaf)** is a flat **vector** scan within each probed cluster. ~10K rows ×
+  4096 is small enough that flat scan is fast; routing is what keeps the scanned set
+  small. ! The keyword half does **not** live here — it is one global query, for the
+  reasons in §5.
 
 ### Sizing the layers · **k = √N**
 
@@ -165,13 +168,38 @@ implementation rule. Detail in `MCP_ENGINE.md` §5.
 
 | Half | Engine | Strength | Scope |
 |---|---|---|---|
-| Dense | Qwen3-8B vectors, halfvec, per-cluster flat scan | paraphrase, concept | routed clusters |
-| Keyword | Postgres FTS / BM25 (tsvector + GIN, or pg_search) | exact terms, IDs, citations | routed clusters **and** global (for exact identifiers) |
+| Dense | Qwen3 vectors, halfvec, per-cluster flat scan | paraphrase, concept | **routed clusters** |
+| Keyword | Postgres FTS / BM25 (tsvector + GIN, or pg_search) | exact terms, IDs, citations | **always global** |
 
-Fusion is **Reciprocal Rank Fusion (RRF)** — model-free, robust, no reranker. The
-keyword half has a **global** mode for exact regulation identifiers that bypasses
-routing entirely (see `LOOPHOLES.md` §1) — this is the guarantee against silent
-zero-recall.
+! **The keyword half is global, always — never scoped to the probed clusters.** The two
+halves are asymmetric on purpose, and the reason is the same one that motivates routing
+in the first place:
+
+- Dense retrieval **has no index** (pgvector cannot index 4096 dims, §3), so the only
+  way to avoid touching 100M rows is to not look at them. Routing is what makes it
+  affordable.
+- BM25 **is an index.** An inverted index already prunes to the matching postings; it
+  does not need routing and gains nothing from it.
+
+Scoping BM25 per cluster is therefore worse on both axes. It is **slower**, because the
+engine evaluates the match corpus-wide and then discards rows whose `cluster_id` is
+wrong — so probing N clusters costs N full-corpus keyword scans, and the cost grows with
+`clusters_probed`, the dial that is meant to be cheap. Measured on the benchmark corpus
+it was **87% of total query time**. And it is **less accurate**, because a document the
+keyword half would have found is thrown away for sitting in an unprobed cluster: going
+global raised recall@10 at probe=1 from 61.9% to 99.5%.
+
+One global query per search, fused with the routed dense candidates.
+
+Fusion is **Reciprocal Rank Fusion (RRF)** — model-free, robust, no reranker. It
+consumes **ranks, not scores**, which is what lets a cosine in [-1,1] and a BM25 in
+[0,∞) be combined without a per-corpus tuning constant. The same property is why RRF
+fuses across sources (`MULTI_DOMAIN.md` §8) and across shards (`HARDWARE.md` §5).
+
+On top of both halves sits the **exact-identifier path**: regulation numbers extracted
+from the query text are looked up globally *before any routing runs*, so a named
+regulation can never be lost to a routing miss (`LOOPHOLES.md` §1). It is a third input
+to the fusion, not a mode of the keyword half.
 
 Qwen3-Embedding is dense-only (no native sparse output), so the keyword side comes
 entirely from Postgres, not the model.
@@ -220,18 +248,31 @@ an **atomic version swap** so the live engine never sees a half-updated index.
 ## 8. End-to-end request trace
 
 ```
-1. agent → search(query="...")                     [query only; no domain/source]
-2. engine → OpenRouter.embed(query)                [pinned provider, ~120ms]
-3. engine → layer-1: match query vs domain anchors [<1ms, hot; "no match" → empty result]
-4. engine → layer-2: 5 nearest centroids           [~2ms, hot]
-5. engine → for each of 5 clusters (sequential):
-              SELECT ... halfvec distance + BM25 ... LIMIT 50
-6. (this actually runs FIRST, before step 3 — see MCP_ENGINE.md §1)
-7. engine → RRF fuse all candidates → top-k
-8. engine → attach provenance (source_url + page/section) to each
-9. engine → return { detected_domain, results[], citation_block, summary_payload }
-10. agent → writes prose summary with inline links + locators for the human
+1.  agent  → search(query="...")                  [query only; no domain/source]
+2.  engine → OpenRouter.embed(query)              [pinned provider, ~120ms]
+
+    ── nothing below this line may gate step 3 ──────────────────────────────
+3.  engine → extract identifiers from query text  [<1ms]
+4.  engine → GLOBAL exact-identifier lookup       [routing bypass; LOOPHOLES §1]
+    ─────────────────────────────────────────────────────────────────────────
+
+5.  engine → layer-1: query vs source anchors     [<1ms, hot]
+              no match → return steps 3-4 only, honestly empty otherwise
+6.  engine → layer-2: k nearest centroids         [~2ms, hot]
+7.  engine → for each probed cluster, SEQUENTIALLY:
+              stream rows → cosine → keep top-50 → drop cluster → next
+8.  engine → ONE global BM25 query                [§5; not per cluster]
+9.  engine → RRF fuse: dense ⊕ keyword ⊕ exact    → top-k
+10. engine → attach provenance (source_url + page/section) from stored fields
+11. engine → return { detected_domain, results[], citation_block, summary_payload }
+12. agent  → writes prose summary with inline links + locators for the human
 ```
+
+! Steps 3–4 run **before** layer-1 detection, not after. Layer-1 is routing, and an
+exact identifier must never be gated by routing: a query naming `UU 28/2007` whose
+vector falls below the anchor threshold must still return that regulation. Ordering
+these the other way produces `success: true` with an empty result set, which the caller
+cannot distinguish from "no such regulation exists".
 
 Latency: ~150 ms warm, ~250 ms cold single request; ~1–1.8 s worst case at ~4
 concurrent cold. Numbers and the concurrency model in `HARDWARE.md` and

@@ -7,7 +7,7 @@
 //! ! Offline only. Nothing here runs while serving (`CLAUDE.md` §5 rule 6).
 
 use rusqlite::params;
-use vera_core::EmbeddingSpace;
+use vera_core::{AnchorStats, EmbeddingSpace};
 use vera_store::{StoreError, encode_vector, sqlite::SqliteStore};
 
 use crate::{KMeans, KMeansConfig, Matrix, kmeans, kmeans::domain_anchor};
@@ -46,72 +46,58 @@ pub struct BuildReport {
     pub anchor: AnchorStats,
 }
 
-/// How tightly the corpus sits around its own layer-1 anchor.
+/// Measure a corpus against its layer-1 anchor.
 ///
-/// ! This is the measurement that makes layer 1 usable. Transformer embeddings
-/// are anisotropic — they occupy a cone whose width depends on the model — so
-/// there is no universal "close enough to the domain" cosine. Measuring it per
-/// corpus turns a guess into a calibration.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct AnchorStats {
-    pub min: f32,
-    pub p1: f32,
-    pub p5: f32,
-    pub p50: f32,
-    pub p95: f32,
-    pub max: f32,
-    pub mean: f32,
-    /// The layer-1 threshold this corpus was built with.
-    pub threshold: f32,
-}
-
-impl AnchorStats {
-    /// Measure the corpus against its anchor and pick a threshold.
-    ///
-    /// The threshold is the 1st percentile, so ~99% of genuine corpus content
-    /// clears it while a query pointing somewhere else entirely still does not.
-    ///
-    /// ! Chosen to fail in the *recoverable* direction. Too low merely admits an
-    /// off-topic query to a search that ranks it badly and returns weak results
-    /// the agent can judge. Too high returns `success: true` with zero results
-    /// for every query — indistinguishable from an empty corpus, and invisible
-    /// in every metric except recall.
-    #[must_use]
-    pub fn measure(vectors: &Matrix, anchor: &[f32]) -> Self {
-        let mut sims: Vec<f32> = vectors
-            .iter_rows()
-            .map(|row| crate::kmeans::dot(row, anchor))
-            .collect();
-        if sims.is_empty() {
-            return Self {
-                min: 0.0,
-                p1: 0.0,
-                p5: 0.0,
-                p50: 0.0,
-                p95: 0.0,
-                max: 0.0,
-                mean: 0.0,
-                threshold: 0.0,
-            };
-        }
-        sims.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        let at = |p: f64| -> f32 {
-            #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let i = ((p * sims.len() as f64).ceil() as usize).saturating_sub(1);
-            sims[i.min(sims.len() - 1)]
+/// Lives here because it needs [`Matrix`]; the [`AnchorStats`] type itself is in
+/// `vera-core` so the query path can read it back without depending on the
+/// offline indexer.
+///
+/// ! The `threshold` field is filled in under the default margin for reference
+/// only — the engine recomputes it from these stats at load time, so retuning
+/// the policy never requires re-ingesting the corpus.
+#[must_use]
+pub fn measure_anchor(vectors: &Matrix, anchor: &[f32]) -> AnchorStats {
+    let mut sims: Vec<f32> = vectors
+        .iter_rows()
+        .map(|row| crate::kmeans::dot(row, anchor))
+        .collect();
+    if sims.is_empty() {
+        return AnchorStats {
+            min: 0.0,
+            p1: 0.0,
+            p5: 0.0,
+            p50: 0.0,
+            p95: 0.0,
+            max: 0.0,
+            mean: 0.0,
+            threshold: 0.0,
         };
-        #[allow(clippy::cast_precision_loss)]
-        let mean = sims.iter().sum::<f32>() / sims.len() as f32;
-        Self {
-            min: sims[0],
-            p1: at(0.01),
-            p5: at(0.05),
-            p50: at(0.50),
-            p95: at(0.95),
-            max: sims[sims.len() - 1],
-            mean,
-            threshold: at(0.01),
-        }
+    }
+    sims.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let at = |p: f64| -> f32 {
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let i = ((p * sims.len() as f64).ceil() as usize).saturating_sub(1);
+        sims[i.min(sims.len() - 1)]
+    };
+    #[allow(clippy::cast_precision_loss)]
+    let mean = sims.iter().sum::<f32>() / sims.len() as f32;
+    let stats = AnchorStats {
+        min: sims[0],
+        p1: at(0.01),
+        p5: at(0.05),
+        p50: at(0.50),
+        p95: at(0.95),
+        max: sims[sims.len() - 1],
+        mean,
+        threshold: 0.0,
+    };
+    AnchorStats {
+        threshold: stats.threshold_at(1.0),
+        ..stats
     }
 }
 
@@ -171,7 +157,7 @@ pub fn build_corpus(
 
     let km: KMeans = kmeans(vectors, cfg);
     let anchor = domain_anchor(vectors);
-    let anchor_stats = AnchorStats::measure(vectors, &anchor);
+    let anchor_stats = measure_anchor(vectors, &anchor);
     let store = SqliteStore::create(path, space)?;
 
     store.with_connection(|conn| -> Result<(), BuildError> {
@@ -180,12 +166,22 @@ pub fn build_corpus(
         conn.execute("DELETE FROM domains", [])?;
 
         // ! Recorded so the engine reads a measured threshold rather than a
-        // guessed one. See AnchorStats::measure.
+        // guessed one. See measure_anchor and AnchorStats::threshold_at.
         conn.execute(
             "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
             params![
                 format!("domain_threshold::{domain_id}"),
                 anchor_stats.threshold.to_string()
+            ],
+        )?;
+        // ! The full distribution, ✗ only the derived number. Retuning the
+        // threshold policy must not require re-ingesting the corpus.
+        conn.execute(
+            "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
+            params![
+                format!("anchor_stats::{domain_id}"),
+                serde_json::to_string(&anchor_stats)
+                    .map_err(|e| BuildError::Backend(e.to_string()))?
             ],
         )?;
 

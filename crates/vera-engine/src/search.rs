@@ -105,16 +105,26 @@ impl<S: ChunkStore> Engine<S> {
         for d in &domains {
             centroids.insert(d.id.clone(), store.centroids(&d.id)?);
             // ! Prefer what the corpus measured about itself over the config's
-            // guess. A configured `Some` is an explicit operator override and
-            // still wins; `None` means "use the calibration", which is the
-            // default because a fixed threshold that is too tight makes every
-            // query return a *successful* empty result (see RoutingConfig).
-            let threshold = config.routing.domain_threshold.or(store
-                .calibrated_domain_threshold(&d.id)?);
-            thresholds.insert(
-                d.id.clone(),
-                threshold.unwrap_or(vera_core::config::FALLBACK_DOMAIN_THRESHOLD),
-            );
+            // guess, and *derive* the threshold from those measurements rather
+            // than read a scalar fixed at build time — so the policy can be
+            // retuned without re-ingesting the corpus (`AnchorStats`).
+            //
+            // Precedence: an explicit operator override wins; else the recorded
+            // distribution under the configured margin; else a threshold an
+            // older corpus baked in; else the permissive fallback. The order
+            // matters because a threshold set too tight returns a *successful*
+            // empty result for every query, which no caller can tell from an
+            // empty corpus.
+            let threshold = match config.routing.domain_threshold {
+                Some(explicit) => explicit,
+                None => match store.anchor_stats(&d.id)? {
+                    Some(stats) => stats.threshold_at(config.routing.threshold_margin),
+                    None => store
+                        .calibrated_domain_threshold(&d.id)?
+                        .unwrap_or(vera_core::config::FALLBACK_DOMAIN_THRESHOLD),
+                },
+            };
+            thresholds.insert(d.id.clone(), threshold);
         }
         Ok(Self {
             store,

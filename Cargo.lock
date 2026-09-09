@@ -502,6 +502,7 @@ name = "vera-bench"
 version = "0.0.1"
 dependencies = [
  "vera-core",
+ "vera-embed",
  "vera-engine",
  "vera-index",
  "vera-store",
@@ -548,6 +549,8 @@ version = "0.0.1"
 dependencies = [
  "rayon",
  "rusqlite",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
  "vera-core",

@@ -150,6 +150,18 @@ pub struct RoutingConfig {
     /// Candidates kept from each probed cluster before fusion.
     #[serde(default = "default_per_cluster_top_k")]
     pub per_cluster_top_k: usize,
+    /// How far below p1 to place the calibrated layer-1 threshold, in units of
+    /// `(p50 − p1)`. See [`crate::AnchorStats::threshold_at`].
+    ///
+    /// ! Raising this rejects fewer queries. 0 means "trust p1 exactly", which
+    /// measurably over-rejects, because the calibration is taken over documents
+    /// and applied to queries.
+    #[serde(default = "default_threshold_margin")]
+    pub threshold_margin: f32,
+}
+
+const fn default_threshold_margin() -> f32 {
+    1.0
 }
 
 const fn default_clusters_probed() -> usize {
@@ -165,6 +177,7 @@ impl Default for RoutingConfig {
             clusters_probed: default_clusters_probed(),
             domain_threshold: None,
             per_cluster_top_k: default_per_cluster_top_k(),
+            threshold_margin: default_threshold_margin(),
         }
     }
 }

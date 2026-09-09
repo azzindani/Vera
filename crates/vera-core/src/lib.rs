@@ -9,9 +9,11 @@
 //! Field names here are the **wire format** an agent parses, fixed by
 //! `OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
 
+pub mod calibration;
 pub mod config;
 pub mod contract;
 
+pub use calibration::AnchorStats;
 pub use config::{
     Config, ConcurrencyConfig, ConfidenceConfig, DEFAULT_QUERY_INSTRUCTION, EmbeddingSpace, ReadConfig,
     RoutingConfig, SearchConfig, SpaceMismatch,

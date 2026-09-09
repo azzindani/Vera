@@ -14,7 +14,7 @@ pub mod build;
 pub mod kmeans;
 pub mod matrix;
 
-pub use build::{BuildError, BuildReport, IngestRow, build_corpus};
+pub use build::{BuildError, BuildReport, IngestRow, build_corpus, measure_anchor};
 pub use kmeans::{KMeans, KMeansConfig, kmeans};
 pub use matrix::Matrix;
 
