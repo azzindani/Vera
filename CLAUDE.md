@@ -187,20 +187,65 @@ read-only server.
 
 ## 8. Progress tracker
 
-- [ ] Engine skeleton: MCP server (stdio + http), tool stubs, return contract
+- [x] Engine skeleton: MCP server (stdio), tool stubs, return contract
 - [ ] OpenRouter provider client: pin, batch, retry/backoff, canary check
-- [ ] Routing: layer-1 anchors + layer-2 centroids loaded hot at startup
-- [ ] Retrieval: sequential cluster scan + halfvec distance + BM25 + RRF fusion
-- [ ] Global exact-identifier keyword path (routing bypass)
-- [ ] Concurrency: semaphore + bounded queue + backpressure + wait-timeout
-- [ ] Output contract: results + provenance + citation block
+      *(trait, validation and `canary_check` exist; the HTTP client does not —
+      a deterministic stub stands in and logs a warning at startup)*
+- [x] Routing: layer-1 anchors + layer-2 centroids loaded hot at startup
+- [x] Retrieval: sequential cluster scan + cosine + BM25 + RRF fusion
+- [x] Global exact-identifier keyword path (routing bypass)
+- [x] Concurrency: semaphore + bounded queue + backpressure + wait-timeout
+- [x] Output contract: results + provenance + citation block
 - [ ] Pre-embedding pipeline: ingest → chunk → embed (GPU) → bulk-load (resumable)
-- [ ] Consistency: pinned model/version metadata + cosine round-trip preflight
-- [ ] Cluster maintenance: incremental assign, split-on-size, periodic re-cluster (atomic swap)
-- [ ] Eval harness: labeled regulation queries; tune nprobe / clusters-probed / chunk size
-- [ ] Hardware validation on 2 vCPU / 8 GB VPS under concurrency (no OOM, latency in budget)
+      *(`vera-ingest` imports an already-embedded corpus; document embedding is
+      not built)*
+- [x] Consistency: pinned model/version metadata + space check at startup
+- [ ] Cluster maintenance: incremental assign, split-on-size, periodic re-cluster
+      *(k-means and atomic rebuild exist in `vera-index`; incremental
+      maintenance does not. **Split-on-size is needed sooner than expected** —
+      see finding 4 below)*
+- [x] Eval harness: `vera-bench` sweeps clusters_probed reporting latency and
+      recall against an exhaustive baseline
+- [ ] Hardware validation on 2 vCPU / 8 GB VPS under concurrency
 
----
+### Measured findings
+
+Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
+200K × 1024 corpus on 4 vCPU / 16 GB.
+
+1. **Layer-1 thresholds must be calibrated, never fixed.** A hardcoded 0.25
+   rejected 97% of genuine in-corpus queries on the first real corpus tried.
+   How close a query lands to a domain anchor depends on the embedding model's
+   anisotropy. Worse, the failure is silent: too tight a threshold returns
+   `success: true` with zero results, indistinguishable from an empty corpus.
+   The build now measures the row-to-anchor distribution and records p1.
+
+2. **BM25 must run globally, once — never per cluster.** Routing exists because
+   dense vectors cannot be indexed. An inverted index does not have that
+   problem, and FTS5 evaluates a match corpus-wide before filtering by
+   `cluster_id`, so per-cluster keyword search cost N full scans and grew with
+   the dial that is meant to be cheap. It was 87% of query time. Going global
+   cut total time 4.7× *and* raised recall@10 at probe=1 from 61.9% to 99.5%.
+   `ARCHITECTURE.md` §5 still describes the per-cluster scheme and is now wrong.
+
+3. **The leaf scan is I/O-bound, not compute-bound — this is the open problem.**
+   At 1024 dims the dense scan costs **~5.3 µs/row**, of which the dot product
+   is ~0.3 µs. The rest is SQLite row-stepping. One 10K-row cluster therefore
+   costs ~53 ms, so probe=5 spends ~265 ms in scan overhead alone and the
+   ~150 ms warm target in `ARCHITECTURE.md` §8 is unreachable in this shape.
+   The fix is the one the architecture already describes but the storage layer
+   does not implement: hold each cluster's vectors as **one contiguous blob**,
+   so a probe is one fetch plus an in-memory scan rather than 10K row fetches.
+   Expected ~15× on the dominant stage.
+
+4. **k-means produces badly unbalanced clusters.** Targeting 10K rows/cluster
+   gave 1,005 min / 25,011 max. The largest cluster sets *both* the per-request
+   RAM ceiling and worst-case probe latency, so the tail governs the budget.
+   Split-on-size is not a later refinement.
+
+5. **Recall is not yet meaningfully measured.** The synthetic corpus returns
+   100% recall@10 at every probe level, which means it is too easy rather than
+   that routing is free. A real corpus is needed before any recall claim.
 
 *Upstream standard: `https://github.com/azzindani/Standards/blob/main/local_mcp/STANDARDS.md`.*
 *Where this CLAUDE.md or `docs/STANDARDS_COMPLIANCE.md` conflicts with the upstream

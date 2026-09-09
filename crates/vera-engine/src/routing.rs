@@ -134,9 +134,11 @@ mod tests {
     #[test]
     fn a_query_exactly_at_the_threshold_is_accepted() {
         let anchors = [anchor("d", &[1.0, 0.0])];
-        // cosine([1,1],[1,0]) = 0.7071…
-        assert!(detect_domain(&[1.0, 1.0], &anchors, 0.7071).is_some());
-        assert!(detect_domain(&[1.0, 1.0], &anchors, 0.7072).is_none());
+        // cosine([1,1],[1,0]) is exactly 1/√2 · the comparison is `>=`, so a
+        // threshold at the value itself admits and a hair above rejects.
+        let exact = std::f32::consts::FRAC_1_SQRT_2;
+        assert!(detect_domain(&[1.0, 1.0], &anchors, exact).is_some());
+        assert!(detect_domain(&[1.0, 1.0], &anchors, exact + 1e-4).is_none());
     }
 
     #[test]

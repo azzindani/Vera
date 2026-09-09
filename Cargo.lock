@@ -537,6 +537,7 @@ dependencies = [
  "tokio",
  "vera-core",
  "vera-embed",
+ "vera-index",
  "vera-store",
 ]
 
@@ -550,6 +551,16 @@ dependencies = [
  "thiserror",
  "vera-core",
  "vera-store",
+]
+
+[[package]]
+name = "vera-ingest"
+version = "0.0.1"
+dependencies = [
+ "rusqlite",
+ "serde_json",
+ "vera-core",
+ "vera-index",
 ]
 
 [[package]]

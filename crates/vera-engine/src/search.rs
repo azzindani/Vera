@@ -178,6 +178,44 @@ impl<S: ChunkStore> Engine<S> {
             });
         }
 
+        // ── Global exact-identifier path · runs BEFORE any routing ───────────
+        // ! Hoisted above layer 1 deliberately. `CLAUDE.md` §7 rule 4 says an
+        // exact identifier must never be gated by routing, and layer-1 domain
+        // detection is routing: a query naming "UU 28/2007" whose vector fell
+        // below the domain anchor threshold would return empty, and the caller
+        // could not distinguish that from "no such regulation exists". Silent
+        // zero-recall on a citation is the worst failure this engine can
+        // produce, so the lookup happens first and unconditionally.
+        let t = Instant::now();
+        let identifiers = identifier::extract(query_text);
+        let mut exact_matches = Vec::new();
+        let mut exact_ids: Vec<Scored> = Vec::new();
+        for ident in &identifiers {
+            for chunk in self
+                .store
+                .exact_identifier(&ident.canonical, self.config.search.bm25_limit)?
+            {
+                exact_matches.push(ExactMatch {
+                    id: chunk.id.clone(),
+                    matched_on: ident.matched_on.clone(),
+                });
+                // Rank 1-equivalent: an exact citation hit is the strongest
+                // evidence the engine has.
+                exact_ids.push(Scored {
+                    id: chunk.id,
+                    score: 1.0,
+                });
+            }
+        }
+        timings.exact_path = t.elapsed();
+        if !identifiers.is_empty() {
+            progress.push(format!(
+                "exact:global {} identifier(s) → {} hit(s)",
+                identifiers.len(),
+                exact_matches.len()
+            ));
+        }
+
         // ── Layer 1 ──────────────────────────────────────────────────────────
         let t = Instant::now();
         let detected = routing::detect_domain_with(query_vector, &self.domains, |id| {
@@ -186,11 +224,22 @@ impl<S: ChunkStore> Engine<S> {
         timings.route_domain = t.elapsed();
 
         let Some(domain) = detected else {
-            // ! Empty, ✗ a guess. See routing::detect_domain.
             progress.push("route:layer1 no anchor above threshold".to_owned());
             timings.total = started.elapsed();
+
+            // ! Even with no domain, exact hits are still returned. Routing
+            // failing is not a reason to withhold a regulation the caller named
+            // outright and the corpus demonstrably contains.
+            if exact_ids.is_empty() {
+                // Empty, ✗ a guess. See routing::detect_domain.
+                return Ok(SearchOutcome {
+                    response: SearchResponse::no_matching_domain(query_text, progress),
+                    timings,
+                    probed: Vec::new(),
+                });
+            }
             return Ok(SearchOutcome {
-                response: SearchResponse::no_matching_domain(query_text, progress),
+                response: self.exact_only_response(query_text, &exact_ids, exact_matches, progress)?,
                 timings,
                 probed: Vec::new(),
             });
@@ -262,37 +311,6 @@ impl<S: ChunkStore> Engine<S> {
         timings.leaf_keyword = t.elapsed();
         progress.push(format!("keyword:global {} candidates", keyword.len()));
 
-        // ── Global exact-identifier path · bypasses routing entirely ─────────
-        let t = Instant::now();
-        let identifiers = identifier::extract(query_text);
-        let mut exact_matches = Vec::new();
-        let mut exact_ids: Vec<Scored> = Vec::new();
-        for ident in &identifiers {
-            for chunk in self
-                .store
-                .exact_identifier(&ident.canonical, self.config.search.bm25_limit)?
-            {
-                exact_matches.push(ExactMatch {
-                    id: chunk.id.clone(),
-                    matched_on: ident.matched_on.clone(),
-                });
-                // Rank 1-equivalent: an exact citation hit is the strongest
-                // evidence the engine has.
-                exact_ids.push(Scored {
-                    id: chunk.id,
-                    score: 1.0,
-                });
-            }
-        }
-        timings.exact_path = t.elapsed();
-        if !identifiers.is_empty() {
-            progress.push(format!(
-                "exact:global {} identifier(s) → {} hit(s)",
-                identifiers.len(),
-                exact_matches.len()
-            ));
-        }
-
         // ── Fusion ───────────────────────────────────────────────────────────
         let t = Instant::now();
         let candidate_cap = self.config.search.max_results * 10;
@@ -353,6 +371,56 @@ impl<S: ChunkStore> Engine<S> {
             timings,
             probed,
         })
+    }
+
+    /// Response for a query whose identifiers hit but whose routing did not.
+    ///
+    /// Reports `detected_domain: null` honestly — routing genuinely failed —
+    /// while still returning the evidence the corpus holds. `confidence` is
+    /// `High` because an exact identifier match is the least ambiguous signal
+    /// the engine has; it did not need routing to be right.
+    fn exact_only_response(
+        &self,
+        query_text: &str,
+        exact_ids: &[Scored],
+        exact_matches: Vec<ExactMatch>,
+        mut progress: Vec<String>,
+    ) -> Result<SearchResponse, EngineError> {
+        progress.push("exact:global returning identifier hits without a routed domain".to_owned());
+        let fused = reciprocal_rank_fusion(
+            &[RankedList {
+                label: "exact",
+                items: exact_ids,
+            }],
+            self.config.search.rrf_k,
+        );
+        let mut results = self.hydrate(&fused)?;
+        results.truncate(self.config.search.max_results);
+
+        let citation_block = citation_block(&results);
+        let summary_payload = summary_payload(&results);
+        let mut response = SearchResponse {
+            success: true,
+            op: "search_knowledge",
+            query: query_text.to_owned(),
+            detected_domain: None,
+            domain_confidence: 0.0,
+            clusters_probed: 0,
+            results,
+            citation_block,
+            summary_payload,
+            exact_matches,
+            confidence: Confidence::High,
+            progress,
+            token_estimate: 0,
+            truncated: false,
+            hint: Some(
+                "no domain anchor matched, so these are exact-identifier hits only · \
+                 semantic results were not searched".into(),
+            ),
+        };
+        response.token_estimate = response.estimate_tokens();
+        Ok(response)
     }
 
     /// Turn fused ids into full results with snippets and provenance.

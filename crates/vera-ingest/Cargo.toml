@@ -1,0 +1,15 @@
+[package]
+name = "vera-ingest"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Import an existing embedded corpus (arbitrary SQLite schema) into a Vera corpus."
+
+[dependencies]
+vera-core = { version = "0.0.1", path = "../vera-core" }
+vera-index = { version = "0.0.1", path = "../vera-index" }
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde_json = "1"
+
+[lints]
+workspace = true

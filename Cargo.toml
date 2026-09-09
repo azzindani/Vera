@@ -25,6 +25,7 @@ members = [
     "crates/vera-engine",
     "crates/vera-bench",
     "crates/vera-index",
+    "crates/vera-ingest",
     "crates/vera-mcp",
 ]
 
