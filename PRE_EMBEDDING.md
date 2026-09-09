@@ -42,10 +42,86 @@ shreds that.
 
 ---
 
+## 2b. The load streams · it never holds the corpus
+
+Stages 5–8 are `vera-ingest import` (`vera_index::stream`). The constraint that shapes
+them is simple arithmetic: at 100M × 4096 the corpus is **1.6 TB of vectors and ~100 GB
+of bodies**, so anything the loader keeps resident it keeps at that size.
+
+The earlier loader kept four such things. Each is now bounded:
+
+| held | at 100M × 4096 | now |
+|---|---|---|
+| every `IngestRow` (bodies + provenance) | ~100 GB | one row · written as it arrives |
+| every vector | **1.6 TB** | a bounded training sample |
+| one anchor cosine per row, sorted for percentiles | 400 MB | a fixed-width histogram |
+| one SQL transaction over every insert | a ~1.6 TB WAL | batched commits + a completeness marker |
+
+Peak RSS is now `train_sample × dim × 4` plus the vocabulary plus one row. Measured on a
+20K × 1024 import: **89 MB** training on everything, **29 MB** at 5,000, **13 MB** at
+1,000.
+
+### Two passes, and why not one
+
+k-means must finish before any row can be assigned, and the domain anchor must be known
+before any row-to-anchor cosine can be measured. So pass 1 collects the training sample,
+the anchor sum, the lexical profile and the row count; pass 2 assigns, writes, and
+measures. ! There is no single-pass version that is not a guess — estimating the anchor
+from a sample too would make the **layer-1 threshold** depend on a random subset, and
+that threshold is the difference between a working corpus and one that silently rejects
+97% of queries (`CLAUDE.md` §8 finding 1).
+
+The source is therefore **streamed twice** and must be replayable in a stable order. A
+source that cannot be replayed (a pipe, a network response) has to be staged to disk
+first — which stage 5 already does.
+
+### Training on a sample
+
+`--train-sample` is the dial that sets peak RAM. This is the **standard IVF
+construction**, not a shortcut: FAISS trains a coarse quantizer on ~30–256 vectors per
+centroid and then adds the full corpus. It defaults to `40 × k`, floored at 50,000.
+
+! **Assignment stays exact.** Every row is scored against every centroid in pass 2. Only
+the centroid *positions* come from a sample.
+
+! **The sample is uniform, not a prefix.** Sources are ordered — by document, by date, by
+id — so taking the first N rows would train the quantizer on whichever slice came first.
+On a regulation corpus ordered by year that is a quantizer for the 1990s.
+
+Measured cost on a corpus with real cluster structure (50K × 512, 100 topics):
+
+| training rows | per centroid | cluster tightness |
+|---|---|---|
+| 50,000 (all) | 224 | 0.8814 |
+| 8,000 | 36 | 0.8791 *(−0.3%)* |
+| 2,000 | 9 | 0.8709 *(−1.2%)* |
+
+Within the FAISS range the cost is negligible; below it the centroids start describing
+the sample. `mean_similarity` in the build report is the number that says which side of
+that line a build landed on.
+
+And tightness is the *pessimistic* view — what matters is retrieval, which is unmoved.
+Swept at probe=5 on the same corpus, training on 8,000 rows versus all 50,000:
+
+| | recall@10 | route/D | nDCG@10 |
+|---|---|---|---|
+| full training | 100.0% | 100.0% | 1.000 |
+| 8,000 sampled | 100.0% | 100.0% | 1.000 |
+
+! Both are on a *synthetic* corpus, so this shows the mechanism is sound, ✗ that the
+ratio transfers. Re-check `mean_similarity` on the real corpus, where cluster structure
+is whatever the embedding model produced rather than something the fixture arranged.
+
+---
+
 ## 3. Non-negotiables at 100M scale
 
 1. **Resumable.** Checkpoint progress by chunk id / content hash. A GPU dying at row
    60M resumes from 60M, never restarts.
+   ! Not built. The loader is *interruptible* but not resumable: batched commits mean an
+   interrupted import leaves a partial corpus, and it marks itself `build_state =
+   in_progress` so the store refuses to open it (`LOOPHOLES.md` §10). That converts a
+   silent half-corpus into a loud restart — the safe failure, not yet the cheap one.
 2. **Idempotent.** Re-running never double-inserts (key on content hash).
 3. **Consistency capture.** Record the pinned model + version, the exact document and
    query instruction strings, and pooling/normalization into metadata. These are what

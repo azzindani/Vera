@@ -96,7 +96,7 @@ vera/
 │   ├── vera-embed/                ← provider trait, canary, stub (no HTTP client yet)
 │   ├── vera-store/                ← ChunkStore trait + SQLite backend
 │   ├── vera-engine/               ← routing, leaf scan, fusion, orchestration
-│   ├── vera-index/                ← k-means, corpus build, free-space preflight
+│   ├── vera-index/                ← k-means, streaming corpus build, split, preflight
 │   ├── vera-ingest/               ← import an already-embedded corpus
 │   ├── vera-mcp/                  ← the four primitives over stdio
 │   └── vera-bench/                ← fixture generation + the eval sweep
@@ -248,9 +248,11 @@ Every tool returns a dict with `success` first, plus `token_estimate`, `progress
 - [x] Global exact-identifier keyword path (routing bypass)
 - [x] Concurrency: semaphore + bounded queue + backpressure + wait-timeout
 - [x] Output contract: results + provenance + citation block
-- [ ] Pre-embedding pipeline: ingest → chunk → embed (GPU) → bulk-load (resumable)
-      *(`vera-ingest` imports an already-embedded corpus; document embedding is
-      not built)*
+- [~] Pre-embedding pipeline: ingest → chunk → embed (GPU) → bulk-load (resumable)
+      *(`vera-ingest` imports an already-embedded corpus and the load now
+      **streams** — peak RAM is `train_sample × dim × 4`, ✗ the corpus
+      (`PRE_EMBEDDING.md` §2b). Document embedding and chunking are not built,
+      and the loader is interruptible but not resumable)*
 - [x] Consistency: pinned model/version metadata + space check at startup
 - [~] Cluster maintenance: incremental assign, split-on-size, periodic re-cluster
       *(k-means, atomic rebuild and **split-on-size** exist in `vera-index`.
@@ -476,7 +478,36 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    exhaustive fused run returned the row: **`fusion`** if it did, **`by design`**
    if it did not.
 
-15. **`per_cluster_top_k` and `rrf_k` are coupled.** RRF scores by rank *within
+15. **The loader held the corpus, and three of the four things it held were
+   invisible.** `vera-ingest import` collected every `IngestRow` and every vector
+   before building — ~100 GB of bodies and **1.6 TB of vectors** at the design
+   point. The obvious one is the vector matrix; the other three only show up
+   when the arithmetic is done at 100M:
+
+   | held | at 100M × 4096 | replaced by |
+   |---|---|---|
+   | every `IngestRow` | ~100 GB | one row, written as it arrives |
+   | every vector | **1.6 TB** | a bounded training sample |
+   | one anchor cosine per row, sorted for percentiles | 400 MB | a fixed-width histogram |
+   | one SQL transaction over every insert | a ~1.6 TB WAL | batched commits + a completeness marker |
+
+   Measured peak RSS on a 20K × 1024 import: **89 MB** training on everything,
+   **29 MB** at 5,000 rows, **13 MB** at 1,000.
+
+   ! **Sampled training is the standard IVF construction, and assignment stays
+   exact.** FAISS trains a coarse quantizer on 30–256 vectors per centroid and
+   then adds the full corpus; every row here is still scored against every
+   centroid in pass 2. Measured cost on a corpus with real structure: at 36
+   points per centroid, cluster tightness fell 0.8814 → 0.8791 (**−0.3%**) and
+   recall@10, route/D and nDCG@10 were **identical** (100% / 100% / 1.000).
+
+   ! **Batching commits gave up atomicity, so it needed a marker.** An
+   interrupted load leaves a corpus with a valid schema, a working FTS index and
+   *some* of the rows — it opens, it answers, it is silently short. The build
+   writes `build_state = in_progress` before the first insert and `complete`
+   only after the FTS rebuild; `SqliteStore::open` refuses anything else.
+
+16. **`per_cluster_top_k` and `rrf_k` are coupled.** RRF scores by rank *within
    each list*, so a longer dense candidate list gives documents present in both
    halves a second contribution and pushes dense-only documents down. Dense
    faithfulness is therefore **non-monotonic** in the cap (33.0% → 53.0% → 32.8%

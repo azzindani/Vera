@@ -15,7 +15,9 @@ use std::collections::HashMap;
 
 use rusqlite::{Connection, OpenFlags, types::ValueRef};
 use vera_core::EmbeddingSpace;
-use vera_index::{IngestRow, KMeansConfig, Matrix, build_corpus};
+use vera_index::{
+    BuildError, IngestRow, KMeansConfig, RowSource, build_corpus_streaming,
+};
 
 fn main() {
     if let Err(e) = run() {
@@ -45,6 +47,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                       [--hash-col <c>]   digest of the source · LOOPHOLES.md §8
                       [--domain <id>] [--description <text>]
                       [--iters N] [--limit N]
+                      [--train-sample N]  rows the quantizer trains on · this is
+                                          the dial that bounds peak RAM
                       [--per-cluster N]  override sqrt(N) cluster sizing
                       [--max-cluster-rows N]  split-on-size cap · bounds the
                                               per-request RAM ceiling
@@ -256,6 +260,127 @@ fn cmd_inspect(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
 // ── import ───────────────────────────────────────────────────────────────────
 
+/// Streams a foreign SQLite table as [`IngestRow`]s.
+///
+/// ! Replayable, which [`RowSource`] requires: `stream` re-runs the same
+/// `SELECT` against the same connection, so both passes see the same rows in the
+/// same order. The `SELECT` carries no `ORDER BY` — SQLite's scan order over an
+/// unchanging table is stable, and the source is opened read-only so nothing can
+/// change it mid-build.
+struct SqliteRowSource {
+    conn: Connection,
+    sql: String,
+    format: VectorFormat,
+    should_normalize: bool,
+    dim: usize,
+    slot: HashMap<&'static str, usize>,
+    rows_hint: usize,
+    skipped: usize,
+}
+
+fn backend(e: impl std::fmt::Display) -> BuildError {
+    BuildError::Backend(e.to_string())
+}
+
+impl RowSource for SqliteRowSource {
+    fn rows_hint(&self) -> Option<usize> {
+        Some(self.rows_hint)
+    }
+
+    fn stream(
+        &mut self,
+        visit: &mut dyn FnMut(&IngestRow, &[f32]) -> Result<(), BuildError>,
+    ) -> Result<(), BuildError> {
+        // Disjoint field borrows · `stmt` borrows `conn` while `skipped` is
+        // written, which only type-checks with the fields named separately.
+        let Self {
+            conn,
+            sql,
+            format,
+            should_normalize,
+            dim,
+            slot,
+            skipped,
+            ..
+        } = self;
+        *skipped = 0;
+
+        let mut stmt = conn.prepare(sql).map_err(backend)?;
+        let mut rows = stmt.query([]).map_err(backend)?;
+
+        while let Some(row) = rows.next().map_err(backend)? {
+            let vector_ref = row.get_ref(2).map_err(backend)?;
+            let mut vector = match decode(&vector_ref, *format) {
+                Ok(v) => v,
+                Err(e) => {
+                    // ! Skip and count, ✗ abort. Real corpora carry a few broken
+                    // rows, and losing an entire multi-hour import to one of them
+                    // is worse than losing the row — but a silent skip is worse
+                    // still, so the total is reported at the end.
+                    if *skipped < 5 {
+                        eprintln!("  skipping row: {e}");
+                    }
+                    *skipped += 1;
+                    continue;
+                }
+            };
+            if *should_normalize {
+                normalize(&mut vector);
+            }
+            if vector.len() != *dim {
+                if *skipped < 5 {
+                    eprintln!("  skipping row: {} dims, expected {dim}", vector.len());
+                }
+                *skipped += 1;
+                continue;
+            }
+
+            let text = |i: Option<&usize>| -> Option<String> {
+                i.and_then(|i| row.get::<_, Option<String>>(*i).ok().flatten())
+            };
+            let id: String = match row.get_ref(0).map_err(backend)? {
+                ValueRef::Text(t) => String::from_utf8_lossy(t).into_owned(),
+                ValueRef::Integer(n) => n.to_string(),
+                _ => {
+                    *skipped += 1;
+                    continue;
+                }
+            };
+
+            let ingest = IngestRow {
+                id,
+                body: row
+                    .get::<_, Option<String>>(1)
+                    .map_err(backend)?
+                    .unwrap_or_default(),
+                source_title: text(slot.get("title")).unwrap_or_else(|| "Untitled".to_owned()),
+                // ! Empty rather than fabricated. A synthesized URL would look
+                // like provenance a human could click, and it is the one thing
+                // the engine must never invent (CLAUDE.md §7 rule 8).
+                source_url: text(slot.get("url")).unwrap_or_default(),
+                locator_page: slot
+                    .get("page")
+                    .and_then(|i| row.get::<_, Option<i32>>(*i).ok().flatten()),
+                locator_section: text(slot.get("section")),
+                heading_path: text(slot.get("heading")),
+                identifier: text(slot.get("identifier")),
+                // ! Copied from the source, never computed here. A hash of the
+                // *chunk body* would be a checksum of our own storage and would
+                // still match after the upstream document changed — the failure
+                // LOOPHOLES.md §8 is about. Only the ingesting pipeline, which
+                // held the original file, can produce a meaningful digest.
+                source_hash: text(slot.get("hash")),
+            };
+            // ! One row resident at a time. This is the whole point: the old
+            // import collected every IngestRow and every vector before building,
+            // which is ~100 GB of bodies and 1.6 TB of vectors at the design
+            // point (`vera_index::stream`).
+            visit(&ingest, &vector)?;
+        }
+        Ok(())
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let source = required(args, "--source")?;
@@ -285,7 +410,7 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     // Build the projection: required columns first, then whichever optional
     // ones the caller mapped.
     let mut columns = vec![id_col.clone(), body_col.clone(), vector_col.clone()];
-    let mut slot: HashMap<&str, usize> = HashMap::new();
+    let mut slot: HashMap<&'static str, usize> = HashMap::new();
     for key in ["title", "url", "page", "section", "heading", "identifier", "hash"] {
         if let Some(Some(col)) = optional.get(key) {
             slot.insert(key, columns.len());
@@ -302,92 +427,29 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         None => format!("SELECT {projection} FROM \"{table}\""),
     };
 
-    eprintln!("reading {source}::{table}…");
-    let mut stmt = conn.prepare(&sql)?;
-    let mut rows = stmt.query([])?;
-
-    let mut ingest: Vec<IngestRow> = Vec::new();
-    let mut vectors: Option<Matrix> = None;
-    let mut dim = 0usize;
-    let mut skipped = 0usize;
-
-    while let Some(row) = rows.next()? {
-        let vector_ref = row.get_ref(2)?;
-        let mut vector = match decode(&vector_ref, format) {
-            Ok(v) => v,
-            Err(e) => {
-                // ! Skip and count, ✗ abort. Real corpora carry a few broken
-                // rows, and losing an entire multi-hour import to one of them
-                // is worse than losing the row — but a silent skip is worse
-                // still, so the total is reported at the end.
-                if skipped < 5 {
-                    eprintln!("  skipping row: {e}");
-                }
-                skipped += 1;
-                continue;
-            }
-        };
-        if should_normalize {
-            normalize(&mut vector);
-        }
-
-        if vectors.is_none() {
-            dim = vector.len();
-            eprintln!("  detected {dim} dimensions");
-            vectors = Some(Matrix::new(dim));
-        }
-        if vector.len() != dim {
-            if skipped < 5 {
-                eprintln!("  skipping row: {} dims, expected {dim}", vector.len());
-            }
-            skipped += 1;
-            continue;
-        }
-
-        let text = |i: Option<&usize>| -> Option<String> {
-            i.and_then(|i| row.get::<_, Option<String>>(*i).ok().flatten())
-        };
-
-        let id: String = match row.get_ref(0)? {
-            ValueRef::Text(t) => String::from_utf8_lossy(t).into_owned(),
-            ValueRef::Integer(n) => n.to_string(),
-            _ => {
-                skipped += 1;
-                continue;
-            }
-        };
-
-        ingest.push(IngestRow {
-            id,
-            body: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
-            source_title: text(slot.get("title")).unwrap_or_else(|| "Untitled".to_owned()),
-            // ! Empty rather than fabricated. A synthesized URL would look like
-            // provenance a human could click, and it is the one thing the
-            // engine must never invent (CLAUDE.md §7 rule 8).
-            source_url: text(slot.get("url")).unwrap_or_default(),
-            locator_page: slot
-                .get("page")
-                .and_then(|i| row.get::<_, Option<i32>>(*i).ok().flatten()),
-            locator_section: text(slot.get("section")),
-            heading_path: text(slot.get("heading")),
-            identifier: text(slot.get("identifier")),
-            // ! Copied from the source, never computed here. A hash of the
-            // *chunk body* would be a checksum of our own storage and would
-            // still match after the upstream document changed — the failure
-            // LOOPHOLES.md §8 is about. Only the ingesting pipeline, which held
-            // the original file, can produce a meaningful digest.
-            source_hash: text(slot.get("hash")),
-        });
-        vectors.as_mut().expect("initialized above").push(&vector);
+    // ── Probe: row count and vector width, without reading the corpus ────────
+    // ! Both are needed *before* streaming — `k` is derived from the row count
+    // and the width has to be declared in the embedding space — and both are
+    // answerable from one COUNT and one row.
+    eprintln!("probing {source}::{table}…");
+    let total: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM \"{table}\""), [], |r| r.get(0))?;
+    #[allow(clippy::cast_sign_loss)]
+    let estimated_rows = limit.map_or(total as usize, |n| n.min(total as usize));
+    if estimated_rows == 0 {
+        return Err("source table is empty".into());
     }
 
-    let vectors = vectors.ok_or("source produced no usable rows")?;
-    eprintln!(
-        "  {} rows, {} skipped · {:.2} GB of vectors",
-        ingest.len(),
-        skipped,
-        vectors.bytes() as f64 / 1e9
-    );
+    let dim = {
+        let mut stmt = conn.prepare(&sql)?;
+        let mut rows = stmt.query([])?;
+        let row = rows.next()?.ok_or("source produced no rows")?;
+        let mut v = decode(&row.get_ref(2)?, format).map_err(|e| format!("first row: {e}"))?;
+        if should_normalize {
+            normalize(&mut v);
+        }
+        v.len()
+    };
+    eprintln!("  {estimated_rows} rows · {dim} dimensions");
 
     // ! A **list**, and it must include the query-side hosts, not only the one
     // that produced the vectors. `EMBEDDING.md` §2 embeds the corpus on a rented
@@ -441,27 +503,52 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     // ! sqrt(N) by default · see KMeansConfig::sqrt_n for why a fixed
     // rows-per-cluster target under-clusters everything below 100M rows.
     let k = match flag(args, "--per-cluster") {
-        Some(v) => KMeansConfig::clusters_for(ingest.len(), v.parse::<usize>()?),
-        None => KMeansConfig::sqrt_n(ingest.len()),
+        Some(v) => KMeansConfig::clusters_for(estimated_rows, v.parse::<usize>()?),
+        None => KMeansConfig::sqrt_n(estimated_rows),
     };
-    eprintln!("clustering {} rows into {k} clusters…", ingest.len());
 
-    let report = build_corpus(
+    // ! The dial that decides peak RAM. Defaulted from `k` on the FAISS
+    // convention rather than left unset: unset means "train on everything",
+    // which is what made this command hold the whole corpus.
+    let train_sample = match flag(args, "--train-sample") {
+        Some(v) => v.parse::<usize>()?,
+        None => KMeansConfig::train_sample_for(k),
+    }
+    .min(estimated_rows);
+    eprintln!(
+        "clustering {estimated_rows} rows into {k} clusters · training on {train_sample} \
+         sampled rows (~{:.2} GB resident)",
+        (train_sample * dim * 4) as f64 / 1e9
+    );
+
+    let mut row_source = SqliteRowSource {
+        conn,
+        sql,
+        format,
+        should_normalize,
+        dim,
+        slot,
+        rows_hint: estimated_rows,
+        skipped: 0,
+    };
+
+    let report = build_corpus_streaming(
         &out,
         &space,
         &flag(args, "--domain").unwrap_or_else(|| "corpus".to_owned()),
         &flag(args, "--description").unwrap_or_else(|| "Imported corpus".to_owned()),
-        &ingest,
-        &vectors,
+        &mut row_source,
         &KMeansConfig {
             k,
             max_iters: parsed(args, "--iters", 20usize)?,
             max_cluster_rows: flag(args, "--max-cluster-rows")
                 .map(|v| v.parse::<usize>())
                 .transpose()?,
+            train_sample: Some(train_sample),
             ..Default::default()
         },
     )?;
+    let skipped = row_source.skipped;
 
     println!("corpus:            {out}");
     println!("rows:              {} ({skipped} skipped)", report.rows);

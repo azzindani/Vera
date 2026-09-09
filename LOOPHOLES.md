@@ -57,7 +57,7 @@ fall back to an unvalidated host. See `EMBEDDING.md` §5.
 
 **Status: half built.** The permission model exists; the HTTP client that would use it
 does not. `EmbeddingSpace.validated_providers` is an allowlist recorded on the *corpus*
-(by `vera-ingest --provider`); `ProviderConfig` picks primary and fallback at runtime.
+(by `vera-ingest --providers`); `ProviderConfig` picks primary and fallback at runtime.
 
 ! **Both are checked at startup**, not at failover. Validating only the primary passes
 boot and fails during the outage the fallback exists for — the one moment nobody is
@@ -163,6 +163,19 @@ it to discover the disk cannot hold the result wastes all of it.
 - `df -kP`, ✗ `statvfs`: the workspace forbids `unsafe`, and a crate wrapping the syscall
   would relocate the `unsafe` rather than remove it, for a check that runs once per build
   and is allowed to be slow.
+
+! **"Never partially apply" needed a second mechanism once the loader started batching
+its commits.** A single transaction over the whole load is atomic — a crash leaves no
+corpus — but at 100M rows its WAL is the size of the corpus, so the guarantee costs more
+disk than the result (`PRE_EMBEDDING.md` §2b). Batching gives that up, and what it leaves
+behind is the worst possible artifact: a corpus with a valid schema, a working FTS index
+and *some* of the rows. It opens. It answers. It is silently short.
+
+So the build writes `build_state = in_progress` before the first insert and `complete`
+only after the FTS rebuild, and `SqliteStore::open` refuses anything else. ! An **absent**
+marker reads as complete, not incomplete: corpora built before it existed used one
+transaction and are atomic by construction, so rejecting them would break every existing
+index to catch a state none of them can be in.
 
 ---
 

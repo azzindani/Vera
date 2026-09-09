@@ -105,7 +105,36 @@ impl SqliteStore {
     /// Backend failure, or [`StoreError::NoRecordedSpace`] when the corpus
     /// never recorded what it was embedded with.
     pub fn open(path: impl AsRef<std::path::Path>) -> Result<Self, StoreError> {
-        let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        let display = path.as_ref().display().to_string();
+        let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+
+        // ! Refuse a build that never finished. Because the loader commits in
+        // batches (`vera_index::stream`), an interrupted import leaves a corpus
+        // with a valid schema, a working FTS index and *some* of the rows — it
+        // opens, it answers, and it is silently short. That is the failure this
+        // project is shaped around, and the marker is the only thing that
+        // distinguishes it.
+        //
+        // ! Absent means **complete**, not incomplete. Corpora built before the
+        // marker existed record nothing, and treating those as broken would
+        // reject every existing index to catch a state none of them can be in:
+        // the unmarked builds used a single transaction, so they are atomic by
+        // construction.
+        let state: Option<String> = conn
+            .query_row(
+                "SELECT value FROM meta WHERE key = 'build_state'",
+                [],
+                |r| r.get(0),
+            )
+            .ok();
+        if let Some(state) = state
+            && state != "complete"
+        {
+            return Err(StoreError::IncompleteBuild {
+                path: display,
+                state,
+            });
+        }
         Self::from_connection(conn)
     }
 
@@ -547,6 +576,38 @@ mod tests {
         let space = store.corpus_space().unwrap();
         assert_eq!(space.dim, 4);
         assert_eq!(space.model_id, "test/tiny");
+    }
+
+    #[test]
+    fn a_half_written_corpus_refuses_to_open() {
+        // ! The state batched commits make reachable: valid schema, working FTS,
+        // some of the rows. Nothing about it looks wrong from the outside, which
+        // is exactly why the marker has to be checked rather than the row count
+        // eyeballed.
+        let (dir, store) = fixture();
+        store.with_connection(|conn| {
+            conn.execute(
+                "INSERT OR REPLACE INTO meta (key, value) VALUES ('build_state', 'in_progress')",
+                [],
+            )
+            .unwrap();
+        });
+        drop(store);
+        let err = SqliteStore::open(dir.path().join("c.db")).unwrap_err();
+        match err {
+            StoreError::IncompleteBuild { state, .. } => assert_eq!(state, "in_progress"),
+            other => panic!("{other}"),
+        }
+    }
+
+    #[test]
+    fn a_corpus_predating_the_marker_still_opens() {
+        // ! Absent means complete. Those builds used one transaction and are
+        // atomic by construction, so rejecting them would break every existing
+        // index to catch a state none of them can be in.
+        let (dir, store) = fixture();
+        drop(store);
+        assert!(SqliteStore::open(dir.path().join("c.db")).is_ok());
     }
 
     #[test]

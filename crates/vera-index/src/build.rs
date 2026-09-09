@@ -6,11 +6,10 @@
 //!
 //! ! Offline only. Nothing here runs while serving (`CLAUDE.md` §5 rule 6).
 
-use rusqlite::params;
-use vera_core::{AnchorStats, CorpusProfile, EmbeddingSpace, ProfileBuilder};
-use vera_store::{StoreError, encode_vector, sqlite::SqliteStore};
+use vera_core::{AnchorStats, CorpusProfile, EmbeddingSpace};
+use vera_store::StoreError;
 
-use crate::{KMeans, KMeansConfig, Matrix, kmeans, kmeans::domain_anchor};
+use crate::{KMeansConfig, Matrix};
 
 /// One row on its way into the corpus.
 #[derive(Debug, Clone)]
@@ -53,11 +52,14 @@ pub struct BuildReport {
     pub split: crate::split::SplitReport,
 }
 
-/// Measure a corpus against its layer-1 anchor.
+/// Measure a corpus against its layer-1 anchor, **exactly**.
 ///
-/// Lives here because it needs [`Matrix`]; the [`AnchorStats`] type itself is in
-/// `vera-core` so the query path can read it back without depending on the
-/// offline indexer.
+/// ! No longer on the build path — [`crate::stream`] uses a fixed-width
+/// histogram, because holding one `f32` per row costs 400 MB at 100M rows purely
+/// to read six percentiles off it. This stays as the *reference*: it sorts every
+/// value and is therefore exact, and `stream`'s tests check the histogram
+/// against it. An approximation nobody can compare to an exact answer is an
+/// approximation nobody can bound.
 ///
 /// ! The `threshold` field is filled in under the default margin for reference
 /// only — the engine recomputes it from these stats at load time, so retuning
@@ -134,6 +136,14 @@ impl From<rusqlite::Error> for BuildError {
 
 /// Cluster `vectors`, then write rows, centroids and the domain anchor.
 ///
+/// ! A thin adapter over [`crate::stream::build_corpus_streaming`], ✗ a second
+/// implementation. Two construction paths would mean the benchmark measures code
+/// that is not what ingest runs — and the whole reason the fixture and the real
+/// import share `build_corpus` is that the numbers must describe the serving
+/// index. Callers that already hold the corpus in memory (the fixture, tests)
+/// use this; callers that cannot (ingest at scale) use the streaming entry
+/// point directly.
+///
 /// # Errors
 /// Width or count mismatches, or a backend failure.
 ///
@@ -148,181 +158,30 @@ pub fn build_corpus(
     vectors: &Matrix,
     cfg: &KMeansConfig,
 ) -> Result<BuildReport, BuildError> {
-    let started = std::time::Instant::now();
-
+    // ! Checked here rather than in the streaming builder: a `RowSource` yields
+    // a row and its vector together, so the two counts cannot disagree. They can
+    // only disagree when the caller holds two parallel collections, which is
+    // exactly this entry point.
     if rows.len() != vectors.rows() {
         return Err(BuildError::Mismatched {
             rows: rows.len(),
             vectors: vectors.rows(),
         });
     }
-    if vectors.dim() != space.dim {
-        return Err(BuildError::Width {
-            index: 0,
-            expected: space.dim,
-            got: vectors.dim(),
-        });
-    }
-
-    // ! Before the k-means, not just before the write. Clustering 100M vectors
-    // is hours of work, and finishing it only to discover the disk cannot hold
-    // the result wastes all of it (`LOOPHOLES.md` §10).
-    let mean_body_bytes = if rows.is_empty() {
-        0
-    } else {
-        rows.iter().map(|r| r.body.len()).sum::<usize>() / rows.len()
-    };
-    crate::preflight::require_free_space(
-        path.as_ref(),
-        crate::preflight::estimated_bytes(rows.len(), space.dim, mean_body_bytes),
-    )?;
-
-    let km: KMeans = kmeans(vectors, cfg);
-    // ! Tier-2 split-on-size, run offline where nothing is live
-    // (`CLUSTER_MAINTENANCE.md` §2, `crate::split`). k = √N minimises query cost
-    // and says nothing about the *largest* cluster, which is what sets the
-    // per-request RAM ceiling — so the two bounds are enforced separately.
-    let (km, split) = match cfg.max_cluster_rows {
-        Some(cap) => crate::split::split_oversized(vectors, km, cap, cfg, 16),
-        None => (
-            km,
-            crate::split::SplitReport {
-                splits: 0,
-                clusters_before: 0,
-                clusters_after: 0,
-                largest_before: 0,
-                largest_after: 0,
-            },
-        ),
-    };
-    let anchor = domain_anchor(vectors);
-    let anchor_stats = measure_anchor(vectors, &anchor);
-
-    // ! Profiled here, once, while the bodies are already in hand. Measuring it
-    // later means a second full pass over the corpus, and measuring it *never*
-    // is how a benchmark ends up reporting a full scan as an index lookup
-    // (`vera_core::profile`).
-    let mut profiler = ProfileBuilder::new();
-    for row in rows {
-        profiler.observe(&row.body, &row.source_url, row.identifier.as_deref());
-    }
-    let profile = profiler.finish();
-
-    let store = SqliteStore::create(path, space)?;
-
-    store.with_connection(|conn| -> Result<(), BuildError> {
-        conn.execute("DELETE FROM chunks", [])?;
-        conn.execute("DELETE FROM clusters", [])?;
-        conn.execute("DELETE FROM domains", [])?;
-
-        // ! Recorded so the engine reads a measured threshold rather than a
-        // guessed one. See measure_anchor and AnchorStats::threshold_at.
-        conn.execute(
-            "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
-            params![
-                format!("domain_threshold::{domain_id}"),
-                anchor_stats.threshold.to_string()
-            ],
-        )?;
-        // ! The full distribution, ✗ only the derived number. Retuning the
-        // threshold policy must not require re-ingesting the corpus.
-        conn.execute(
-            "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
-            params![
-                format!("anchor_stats::{domain_id}"),
-                serde_json::to_string(&anchor_stats)
-                    .map_err(|e| BuildError::Backend(e.to_string()))?
-            ],
-        )?;
-        // ! Stored with the corpus, ✗ printed and forgotten. The caveat that
-        // qualifies every keyword number has to travel with the data, or it ends
-        // up living in a document that the next measurement does not read.
-        conn.execute(
-            "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
-            params![
-                format!("corpus_profile::{domain_id}"),
-                serde_json::to_string(&profile).map_err(|e| BuildError::Backend(e.to_string()))?
-            ],
-        )?;
-
-        conn.execute(
-            "INSERT INTO domains (id, description, anchor, row_count) VALUES (?1,?2,?3,?4)",
-            params![
-                domain_id,
-                domain_description,
-                encode_vector(&anchor),
-                i64::try_from(rows.len()).unwrap_or(i64::MAX)
-            ],
-        )?;
-
-        for (i, centroid) in km.centroids.iter_rows().enumerate() {
-            conn.execute(
-                "INSERT INTO clusters (id, domain_id, centroid, row_count, generation) \
-                 VALUES (?1,?2,?3,?4,1)",
-                params![
-                    i as i64,
-                    domain_id,
-                    encode_vector(centroid),
-                    i64::try_from(km.sizes[i]).unwrap_or(0)
-                ],
-            )?;
-        }
-
-        // ! One transaction for the whole load. Per-row autocommit costs an
-        // fsync each and turns a 200K-row build from seconds into ~an hour.
-        conn.execute_batch("BEGIN")?;
-        {
-            let mut stmt = conn.prepare(
-                "INSERT INTO chunks (rowid, id, domain_id, cluster_id, body, embedding, \
-                 source_title, source_url, locator_page, locator_section, heading_path, \
-                 identifier, source_hash) \
-                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
-            )?;
-            for (i, row) in rows.iter().enumerate() {
-                stmt.execute(params![
-                    i as i64 + 1,
-                    row.id,
-                    domain_id,
-                    i64::from(km.assignments[i]),
-                    row.body,
-                    encode_vector(vectors.row(i)),
-                    row.source_title,
-                    row.source_url,
-                    row.locator_page,
-                    row.locator_section,
-                    row.heading_path,
-                    row.identifier,
-                    row.source_hash,
-                ])?;
-            }
-        }
-        conn.execute_batch("COMMIT")?;
-
-        // External-content FTS5 indexes nothing until told to · without this the
-        // keyword half of every hybrid search silently returns zero rows.
-        conn.execute("INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')", [])?;
-        conn.execute_batch("ANALYZE")?;
-        Ok(())
-    })?;
-
-    Ok(BuildReport {
-        rows: rows.len(),
-        clusters: km.centroids.rows(),
-        iterations: km.iterations,
-        mean_similarity: km.mean_similarity,
-        smallest_cluster: km.sizes.iter().copied().min().unwrap_or(0),
-        largest_cluster: km.sizes.iter().copied().max().unwrap_or(0),
-        build_seconds: started.elapsed().as_secs_f64(),
-        anchor: anchor_stats,
-        profile,
-        split,
-    })
+    crate::stream::build_corpus_streaming(
+        path,
+        space,
+        domain_id,
+        domain_description,
+        &mut crate::stream::SliceSource { rows, vectors },
+        cfg,
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vera_store::ChunkStore;
+    use vera_store::{ChunkStore, sqlite::SqliteStore};
 
     fn tiny() -> (Vec<IngestRow>, Matrix) {
         let mut m = Matrix::new(4);

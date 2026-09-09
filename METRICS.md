@@ -304,6 +304,8 @@ cluster-size skew is a memory risk, not just a latency one. Measured spread at �
 | Total incl. text + BM25, T2 | ~1.3 TB | `HARDWARE.md` §3 |
 | Storage format | **halfvec (16-bit)** | ⚠️ currently f32 — **2× the bytes and 2× the scan bandwidth** |
 | Index build (k-means), 200K × 1024 | reference: 318 s at k=447 | measured |
+| **Offline build peak RSS** | `train_sample × dim × 4` + vocabulary + one row | ✅ measured · 89 MB / 29 MB / 13 MB at train-samples of 20K / 5K / 1K on a 20K × 1024 import |
+| Loader working set independent of corpus size | required | ✅ the corpus is streamed twice, never held (`PRE_EMBEDDING.md` §2b) |
 | Re-cluster, T2 | ≤ 24 h on GPU | `CLUSTER_MAINTENANCE.md` tier 3 |
 | Ingest throughput | not yet targeted | needs real pipeline |
 

@@ -31,6 +31,13 @@ pub enum StoreError {
     Malformed(String),
 
     #[error(
+        "corpus at {path} was never finished building (build_state = '{state}') · \
+         it has a valid schema and will answer queries about however many rows the \
+         interrupted load happened to write · refusing to open · re-run the import"
+    )]
+    IncompleteBuild { path: String, state: String },
+
+    #[error(
         "chunk {id} stores a {got}-float vector but the corpus declares {expected} · \
          the corpus is internally inconsistent"
     )]

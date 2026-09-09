@@ -64,6 +64,12 @@ centroids and assignments, then publish via **atomic version swap** (§3). Trigg
 below threshold, that is the signal drift has accumulated enough to justify a rebuild.
 Monthly-ish at most.
 
+! The construction this needs already exists. `vera_index::stream` trains the quantizer
+on a bounded sample and then assigns every row in a streaming pass, which is a
+re-cluster minus the swap (`PRE_EMBEDDING.md` §2b) — and it never holds the corpus, so
+it is not bounded by GPU-box RAM either. What Tier 3 still lacks is the **versioned
+publish**, ✗ the clustering.
+
 ---
 
 ## 3. Atomic version swap (never serve a half-updated index)

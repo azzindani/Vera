@@ -47,6 +47,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                    [--anisotropy F] [--iters N] [--seed N]
                    [--vocab N] [--zipf F] [--body-tokens N] [--topic-terms N]
                    [--max-cluster-rows N]  split-on-size cap · CLUSTER_MAINTENANCE §2
+                   [--train-sample N]      rows the quantizer trains on
                    [--per-cluster N]   override sqrt(N) cluster sizing
   vera-bench info  --corpus <db>
   vera-bench run   --corpus <db> [--queries N] [--probe 1,2,5,10] [--k N] [--jitter F]
@@ -152,6 +153,13 @@ fn cmd_synth(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             // per-request RAM ceiling and worst-case probe latency
             // (CLUSTER_MAINTENANCE.md §2 Tier 2, METRICS.md §4).
             max_cluster_rows: flag(args, "--max-cluster-rows")
+                .map(|v| v.parse::<usize>())
+                .transpose()?,
+            // ! Unset by default here, ✗ defaulted from k like ingest does. The
+            // fixture exists to measure the engine, and training on everything
+            // removes one source of variation. Setting it is how the *cost* of
+            // sampling gets measured against a corpus whose structure is known.
+            train_sample: flag(args, "--train-sample")
                 .map(|v| v.parse::<usize>())
                 .transpose()?,
             ..Default::default()

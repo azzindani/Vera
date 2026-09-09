@@ -33,6 +33,21 @@ pub struct KMeansConfig {
     /// can satisfy the query-cost optimum and still blow the memory bound.
     /// Enforced by splitting after convergence (`crate::split`).
     pub max_cluster_rows: Option<usize>,
+    /// Rows to train the quantizer on · `None` trains on every row.
+    ///
+    /// ! The dial that decides the offline build's peak RAM. Training needs the
+    /// vectors resident across many passes, so `None` means the whole corpus is
+    /// held — 1.6 TB at the 100M × 4096 design point. Setting it caps that at
+    /// `train_sample × dim × 4` and streams the rest
+    /// (`crate::stream::build_corpus_streaming`).
+    ///
+    /// ! **Assignment stays exact** whatever this is set to: every row is scored
+    /// against every centroid in the second pass. Only the centroid *positions*
+    /// are estimated, which is the standard IVF construction (FAISS trains a
+    /// coarse quantizer on ~30–256 vectors per centroid). Too small a sample
+    /// gives centroids that describe the corpus badly, and `mean_similarity` in
+    /// the build report is what says so.
+    pub train_sample: Option<usize>,
     /// Cap on the sample k-means++ initializes from.
     ///
     /// ! Seeding from a sample rather than the full corpus. Full k-means++ costs
@@ -50,6 +65,7 @@ impl Default for KMeansConfig {
             tolerance: 0.001,
             seed: 0x5EED,
             max_cluster_rows: None,
+            train_sample: None,
             sample_for_init: 50_000,
         }
     }
@@ -80,6 +96,18 @@ impl KMeansConfig {
         #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let k = (rows as f64).sqrt().round() as usize;
         k.clamp(1, rows.max(1))
+    }
+
+    /// Vectors to train a `k`-centroid quantizer on · the FAISS convention.
+    ///
+    /// ! 40 points per centroid, floored at 50K. FAISS recommends 30–256 per
+    /// centroid for IVF; below ~30 the centroids start describing the sample
+    /// rather than the corpus. The floor matters at small `k`, where 40·k is a
+    /// handful of rows and the estimate would be noise.
+    #[must_use]
+    pub const fn train_sample_for(k: usize) -> usize {
+        let by_k = k * 40;
+        if by_k < 50_000 { 50_000 } else { by_k }
     }
 
     /// Cluster count for an explicitly chosen rows-per-cluster target.
