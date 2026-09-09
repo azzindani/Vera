@@ -42,18 +42,35 @@ Store under `eval/` with the queries, the labels, and the scoring script.
 
 ## 3. Metrics
 
+All of these are implemented in `vera-bench run`. What is missing is the **labelled
+set** (§2), not the harness.
+
 - **Recall@k** — is the correct chunk in the top-k? *The primary metric* for "cannot
   miss a regulation."
 - **Routing recall** — was the correct chunk in a *probed cluster* at all? Separates
-  routing failures (`LOOPHOLES.md` §1) from ranking failures. If routing recall is high
-  but Recall@k is low, fix fusion/top-k; if routing recall itself is low, fix clustering
-  or raise `clusters_probed`.
+  routing failures (`LOOPHOLES.md` §1) from ranking failures. Scored against a
+  **dense-only** exhaustive baseline: part of the fused result is not dense-reachable by
+  construction, so scoring routing against a target no probe count can hit understates
+  it. ! It is **blind to the candidate cap** — a row that was probed and then discarded
+  scores as a routing success — which is why the decomposition below exists.
+- **Recall-loss decomposition** — every miss charged to the stage that dropped it:
+  routing / cap / fusion / by-design. This is the metric that says *which dial to turn*,
+  and each column has a different one. `METRICS.md` §3.1 has the reference-choice
+  argument, which is subtler than it looks.
 - **Exact-match recall** — for exact-reference queries, did the global keyword path
-  return the right regulation? Should be ~100%; anything less means the routing-bypass
-  net has a hole.
-- **MRR / nDCG@k** — ranking quality among retrieved results.
-- **Latency p50/p95** — alongside accuracy, so a dial change that helps recall but
+  return the right regulation? Should be 100%; anything less means the routing-bypass
+  net has a hole. ! Run with a **deliberately unrelated query vector**, so the
+  regulation has to come back because it was *named*. A well-aimed vector would pass
+  even with the bypass fully gated by routing.
+- **MRR / nDCG@k** — ranking quality among retrieved results. Recall is a set measure
+  and cannot tell rank 1 from rank 10; a caller that reads the first result can.
+- **Latency p50/p95/p99** — alongside accuracy, so a dial change that helps recall but
   blows latency is visible.
+- **Corpus profile** — not a retrieval metric but a precondition for reading one: the
+  vocabulary, occurrence-weighted IDF, Zipf slope, document lengths and identifier
+  density of the corpus under test, measured at ingest and stored with it. A keyword
+  measurement taken on a corpus whose queries reach every row describes a full scan, and
+  the profile is what says so out loud rather than leaving it to be noticed later.
 
 ---
 
@@ -63,7 +80,8 @@ Store under `eval/` with the queries, the labels, and the scoring script.
 |---|---|
 | Keep 4096 vs. truncate / rescore | Recall@k delta vs. dimension |
 | `clusters_probed` (default ~5) | smallest value holding Recall@k |
-| per-cluster top-k | Recall@k vs. candidate-cap misses |
+| per-cluster top-k | the **cap** column of the loss decomposition · sweep with `--per-cluster-top-k` |
+| keyword term capping (`METRICS.md` §2.3) | Recall@k must not fall · **this eval set is the gate that change waits on** |
 | chunk strategy | Recall@k across query types |
 | fusion weight | Recall@k / nDCG for keyword-heavy vs. conceptual queries |
 | **re-cluster trigger** | drop in routing recall over time → schedule Tier-3 rebuild (`CLUSTER_MAINTENANCE.md`) |

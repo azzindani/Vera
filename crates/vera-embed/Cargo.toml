@@ -6,6 +6,7 @@ rust-version.workspace = true
 description = "Embedding providers. Pinned remote client plus a deterministic stub."
 
 [dependencies]
+vera-core = { version = "0.0.1", path = "../vera-core" }
 async-trait = "0.1.91"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"

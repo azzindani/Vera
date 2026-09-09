@@ -9,18 +9,33 @@
 //! Field names here are the **wire format** an agent parses, fixed by
 //! `OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
 
+pub mod calibration;
+pub mod config;
 pub mod contract;
+pub mod profile;
 
+pub use calibration::AnchorStats;
+pub use config::{
+    Config, ConcurrencyConfig, ConfidenceConfig, DEFAULT_QUERY_INSTRUCTION, EmbeddingSpace,
+    ProviderConfig, ReadConfig, RoutingConfig, SearchConfig, SpaceMismatch, UnvalidatedProvider,
+};
+pub use profile::{CorpusProfile, ProfileBuilder};
 pub use contract::{
-    Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
+    ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
     Source, SummaryPayload,
 };
 
-/// Embedding width · Qwen3-Embedding-8B at full dimensionality.
+/// Embedding width of the production target, Qwen3-Embedding-8B.
 ///
-/// ! Load-bearing. 4096 is why there is no global ANN index (pgvector cannot
-/// index it) and therefore why routing exists at all (`EMBEDDING.md` §3).
-pub const EMBEDDING_DIM: usize = 4096;
+/// ! Reference value only — ✗ the width the engine enforces. Read
+/// [`EmbeddingSpace::dim`] instead; a corpus embedded with Qwen3-0.6B is 1024
+/// and equally valid. What must hold is that corpus and query agree, which
+/// [`EmbeddingSpace::assert_matches`] checks at startup.
+///
+/// The number stays documented because it is *why* routing exists: at 4096 no
+/// pgvector ANN index can be built (`EMBEDDING.md` §3), so pruning has to come
+/// from the routing layers rather than from an index.
+pub const QWEN3_8B_DIM: usize = 4096;
 
 /// A stored chunk: body plus the provenance captured at ingest.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -35,6 +50,16 @@ pub struct Chunk {
     pub locator_section: Option<String>,
     pub heading_path: Option<String>,
     pub identifier: Option<String>,
+    /// Digest of the source document as it was at ingest · `LOOPHOLES.md` §8.
+    ///
+    /// ! Provenance is the product, and a link is only a promise: the document
+    /// behind it can be revised, renumbered or moved, and the citation keeps
+    /// rendering as though nothing happened. The hash is what turns "here is a
+    /// link" into a claim that can be **falsified** — re-fetch the source, hash
+    /// it, compare. `None` means ingest recorded none, which is reported as
+    /// unknown rather than treated as unchanged.
+    #[serde(default)]
+    pub source_hash: Option<String>,
 }
 
 impl Chunk {
@@ -54,7 +79,7 @@ impl Chunk {
         }
     }
 
-    /// Bounded preview for `search_knowledge` · never the full body.
+    /// Bounded preview for `search` · never the full body.
     ///
     /// Cuts on a char boundary and prefers the last word break, so a snippet
     /// does not end mid-token. Multibyte-safe.
@@ -74,7 +99,7 @@ impl Chunk {
     }
 }
 
-/// A knowledge base, as advertised by `list_domains`.
+/// A knowledge base, as advertised by `describe`.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Domain {
     pub id: String,
@@ -98,6 +123,7 @@ mod tests {
             locator_section: Some("Pasal 9 ayat (3)".into()),
             heading_path: None,
             identifier: Some("UU 28/2007".into()),
+            source_hash: Some("sha256:0f3c…".into()),
         }
     }
 

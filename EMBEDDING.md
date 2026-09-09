@@ -59,6 +59,19 @@ A space mismatch produces no error — just quietly worse results. Defend with:
 1. **Pin the provider.** OpenRouter routes across hosts by default (Balanced/Nitro);
    different hosts can serve with subtly different config. Use **Exacto (one fixed
    provider)**. Treat the provider id as part of the pinned config.
+
+   ! The pin lives in **two places, and they are not the same thing.** The corpus records
+   `validated_providers` — the hosts proven by the §4.5 round-trip to reproduce its
+   space, a property of the data that survives every deployment. The deployment records
+   `[provider] primary` and `fallback` — which of those hosts answers today, a property
+   that changes during an outage. Merging them would make failover look like a corpus
+   change.
+
+   ! **Provider id is deliberately not part of `assert_matches`.** §2 has the corpus
+   embedded on a rented GPU and queries served through OpenRouter, so the two ids never
+   match by design; comparing them would reject the architecture. Space equality is about
+   *geometry* — model, width, normalization. The provider check is a separate,
+   one-directional permission: is this host on the corpus's allowlist?
 2. **Pin the model version.** Store the exact model + version string in each
    partition's metadata. A floating "latest" alias can silently update and rot the
    index.
@@ -85,6 +98,20 @@ Pinning one provider for consistency creates a single point of failure. Resoluti
 - Through transient blips, **queue + retry with backoff** rather than switching.
 - **Never** fall back to an unvalidated host — a wrong-space embedding is worse than a
   brief delay.
+
+**How it is enforced.** The corpus carries the allowlist; `ProviderConfig` carries the
+choice; `assert_all_validated` checks **every** candidate at startup, primary and
+fallback alike, and refuses to boot on an unlisted one.
+
+! Checking the fallback at *failover* would be too late in the only way that matters: it
+passes boot, looks configured, and fails during the outage it was added for. A permission
+check that only runs on the unhappy path has never been run.
+
+! An empty allowlist is permitted and warned about, not refused. A corpus built before
+validation existed records none, and hard-failing those would break every existing index
+to guard against a risk the operator has not opted into. Recording one closes the list.
+
+The retry/backoff half and the HTTP client itself are still unbuilt (`CLAUDE.md` §8).
 
 ---
 

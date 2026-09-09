@@ -1,0 +1,21 @@
+[package]
+name = "vera-index"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Offline index construction: spherical k-means clusters, anchors, corpus build."
+
+[dependencies]
+vera-core = { version = "0.0.1", path = "../vera-core" }
+vera-store = { version = "0.0.1", path = "../vera-store" }
+rayon = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.37", features = ["bundled"] }
+thiserror = "2"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile = "3"

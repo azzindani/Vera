@@ -1,4 +1,4 @@
-//! The `search_knowledge` response contract · `OUTPUT_CONTRACT.md` §2.
+//! The `search` response contract · `OUTPUT_CONTRACT.md` §2.
 //!
 //! ! Vera returns **evidence**, the agent writes the prose. Nothing here holds a
 //! summary field, and nothing here may ever hold one: summarizing needs an LLM,
@@ -62,7 +62,7 @@ pub struct ComponentScores {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchResult {
     pub id: String,
-    /// Bounded preview · ✗ the full body. Full text comes from `read_chunk`.
+    /// Bounded preview · ✗ the full body. Full text comes from `fetch(depth="full")`.
     pub snippet: String,
     /// Fused RRF score.
     pub score: f32,
@@ -80,14 +80,13 @@ pub struct ExactMatch {
     pub matched_on: String,
 }
 
-/// A ready-to-render citation line, numbered from 1.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Citation {
-    pub index: usize,
-    pub text: String,
-}
-
 /// Compact, de-duplicated material the agent uses to write its summary.
+///
+/// ! `sources` holds citation **references** (`"[1]"`), ✗ full source lines.
+/// They index into [`SearchResponse::citation_block`], which already carries
+/// the rendered text. Repeating title+url here would duplicate the citation
+/// block and leave the agent correlating two differently-formatted lists
+/// (`OUTPUT_CONTRACT.md` §2).
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct SummaryPayload {
     pub snippets: Vec<String>,
@@ -95,7 +94,7 @@ pub struct SummaryPayload {
     pub coverage: String,
 }
 
-/// The full `search_knowledge` response.
+/// The full `search` response.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchResponse {
     pub success: bool,
@@ -106,7 +105,7 @@ pub struct SearchResponse {
     pub domain_confidence: f32,
     pub clusters_probed: usize,
     pub results: Vec<SearchResult>,
-    pub citation_block: Vec<Citation>,
+    pub citation_block: Vec<String>,
     pub summary_payload: SummaryPayload,
     pub exact_matches: Vec<ExactMatch>,
     pub confidence: Confidence,
@@ -126,7 +125,7 @@ impl SearchResponse {
     pub fn no_matching_domain(query: impl Into<String>, progress: Vec<String>) -> Self {
         let mut out = Self {
             success: true,
-            op: "search_knowledge",
+            op: "search",
             query: query.into(),
             detected_domain: None,
             domain_confidence: 0.0,
@@ -141,7 +140,7 @@ impl SearchResponse {
             truncated: false,
             hint: Some(
                 "query matched no known knowledge base · widen the query, or check \
-                 list_domains for what this engine covers"
+                 describe for what this engine covers"
                     .into(),
             ),
         };
@@ -160,8 +159,14 @@ impl SearchResponse {
 ///
 /// One entry per result, in rank order, so `[1]` in `summary_payload.sources`
 /// always addresses `results[0]`.
+///
+/// ! Plain strings, ✗ structs. `OUTPUT_CONTRACT.md` §2 calls this a
+/// "ready-to-render, ordered list the agent can drop into its answer" — an
+/// array of objects makes every caller reassemble the line, and two callers
+/// will format it differently, which is exactly what a shared citation format
+/// exists to prevent.
 #[must_use]
-pub fn citation_block(results: &[SearchResult]) -> Vec<Citation> {
+pub fn citation_block(results: &[SearchResult]) -> Vec<String> {
     results
         .iter()
         .enumerate()
@@ -172,16 +177,7 @@ pub fn citation_block(results: &[SearchResult]) -> Vec<Citation> {
             } else {
                 format!(", {locator}")
             };
-            Citation {
-                index: i + 1,
-                text: format!(
-                    "[{}] {}{} — {}",
-                    i + 1,
-                    r.source.title,
-                    middle,
-                    r.source.url
-                ),
-            }
+            format!("[{}] {}{} — {}", i + 1, r.source.title, middle, r.source.url)
         })
         .collect()
 }
@@ -239,21 +235,18 @@ mod tests {
             result("UU No. 28 Tahun 2007", Some(14), Some("Pasal 9 ayat (3)")),
             result("PP No. 74 Tahun 2011", Some(3), None),
         ]);
-        assert_eq!(block[0].index, 1);
         assert!(
-            block[0]
-                .text
-                .starts_with("[1] UU No. 28 Tahun 2007, Pasal 9 ayat (3), p.14 — https://")
+            block[0].starts_with("[1] UU No. 28 Tahun 2007, Pasal 9 ayat (3), p.14 — https://"),
+            "{}", block[0]
         );
-        assert_eq!(block[1].index, 2);
-        assert!(block[1].text.contains("[2] PP No. 74 Tahun 2011, p.3 — "));
+        assert!(block[1].contains("[2] PP No. 74 Tahun 2011, p.3 — "), "{}", block[1]);
     }
 
     #[test]
     fn a_citation_without_a_locator_still_renders_a_usable_line() {
         let block = citation_block(&[result("Untitled Source", None, None)]);
         assert_eq!(
-            block[0].text,
+            block[0],
             "[1] Untitled Source — https://peraturan.example/uu-28-2007.pdf"
         );
     }

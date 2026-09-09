@@ -55,6 +55,17 @@ and you cannot fall back without breaking the embedding space.
 fail over only to that validated provider; queue + retry through transient blips; never
 fall back to an unvalidated host. See `EMBEDDING.md` §5.
 
+**Status: half built.** The permission model exists; the HTTP client that would use it
+does not. `EmbeddingSpace.validated_providers` is an allowlist recorded on the *corpus*
+(by `vera-ingest --providers`); `ProviderConfig` picks primary and fallback at runtime.
+
+! **Both are checked at startup**, not at failover. Validating only the primary passes
+boot and fails during the outage the fallback exists for — the one moment nobody is
+watching a config error. An empty allowlist means "this corpus predates validation": it
+is permitted, and warned about loudly, because refusing would break every existing index
+to guard a risk the operator has not opted into. Once one provider is listed the list is
+closed.
+
 ---
 
 ## 5. Unbounded queue → OOM via waiters
@@ -100,6 +111,17 @@ locator. If provenance is wrong or synthesized, trust collapses.
 and never synthesize or guess a link at query time. `url` is the original source. Store
 a source hash so a moved/changed source can be detected. See `OUTPUT_CONTRACT.md` §3.
 
+**Status: built.** `chunks.source_hash`, populated by `vera-ingest --hash-col`, returned
+by `fetch` at every depth.
+
+- The hash is **copied from the ingesting pipeline, never computed from the chunk body.**
+  A digest of the body is a checksum of our own storage: it matches perfectly after the
+  upstream document has been revised, which is the exact failure this exists to catch.
+  Only the pipeline that held the original file can produce a meaningful one.
+- `null` means **unknown**, ✗ unchanged. A corpus ingested without hashes must not
+  present as one whose sources are all verified intact — that would convert a missing
+  check into a false assurance, which is worse than no check.
+
 ---
 
 ## 9. Wrong domain — guessed, or supplied by the agent
@@ -110,12 +132,12 @@ model's choice is unreliable. (b) Even with engine-side detection, a query that 
 domain could be forced into the nearest one and confidently return an irrelevant
 regulation.
 
-**Solution:** the engine **owns domain detection** — `search_knowledge` takes only
+**Solution:** the engine **owns domain detection** — `search` takes only
 `query`; there is no `domain` argument. Detection is an anchor match on the query vector
 against pre-embedded domain anchors. A **confidence threshold** gates it: below
 threshold the engine returns empty results with `detected_domain: null` and
 `confidence: "none"` rather than guessing. As domains grow, an ambiguous match can fan
-out to the top-N domains instead of forcing one. `explain_routing` exposes the decision
+out to the top-N domains instead of forcing one. `search(dry_run=True)` exposes the decision
 for tuning. A confidently wrong domain is worse than an honest "nothing matched."
 
 ---
@@ -127,6 +149,33 @@ for tuning. A confidently wrong domain is worse than an honest "nothing matched.
 **Solution:** pre-flight free-space check before bulk-load and before a split/re-cluster
 writes a new version; fail fast with a clear error; never partially apply. (Mirrors the
 upstream resource-check-before-start rule.)
+
+**Status: built.** `vera_index::preflight`, called by `build_corpus` **before the
+k-means**, not merely before the write — clustering 100M vectors is hours, and finishing
+it to discover the disk cannot hold the result wastes all of it.
+
+- The estimate is deliberately **conservative** (vectors + bodies + metadata, doubled for
+  the FTS5 index, WAL and page overhead). SQLite's exact footprint is not predictable;
+  refusing a build that would just barely have fit costs a flag, and discovering the
+  shortfall at 80% costs the run.
+- Free space that cannot be **read** is also a refusal. Treating an unknown figure as a
+  large one would let the check report success without having run.
+- `df -kP`, ✗ `statvfs`: the workspace forbids `unsafe`, and a crate wrapping the syscall
+  would relocate the `unsafe` rather than remove it, for a check that runs once per build
+  and is allowed to be slow.
+
+! **"Never partially apply" needed a second mechanism once the loader started batching
+its commits.** A single transaction over the whole load is atomic — a crash leaves no
+corpus — but at 100M rows its WAL is the size of the corpus, so the guarantee costs more
+disk than the result (`PRE_EMBEDDING.md` §2b). Batching gives that up, and what it leaves
+behind is the worst possible artifact: a corpus with a valid schema, a working FTS index
+and *some* of the rows. It opens. It answers. It is silently short.
+
+So the build writes `build_state = in_progress` before the first insert and `complete`
+only after the FTS rebuild, and `SqliteStore::open` refuses anything else. ! An **absent**
+marker reads as complete, not incomplete: corpora built before it existed used one
+transaction and are atomic by construction, so rejecting them would break every existing
+index to catch a state none of them can be in.
 
 ---
 
