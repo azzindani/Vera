@@ -159,6 +159,36 @@ pub trait ChunkStore: Send + Sync {
     /// # Errors
     /// Backend failure.
     fn largest_cluster_rows(&self) -> Result<usize, StoreError>;
+
+    /// Read a corpus metadata value written at build time.
+    ///
+    /// # Errors
+    /// Backend failure.
+    fn meta(&self, key: &str) -> Result<Option<String>, StoreError>;
+
+    /// The layer-1 threshold calibrated against this corpus's own geometry.
+    ///
+    /// ! A fixed threshold cannot be right. How close a query sits to a domain
+    /// anchor depends on the embedding model's anisotropy — how narrow a cone
+    /// its vectors occupy — which varies by model and by corpus and is not
+    /// knowable in advance. Guess too low and every off-topic query is forced
+    /// into the domain; guess too high and **every** query returns empty, which
+    /// the output contract reports as a *successful* empty result (`success:
+    /// true`, `confidence: none`). That failure is invisible: it looks exactly
+    /// like a corpus that genuinely has no answers.
+    ///
+    /// So the build measures the actual distribution of row-to-anchor cosines
+    /// and records a threshold below essentially all real content. Returns
+    /// `None` for a corpus built before calibration existed, leaving the caller
+    /// to fall back to its configured value.
+    ///
+    /// # Errors
+    /// Backend failure.
+    fn calibrated_domain_threshold(&self, domain_id: &str) -> Result<Option<f32>, StoreError> {
+        Ok(self
+            .meta(&format!("domain_threshold::{domain_id}"))?
+            .and_then(|v| v.parse().ok()))
+    }
 }
 
 /// Decode a little-endian f32 BLOB into a reusable buffer.

@@ -23,6 +23,8 @@ members = [
     "crates/vera-embed",
     "crates/vera-store",
     "crates/vera-engine",
+    "crates/vera-bench",
+    "crates/vera-index",
     "crates/vera-mcp",
 ]
 

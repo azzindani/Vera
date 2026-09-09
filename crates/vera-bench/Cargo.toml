@@ -1,0 +1,15 @@
+[package]
+name = "vera-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Corpus synthesis and the routing latency/recall sweep."
+
+[dependencies]
+vera-core = { version = "0.0.1", path = "../vera-core" }
+vera-engine = { version = "0.0.1", path = "../vera-engine" }
+vera-index = { version = "0.0.1", path = "../vera-index" }
+vera-store = { version = "0.0.1", path = "../vera-store" }
+
+[lints]
+workspace = true

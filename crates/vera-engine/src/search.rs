@@ -82,6 +82,8 @@ pub struct Engine<S: ChunkStore> {
     config: Config,
     domains: Vec<DomainAnchor>,
     centroids: HashMap<String, Vec<vera_store::Centroid>>,
+    /// Layer-1 threshold per domain, calibrated at build time unless overridden.
+    thresholds: HashMap<String, f32>,
 }
 
 impl<S: ChunkStore> Engine<S> {
@@ -99,15 +101,38 @@ impl<S: ChunkStore> Engine<S> {
 
         let domains = store.domains()?;
         let mut centroids = HashMap::new();
+        let mut thresholds = HashMap::new();
         for d in &domains {
             centroids.insert(d.id.clone(), store.centroids(&d.id)?);
+            // ! Prefer what the corpus measured about itself over the config's
+            // guess. A configured `Some` is an explicit operator override and
+            // still wins; `None` means "use the calibration", which is the
+            // default because a fixed threshold that is too tight makes every
+            // query return a *successful* empty result (see RoutingConfig).
+            let threshold = config.routing.domain_threshold.or(store
+                .calibrated_domain_threshold(&d.id)?);
+            thresholds.insert(
+                d.id.clone(),
+                threshold.unwrap_or(vera_core::config::FALLBACK_DOMAIN_THRESHOLD),
+            );
         }
         Ok(Self {
             store,
             config,
             domains,
             centroids,
+            thresholds,
         })
+    }
+
+    /// The layer-1 threshold actually in force for a domain, after calibration
+    /// and any operator override. Surfaced for `explain_routing` and the bench.
+    #[must_use]
+    pub fn threshold_for(&self, domain_id: &str) -> f32 {
+        self.thresholds
+            .get(domain_id)
+            .copied()
+            .unwrap_or(vera_core::config::FALLBACK_DOMAIN_THRESHOLD)
     }
 
     #[must_use]
@@ -155,11 +180,9 @@ impl<S: ChunkStore> Engine<S> {
 
         // ── Layer 1 ──────────────────────────────────────────────────────────
         let t = Instant::now();
-        let detected = routing::detect_domain(
-            query_vector,
-            &self.domains,
-            self.config.routing.domain_threshold,
-        );
+        let detected = routing::detect_domain_with(query_vector, &self.domains, |id| {
+            self.threshold_for(id)
+        });
         timings.route_domain = t.elapsed();
 
         let Some(domain) = detected else {
@@ -198,7 +221,6 @@ impl<S: ChunkStore> Engine<S> {
         // `per_cluster_top_k` ids and the scan itself streams — so the working
         // set does not grow with the number of clusters probed.
         let mut dense_lists: Vec<Vec<Scored>> = Vec::with_capacity(probed.len());
-        let mut keyword_lists: Vec<Vec<Scored>> = Vec::with_capacity(probed.len());
 
         for cluster in &probed {
             let t = Instant::now();
@@ -209,24 +231,36 @@ impl<S: ChunkStore> Engine<S> {
             timings.rows_scanned += scanned;
             timings.leaf_dense += t.elapsed();
             dense_lists.push(top.into_ranked());
-
-            let t = Instant::now();
-            let hits = self.store.keyword_search(
-                query_text,
-                Some(cluster.cluster_id),
-                self.config.search.bm25_limit,
-            )?;
-            timings.leaf_keyword += t.elapsed();
-            keyword_lists.push(
-                hits.into_iter()
-                    .map(|h| Scored {
-                        id: h.id,
-                        score: h.score,
-                    })
-                    .collect(),
-            );
         }
         progress.push(format!("scan:layer3 {} rows", timings.rows_scanned));
+
+        // ── Keyword half · ONE global query, ✗ one per probed cluster ────────
+        // ! Routing exists because dense search has no index — a 4096-dim
+        // vector cannot be indexed, so the only way to avoid scanning 100M rows
+        // is to not look at them. BM25 has the opposite problem: it *is* an
+        // index, and an inverted index already prunes to the matching
+        // postings. Scoping it per cluster does not make it cheaper — FTS5
+        // evaluates the match corpus-wide and then discards rows whose
+        // cluster_id is wrong — so probing N clusters cost N full-corpus
+        // keyword scans. Measured on the bench corpus this was 87% of total
+        // query time, and it grows with `clusters_probed`, which is meant to be
+        // the cheap dial.
+        //
+        // One global query is both faster and strictly higher recall: it can
+        // surface a keyword match that routing pruned away, which is the same
+        // guarantee the exact-identifier path provides, generalized.
+        let t = Instant::now();
+        let keyword: Vec<Scored> = self
+            .store
+            .keyword_search(query_text, None, self.config.search.bm25_limit)?
+            .into_iter()
+            .map(|h| Scored {
+                id: h.id,
+                score: h.score,
+            })
+            .collect();
+        timings.leaf_keyword = t.elapsed();
+        progress.push(format!("keyword:global {} candidates", keyword.len()));
 
         // ── Global exact-identifier path · bypasses routing entirely ─────────
         let t = Instant::now();
@@ -263,7 +297,6 @@ impl<S: ChunkStore> Engine<S> {
         let t = Instant::now();
         let candidate_cap = self.config.search.max_results * 10;
         let dense = merge_by_score(dense_lists, candidate_cap);
-        let keyword = merge_by_score(keyword_lists, candidate_cap);
         let mut lists = vec![
             RankedList {
                 label: "dense",

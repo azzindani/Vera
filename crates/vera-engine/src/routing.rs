@@ -38,10 +38,25 @@ pub fn detect_domain(
     anchors: &[DomainAnchor],
     threshold: f32,
 ) -> Option<DetectedDomain> {
+    detect_domain_with(query, anchors, |_| threshold)
+}
+
+/// [`detect_domain`] with a **per-domain** threshold.
+///
+/// ! Each domain gets its own threshold because each is calibrated against its
+/// own corpus. Two knowledge bases embedded with the same model still occupy
+/// differently shaped regions of the space, so one shared cutoff would be too
+/// tight for one and too loose for the other — and "too tight" fails silently.
+#[must_use]
+pub fn detect_domain_with(
+    query: &[f32],
+    anchors: &[DomainAnchor],
+    threshold_for: impl Fn(&str) -> f32,
+) -> Option<DetectedDomain> {
     anchors
         .iter()
         .map(|a| (a, cosine(query, &a.anchor)))
-        .filter(|(_, sim)| *sim >= threshold)
+        .filter(|(a, sim)| *sim >= threshold_for(&a.id))
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
         .map(|(a, sim)| DetectedDomain {
             id: a.id.clone(),

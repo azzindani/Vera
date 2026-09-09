@@ -137,8 +137,16 @@ pub struct RoutingConfig {
     pub clusters_probed: usize,
     /// Minimum cosine against a layer-1 domain anchor to accept a domain.
     /// Below this the engine returns empty rather than guessing.
-    #[serde(default = "default_domain_threshold")]
-    pub domain_threshold: f32,
+    ///
+    /// ! `None` (the default) means **calibrate from the corpus**, which is
+    /// almost always what you want: the right value depends on how narrow a
+    /// cone the embedding model's vectors occupy, which differs per model and
+    /// per corpus. A hardcoded value that is too high rejects every genuine
+    /// query and reports it as a *successful* empty result — a silent failure
+    /// indistinguishable from "this corpus has no answer". Set `Some` only to
+    /// deliberately override a calibration.
+    #[serde(default)]
+    pub domain_threshold: Option<f32>,
     /// Candidates kept from each probed cluster before fusion.
     #[serde(default = "default_per_cluster_top_k")]
     pub per_cluster_top_k: usize,
@@ -146,9 +154,6 @@ pub struct RoutingConfig {
 
 const fn default_clusters_probed() -> usize {
     5
-}
-const fn default_domain_threshold() -> f32 {
-    0.25
 }
 const fn default_per_cluster_top_k() -> usize {
     50
@@ -158,11 +163,19 @@ impl Default for RoutingConfig {
     fn default() -> Self {
         Self {
             clusters_probed: default_clusters_probed(),
-            domain_threshold: default_domain_threshold(),
+            domain_threshold: None,
             per_cluster_top_k: default_per_cluster_top_k(),
         }
     }
 }
+
+/// Fallback layer-1 threshold for a corpus that records no calibration.
+///
+/// ! Deliberately permissive. An over-tight fallback returns empty for every
+/// query and looks like an empty corpus; an over-loose one merely lets an
+/// off-topic query through to a search that will rank it poorly anyway. Given
+/// the choice, fail loud rather than silent.
+pub const FALLBACK_DOMAIN_THRESHOLD: f32 = 0.0;
 
 /// Result shaping and fusion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

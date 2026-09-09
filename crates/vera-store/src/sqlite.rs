@@ -267,11 +267,16 @@ impl ChunkStore for SqliteStore {
         let mut vector = Vec::with_capacity(self.space.dim);
         let mut scanned = 0usize;
         while let Some(row) = rows.next()? {
-            let id: String = row.get(0)?;
+            // ! Borrow the id, ✗ `row.get::<_, String>(0)`. That allocates a
+            // String for every row scanned — on a 10K-row cluster that is 10K
+            // allocations per probe, spent entirely on rows that will be
+            // rejected. The visitor only sees `&str`, so nothing needs an owned
+            // copy until TopK actually admits a candidate.
+            let id = row.get_ref(0)?.as_str()?;
             let blob = row.get_ref(1)?.as_blob()?;
-            decode_vector_into(&id, blob, self.space.dim, &mut vector)?;
+            decode_vector_into(id, blob, self.space.dim, &mut vector)?;
             visit(ScannedRow {
-                id: &id,
+                id,
                 vector: &vector,
             });
             scanned += 1;
@@ -364,6 +369,16 @@ impl ChunkStore for SqliteStore {
             out.push(row_to_chunk(row)?);
         }
         Ok(out)
+    }
+
+    fn meta(&self, key: &str) -> Result<Option<String>, StoreError> {
+        let conn = self.conn.lock().expect("store lock poisoned");
+        let mut stmt = conn.prepare_cached("SELECT value FROM meta WHERE key = ?1")?;
+        let mut rows = stmt.query(params![key])?;
+        Ok(match rows.next()? {
+            Some(row) => Some(row.get(0)?),
+            None => None,
+        })
     }
 
     fn largest_cluster_rows(&self) -> Result<usize, StoreError> {
