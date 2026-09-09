@@ -3,9 +3,17 @@ name = "vera-engine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-description = "Routing layers and fusion. Pure domain logic with zero MCP imports."
+description = "Routing layers, leaf scan and fusion. Pure retrieval logic with zero MCP imports."
 
 [dependencies]
+vera-core = { version = "0.0.1", path = "../vera-core" }
+vera-embed = { version = "0.0.1", path = "../vera-embed" }
+vera-store = { version = "0.0.1", path = "../vera-store" }
+thiserror = "2"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

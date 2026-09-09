@@ -9,25 +9,20 @@
 //! (`OUTPUT_CONTRACT.md` §1, `LOOPHOLES.md` §2).
 //!
 //! ! Corpus and query must land in the **same vector space**: same model, same
-//! version, same instruction, same pooling, same normalization. That is why the
-//! model id is pinned and a mismatch fails closed rather than degrading quietly
+//! version, same instruction, same pooling, same normalization. That pin is
+//! carried by [`vera_core::EmbeddingSpace`] and checked against what the corpus
+//! recorded, so a mismatch fails closed rather than degrading quietly
 //! (`EMBEDDING.md` §2).
+//!
+//! The space is **configuration**, ✗ a compile-time constant: the production
+//! target is Qwen3-8B at 4096, but a corpus embedded with Qwen3-0.6B at 1024 is
+//! equally valid and must not require a recompile to serve.
 
 use async_trait::async_trait;
+use vera_core::EmbeddingSpace;
 
-/// Full Qwen3-Embedding-8B width.
-pub const EMBEDDING_DIM: usize = 4096;
-
-/// The pinned model. ✗ configurable: changing it silently invalidates every
-/// vector already in the corpus.
-pub const MODEL_ID: &str = "qwen/qwen3-embedding-8b";
-
-/// Instruction prepended to *queries* only.
-///
-/// Qwen3-Embedding is instruction-aware: queries carry an instruction, documents
-/// do not. Applying the wrong one puts the two sides in different spaces.
-pub const QUERY_INSTRUCTION: &str =
-    "Instruct: Given a legal or regulatory question, retrieve passages that answer it\nQuery: ";
+/// The production model pin. A *default*, ✗ the only permitted value.
+pub const DEFAULT_MODEL_ID: &str = "qwen/qwen3-embedding-8b";
 
 #[derive(Debug, thiserror::Error)]
 pub enum EmbedError {
@@ -45,6 +40,12 @@ pub enum EmbedError {
 
     #[error("provider returned no embedding for the query")]
     Empty,
+
+    #[error(
+        "startup canary: cosine {cosine:.6} against the stored reference is below \
+         {threshold:.6} · the provider has drifted out of the corpus space · refusing to serve"
+    )]
+    CanaryDrift { cosine: f32, threshold: f32 },
 }
 
 /// A source of query embeddings.
@@ -59,23 +60,31 @@ pub trait EmbeddingProvider: Send + Sync {
     /// Transport failure, or a response that fails [`validate_response`].
     async fn embed_query(&self, query: &str) -> Result<Vec<f32>, EmbedError>;
 
+    /// The space this provider produces vectors in.
+    fn space(&self) -> &EmbeddingSpace;
+
     /// Identifier for logs and `explain_routing`.
-    fn describe(&self) -> String;
+    fn describe(&self) -> String {
+        let s = self.space();
+        format!("{}(dim={})", s.model_id, s.dim)
+    }
 }
 
-/// Deterministic, offline provider for tests and fixtures.
+/// Deterministic, offline provider for tests, fixtures and benchmarks.
 ///
 /// ! Deterministic by construction, ✗ random: the same query must yield the same
 /// vector across runs or no retrieval test can assert a stable ranking. This is
-/// a hash expanded to the right width — it carries no semantics and must never
-/// be used against a real corpus.
-#[derive(Debug, Clone, Default)]
-pub struct StubProvider;
+/// a hash expanded to the right width — it carries **no semantics** and must
+/// never be pointed at a real corpus expecting meaningful ranking.
+#[derive(Debug, Clone)]
+pub struct StubProvider {
+    space: EmbeddingSpace,
+}
 
 impl StubProvider {
     #[must_use]
-    pub fn new() -> Self {
-        Self
+    pub fn new(space: EmbeddingSpace) -> Self {
+        Self { space }
     }
 
     /// FNV-1a · small, dependency-free, and stable across platforms and runs.
@@ -90,10 +99,10 @@ impl StubProvider {
 
     /// The vector a given text maps to · exposed so tests can predict it.
     #[must_use]
-    pub fn vector_for(text: &str) -> Vec<f32> {
+    pub fn vector_for(text: &str, dim: usize) -> Vec<f32> {
         let bytes = text.as_bytes();
-        let mut out = Vec::with_capacity(EMBEDDING_DIM);
-        for i in 0..EMBEDDING_DIM {
+        let mut out = Vec::with_capacity(dim);
+        for i in 0..dim {
             let h = Self::hash(i as u64, bytes);
             // Map into [-1, 1] · a plausible embedding range.
             #[allow(clippy::cast_precision_loss)]
@@ -110,12 +119,54 @@ impl EmbeddingProvider for StubProvider {
     async fn embed_query(&self, query: &str) -> Result<Vec<f32>, EmbedError> {
         // The instruction is part of the input on the real path, so the stub
         // applies it too · otherwise the two providers key on different strings.
-        Ok(Self::vector_for(&format!("{QUERY_INSTRUCTION}{query}")))
+        let text = format!("{}{query}", self.space.query_instruction);
+        let mut v = Self::vector_for(&text, self.space.dim);
+        if self.space.normalized {
+            l2_normalize(&mut v);
+        }
+        Ok(v)
+    }
+
+    fn space(&self) -> &EmbeddingSpace {
+        &self.space
     }
 
     fn describe(&self) -> String {
-        format!("stub(deterministic, dim={EMBEDDING_DIM})")
+        format!("stub(deterministic, dim={})", self.space.dim)
     }
+}
+
+/// Scale a vector to unit length, in place. A zero vector is left alone.
+pub fn l2_normalize(v: &mut [f32]) {
+    let norm = v.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if norm > f32::EPSILON {
+        for x in v.iter_mut() {
+            *x /= norm;
+        }
+    }
+}
+
+/// Cosine similarity. Assumes nothing about normalization — divides by both
+/// norms, so it is correct for raw and unit vectors alike.
+///
+/// Returns 0.0 for mismatched lengths or a zero vector: callers on the query
+/// path have already validated width, and a zero-norm centroid is degenerate
+/// rather than an error worth unwinding for.
+#[must_use]
+pub fn cosine(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() {
+        return 0.0;
+    }
+    let mut dot = 0.0f32;
+    let mut na = 0.0f32;
+    let mut nb = 0.0f32;
+    for (x, y) in a.iter().zip(b) {
+        dot += x * y;
+        na += x * x;
+        nb += y * y;
+    }
+    let denom = na.sqrt() * nb.sqrt();
+    if denom <= f32::EPSILON { 0.0 } else { dot / denom }
 }
 
 /// Validate a provider response before it reaches the routing layers.
@@ -125,104 +176,202 @@ impl EmbeddingProvider for StubProvider {
 /// standard: validate at the edge, ✗ deep inside).
 ///
 /// # Errors
-/// [`EmbedError::ModelMismatch`] if the model is not the pinned one,
+/// [`EmbedError::ModelMismatch`] if the model is not the configured one,
 /// [`EmbedError::DimensionMismatch`] on the wrong width, [`EmbedError::Empty`]
 /// if no vector was returned.
-pub fn validate_response(model: &str, vector: Vec<f32>) -> Result<Vec<f32>, EmbedError> {
-    if model != MODEL_ID {
+pub fn validate_response(
+    space: &EmbeddingSpace,
+    model: &str,
+    vector: Vec<f32>,
+) -> Result<Vec<f32>, EmbedError> {
+    if model != space.model_id {
         return Err(EmbedError::ModelMismatch {
-            expected: MODEL_ID.to_owned(),
+            expected: space.model_id.clone(),
             returned: model.to_owned(),
         });
     }
     if vector.is_empty() {
         return Err(EmbedError::Empty);
     }
-    if vector.len() != EMBEDDING_DIM {
+    if vector.len() != space.dim {
         return Err(EmbedError::DimensionMismatch {
-            expected: EMBEDDING_DIM,
+            expected: space.dim,
             got: vector.len(),
         });
     }
     Ok(vector)
 }
 
+/// Startup canary · `MCP_ENGINE.md` §6.3.
+///
+/// Embeds a known string and compares against the vector the corpus recorded
+/// for it. Catches silent provider drift — a model retrained under the same id,
+/// a provider swapped behind a router — *before* it corrupts a single result.
+///
+/// ! Runs at startup and fails closed. Serving on a drifted provider is worse
+/// than not serving: results stay plausible while being wrong.
+///
+/// # Errors
+/// [`EmbedError::CanaryDrift`] below threshold, or whatever the provider raised.
+pub async fn canary_check(
+    provider: &dyn EmbeddingProvider,
+    canary_text: &str,
+    reference: &[f32],
+    threshold: f32,
+) -> Result<f32, EmbedError> {
+    let fresh = provider.embed_query(canary_text).await?;
+    if fresh.len() != reference.len() {
+        return Err(EmbedError::DimensionMismatch {
+            expected: reference.len(),
+            got: fresh.len(),
+        });
+    }
+    let cos = cosine(&fresh, reference);
+    if cos < threshold {
+        return Err(EmbedError::CanaryDrift {
+            cosine: cos,
+            threshold,
+        });
+    }
+    Ok(cos)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn space_1024() -> EmbeddingSpace {
+        EmbeddingSpace::qwen3_06b()
+    }
+
     #[tokio::test]
-    async fn stub_is_deterministic_across_calls() {
-        let p = StubProvider::new();
-        let a = p.embed_query("ketentuan sanksi").await.unwrap();
-        let b = p.embed_query("ketentuan sanksi").await.unwrap();
+    async fn stub_is_deterministic_across_calls_and_instances() {
+        let a = StubProvider::new(space_1024())
+            .embed_query("ketentuan sanksi")
+            .await
+            .unwrap();
+        let b = StubProvider::new(space_1024())
+            .embed_query("ketentuan sanksi")
+            .await
+            .unwrap();
         assert_eq!(a, b, "same query must yield the same vector");
     }
 
     #[tokio::test]
     async fn stub_separates_different_queries() {
-        let p = StubProvider::new();
+        let p = StubProvider::new(space_1024());
         let a = p.embed_query("ketentuan sanksi").await.unwrap();
         let b = p.embed_query("tarif pajak").await.unwrap();
         assert_ne!(a, b);
     }
 
     #[tokio::test]
-    async fn every_provider_returns_the_pinned_width() {
-        let v = StubProvider::new().embed_query("x").await.unwrap();
-        assert_eq!(v.len(), EMBEDDING_DIM);
-        assert_eq!(EMBEDDING_DIM, 4096);
+    async fn the_provider_returns_its_configured_width_whatever_that_is() {
+        // ! The point of making the space configurable: 1024 and 4096 are both
+        // valid, and neither is baked in.
+        for space in [EmbeddingSpace::qwen3_06b(), EmbeddingSpace::qwen3_8b()] {
+            let dim = space.dim;
+            let v = StubProvider::new(space).embed_query("x").await.unwrap();
+            assert_eq!(v.len(), dim);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_normalized_space_yields_unit_vectors() {
+        let v = StubProvider::new(space_1024()).embed_query("x").await.unwrap();
+        let norm = v.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!((norm - 1.0).abs() < 1e-5, "norm was {norm}");
     }
 
     #[tokio::test]
     async fn the_query_instruction_is_part_of_the_embedded_input() {
         // ! Queries carry the instruction, documents do not. If this stopped
         // being true the query would land in a different space than the corpus.
-        let p = StubProvider::new();
-        let via_trait = p.embed_query("tarif").await.unwrap();
-        assert_eq!(
-            via_trait,
-            StubProvider::vector_for(&format!("{QUERY_INSTRUCTION}tarif"))
-        );
-        assert_ne!(via_trait, StubProvider::vector_for("tarif"));
+        let space = space_1024();
+        let instruction = space.query_instruction.clone();
+        let dim = space.dim;
+        let via_trait = StubProvider::new(space).embed_query("tarif").await.unwrap();
+
+        let mut expected = StubProvider::vector_for(&format!("{instruction}tarif"), dim);
+        l2_normalize(&mut expected);
+        assert_eq!(via_trait, expected);
+
+        let mut bare = StubProvider::vector_for("tarif", dim);
+        l2_normalize(&mut bare);
+        assert_ne!(via_trait, bare);
     }
 
     #[test]
     fn a_different_model_fails_closed_rather_than_degrading() {
-        let e = validate_response("openai/text-embedding-3-large", vec![0.0; EMBEDDING_DIM])
-            .unwrap_err();
+        let space = space_1024();
+        let e =
+            validate_response(&space, "openai/text-embedding-3-large", vec![0.0; space.dim])
+                .unwrap_err();
         assert!(matches!(e, EmbedError::ModelMismatch { .. }), "{e}");
         assert!(e.to_string().contains("would not share a space"));
     }
 
     #[test]
-    fn a_truncated_vector_is_rejected() {
-        let e = validate_response(MODEL_ID, vec![0.0; 1024]).unwrap_err();
+    fn a_wrong_width_vector_is_rejected_against_the_configured_space() {
+        // 4096 is *wrong* here — the configured corpus is 1024. Width is only
+        // meaningful relative to the space, which is why it is not a constant.
+        let space = space_1024();
+        let e = validate_response(&space, &space.model_id, vec![0.0; 4096]).unwrap_err();
         assert!(matches!(
             e,
             EmbedError::DimensionMismatch {
-                expected: 4096,
-                got: 1024
+                expected: 1024,
+                got: 4096
             }
         ));
     }
 
     #[test]
     fn an_empty_response_is_rejected() {
+        let space = space_1024();
         assert!(matches!(
-            validate_response(MODEL_ID, vec![]).unwrap_err(),
+            validate_response(&space, &space.model_id, vec![]).unwrap_err(),
             EmbedError::Empty
         ));
     }
 
     #[test]
-    fn the_pinned_model_passes() {
-        assert!(validate_response(MODEL_ID, vec![0.5; EMBEDDING_DIM]).is_ok());
+    fn the_configured_model_at_the_configured_width_passes() {
+        let space = space_1024();
+        assert!(validate_response(&space, &space.model_id, vec![0.5; 1024]).is_ok());
     }
 
     #[test]
-    fn stub_values_stay_in_a_plausible_embedding_range() {
-        let v = StubProvider::vector_for("anything");
-        assert!(v.iter().all(|x| (-1.0..=1.0).contains(x)));
+    fn cosine_is_one_for_identical_and_zero_for_orthogonal() {
+        assert!((cosine(&[1.0, 0.0], &[3.0, 0.0]) - 1.0).abs() < 1e-6);
+        assert!(cosine(&[1.0, 0.0], &[0.0, 1.0]).abs() < 1e-6);
+        assert!((cosine(&[1.0, 0.0], &[-1.0, 0.0]) + 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn cosine_degrades_to_zero_rather_than_panicking_on_bad_input() {
+        assert_eq!(cosine(&[1.0, 2.0], &[1.0]), 0.0, "length mismatch");
+        assert_eq!(cosine(&[0.0, 0.0], &[1.0, 1.0]), 0.0, "zero vector");
+    }
+
+    #[tokio::test]
+    async fn the_canary_passes_against_a_provider_that_has_not_drifted() {
+        let p = StubProvider::new(space_1024());
+        let reference = p.embed_query("canary").await.unwrap();
+        let cos = canary_check(&p, "canary", &reference, 0.999).await.unwrap();
+        assert!(cos > 0.999);
+    }
+
+    #[tokio::test]
+    async fn the_canary_refuses_to_serve_a_drifted_provider() {
+        // ! The failure this exists to catch: the provider still answers, still
+        // returns the right width — it just answers from a different space.
+        let p = StubProvider::new(space_1024());
+        let wrong_reference = p.embed_query("a completely different string").await.unwrap();
+        let e = canary_check(&p, "canary", &wrong_reference, 0.999)
+            .await
+            .unwrap_err();
+        assert!(matches!(e, EmbedError::CanaryDrift { .. }), "{e}");
+        assert!(e.to_string().contains("refusing to serve"));
     }
 }

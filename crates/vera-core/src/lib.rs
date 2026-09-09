@@ -9,18 +9,29 @@
 //! Field names here are the **wire format** an agent parses, fixed by
 //! `OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
 
+pub mod config;
 pub mod contract;
 
+pub use config::{
+    Config, ConcurrencyConfig, DEFAULT_QUERY_INSTRUCTION, EmbeddingSpace, ReadConfig,
+    RoutingConfig, SearchConfig, SpaceMismatch,
+};
 pub use contract::{
     Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
     Source, SummaryPayload,
 };
 
-/// Embedding width · Qwen3-Embedding-8B at full dimensionality.
+/// Embedding width of the production target, Qwen3-Embedding-8B.
 ///
-/// ! Load-bearing. 4096 is why there is no global ANN index (pgvector cannot
-/// index it) and therefore why routing exists at all (`EMBEDDING.md` §3).
-pub const EMBEDDING_DIM: usize = 4096;
+/// ! Reference value only — ✗ the width the engine enforces. Read
+/// [`EmbeddingSpace::dim`] instead; a corpus embedded with Qwen3-0.6B is 1024
+/// and equally valid. What must hold is that corpus and query agree, which
+/// [`EmbeddingSpace::assert_matches`] checks at startup.
+///
+/// The number stays documented because it is *why* routing exists: at 4096 no
+/// pgvector ANN index can be built (`EMBEDDING.md` §3), so pruning has to come
+/// from the routing layers rather than from an index.
+pub const QWEN3_8B_DIM: usize = 4096;
 
 /// A stored chunk: body plus the provenance captured at ingest.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
