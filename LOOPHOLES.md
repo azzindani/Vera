@@ -110,12 +110,12 @@ model's choice is unreliable. (b) Even with engine-side detection, a query that 
 domain could be forced into the nearest one and confidently return an irrelevant
 regulation.
 
-**Solution:** the engine **owns domain detection** — `search_knowledge` takes only
+**Solution:** the engine **owns domain detection** — `search` takes only
 `query`; there is no `domain` argument. Detection is an anchor match on the query vector
 against pre-embedded domain anchors. A **confidence threshold** gates it: below
 threshold the engine returns empty results with `detected_domain: null` and
 `confidence: "none"` rather than guessing. As domains grow, an ambiguous match can fan
-out to the top-N domains instead of forcing one. `explain_routing` exposes the decision
+out to the top-N domains instead of forcing one. `search(dry_run=True)` exposes the decision
 for tuning. A confidently wrong domain is worse than an honest "nothing matched."
 
 ---

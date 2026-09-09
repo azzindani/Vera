@@ -1,6 +1,6 @@
 # OUTPUT_CONTRACT.md — Vera
 
-What `search_knowledge` returns, why the agent (not Vera) writes the summary, and how
+What `search` returns, why the agent (not Vera) writes the summary, and how
 the double-check provenance works for both documents and media.
 
 ---
@@ -24,12 +24,12 @@ belongs and absent where it would be expensive. This is the resolution of the
 
 ---
 
-## 2. `search_knowledge` response schema
+## 2. `search` response schema
 
 ```jsonc
 {
   "success": true,
-  "op": "search_knowledge",
+  "op": "search",
   "query": "ketentuan sanksi keterlambatan pelaporan pajak",
   "detected_domain": "regulations",   // chosen by the engine via anchor match, not by the agent
   "domain_confidence": 0.88,           // anchor-match score; low → "no matching domain" (see §4)
@@ -120,15 +120,17 @@ vector), not chosen by the agent. If no domain anchor is matched above the confi
 threshold, the engine does **not** guess — it returns `success: true` with an empty
 `results` array, `detected_domain: null`, and `confidence: "none"`, plus a `hint` that
 the query did not match any known knowledge base. This is deliberate: a confidently
-wrong domain is worse than an honest "nothing matched." See `MCP_ENGINE.md` §2 and
-`LOOPHOLES.md` §9.
+wrong domain is worse than an honest "nothing matched." The one exception is an
+exact-identifier hit, which bypasses routing and is returned even when no anchor
+matched (`LOOPHOLES.md` §1). See `MCP_ENGINE.md` §2 and `LOOPHOLES.md` §9.
 
 ---
 
 ## 5. Size discipline
 
-- `search_knowledge` returns **snippets and addresses**, never full documents. Full
-  text is fetched per-chunk via `read_chunk` only for what the agent actually needs.
+- `search` returns **snippets and addresses**, never full documents. Full text is
+  fetched per-chunk via `fetch(depth="full")` only for what the agent actually needs,
+  and `fetch(depth="provenance")` is the cheap verification bundle.
 - Result count is bounded by `max_results` and the constrained-mode cap.
 - Every response carries `token_estimate` so the agent can budget its own context —
   important because agentic loops are token-expensive (this is the upstream token

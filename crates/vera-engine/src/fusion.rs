@@ -21,7 +21,7 @@ pub struct RankedList<'a> {
     pub items: &'a [Scored],
 }
 
-/// A fused result, carrying enough detail for `explain_routing` and for the
+/// A fused result, carrying enough detail for `search(dry_run)` and for the
 /// per-modality scores the output contract publishes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fused {

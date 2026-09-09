@@ -295,7 +295,7 @@ impl Default for ConcurrencyConfig {
     }
 }
 
-/// Bounds on `read_chunk`.
+/// Bounds on `fetch(depth="full")`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReadConfig {
     #[serde(default = "default_max_chunk_bytes")]

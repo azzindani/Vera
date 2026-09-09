@@ -1,4 +1,4 @@
-//! The wire shape of `search_knowledge`, asserted against `OUTPUT_CONTRACT.md` §2.
+//! The wire shape of `search`, asserted against `OUTPUT_CONTRACT.md` §2.
 //!
 //! ! Field names and shapes here are the **contract an agent parses**. A Rust
 //! refactor that renames a field or changes an array's element type is a
@@ -99,7 +99,11 @@ fn the_top_level_fields_match_the_documented_contract() {
     ] {
         assert!(v.get(field).is_some(), "missing documented field `{field}`");
     }
-    assert_eq!(v["op"], "search_knowledge");
+    assert_eq!(
+        v["op"], "search",
+        "`op` must name the tool that ran · it drifted from `search_knowledge` \
+         when the surface collapsed to four primitives"
+    );
     assert_eq!(v["detected_domain"], "regulations");
 }
 

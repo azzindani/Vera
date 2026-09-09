@@ -1,4 +1,4 @@
-//! The `search_knowledge` response contract · `OUTPUT_CONTRACT.md` §2.
+//! The `search` response contract · `OUTPUT_CONTRACT.md` §2.
 //!
 //! ! Vera returns **evidence**, the agent writes the prose. Nothing here holds a
 //! summary field, and nothing here may ever hold one: summarizing needs an LLM,
@@ -62,7 +62,7 @@ pub struct ComponentScores {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchResult {
     pub id: String,
-    /// Bounded preview · ✗ the full body. Full text comes from `read_chunk`.
+    /// Bounded preview · ✗ the full body. Full text comes from `fetch(depth="full")`.
     pub snippet: String,
     /// Fused RRF score.
     pub score: f32,
@@ -94,7 +94,7 @@ pub struct SummaryPayload {
     pub coverage: String,
 }
 
-/// The full `search_knowledge` response.
+/// The full `search` response.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchResponse {
     pub success: bool,
@@ -125,7 +125,7 @@ impl SearchResponse {
     pub fn no_matching_domain(query: impl Into<String>, progress: Vec<String>) -> Self {
         let mut out = Self {
             success: true,
-            op: "search_knowledge",
+            op: "search",
             query: query.into(),
             detected_domain: None,
             domain_confidence: 0.0,
@@ -140,7 +140,7 @@ impl SearchResponse {
             truncated: false,
             hint: Some(
                 "query matched no known knowledge base · widen the query, or check \
-                 list_domains for what this engine covers"
+                 describe for what this engine covers"
                     .into(),
             ),
         };

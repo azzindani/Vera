@@ -47,7 +47,7 @@ const FILLER: &[&str] = &["no", "nomor", "number", "tahun", "th", "year"];
 pub struct Identifier {
     /// Canonical form, e.g. `UU 28/2007` · what the corpus stores.
     pub canonical: String,
-    /// The span as the user actually wrote it, for `explain_routing`.
+    /// The span as the user actually wrote it, for `search(dry_run)`.
     pub matched_on: String,
 }
 
@@ -243,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn the_original_spelling_is_preserved_for_explain_routing() {
+    fn the_original_spelling_is_preserved_for_the_routing_plan() {
         let found = extract("lihat Undang-Undang Nomor 28 Tahun 2007 pasal 9");
         assert_eq!(found[0].matched_on, "Undang-Undang Nomor 28 Tahun 2007");
         assert_eq!(found[0].canonical, "UU 28/2007");

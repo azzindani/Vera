@@ -150,13 +150,13 @@ an **atomic version swap** so the live engine never sees a half-updated index.
 ## 8. End-to-end request trace
 
 ```
-1. agent → search_knowledge(query="...")          [query only; no domain]
+1. agent → search(query="...")                     [query only; no domain/source]
 2. engine → OpenRouter.embed(query)                [pinned provider, ~120ms]
 3. engine → layer-1: match query vs domain anchors [<1ms, hot; "no match" → empty result]
 4. engine → layer-2: 5 nearest centroids           [~2ms, hot]
 5. engine → for each of 5 clusters (sequential):
               SELECT ... halfvec distance + BM25 ... LIMIT 50
-6. engine → global exact-identifier BM25 (if query has reg numbers/citations)
+6. (this actually runs FIRST, before step 3 — see MCP_ENGINE.md §1)
 7. engine → RRF fuse all candidates → top-k
 8. engine → attach provenance (source_url + page/section) to each
 9. engine → return { detected_domain, results[], citation_block, summary_payload }

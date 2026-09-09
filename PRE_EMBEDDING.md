@@ -36,7 +36,7 @@ shreds that.
 - Split on the **legal unit** (pasal / ayat / section / clause), not a token count.
 - Store the **heading path** in metadata (e.g. `UU 28/2007 › Bab II › Pasal 9 › ayat (3)`).
 - Store **provenance at chunk creation**: `source_url`, `page`, and `section`/clause.
-  Immutable thereafter — this is what `get_provenance` returns.
+  Immutable thereafter — this is what `fetch(depth="provenance")` returns.
 - Qwen3-8B's long context allows large chunks, but bigger chunks blur retrieval
   precision — chunk to the unit, not to the maximum.
 

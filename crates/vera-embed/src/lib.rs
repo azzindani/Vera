@@ -63,7 +63,7 @@ pub trait EmbeddingProvider: Send + Sync {
     /// The space this provider produces vectors in.
     fn space(&self) -> &EmbeddingSpace;
 
-    /// Identifier for logs and `explain_routing`.
+    /// Identifier for logs and the `search(dry_run)` routing plan.
     fn describe(&self) -> String {
         let s = self.space();
         format!("{}(dim={})", s.model_id, s.dim)

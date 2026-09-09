@@ -126,7 +126,7 @@ impl<S: ChunkStore> Engine<S> {
     }
 
     /// The layer-1 threshold actually in force for a domain, after calibration
-    /// and any operator override. Surfaced for `explain_routing` and the bench.
+    /// and any operator override. Surfaced for `search(dry_run)` and the bench.
     #[must_use]
     pub fn threshold_for(&self, domain_id: &str) -> f32 {
         self.thresholds
@@ -350,7 +350,7 @@ impl<S: ChunkStore> Engine<S> {
 
         let mut response = SearchResponse {
             success: true,
-            op: "search_knowledge",
+            op: "search",
             query: query_text.to_owned(),
             detected_domain: Some(domain.id),
             domain_confidence: domain.similarity,
@@ -402,7 +402,7 @@ impl<S: ChunkStore> Engine<S> {
         let summary_payload = summary_payload(&results, 0);
         let mut response = SearchResponse {
             success: true,
-            op: "search_knowledge",
+            op: "search",
             query: query_text.to_owned(),
             detected_domain: None,
             domain_confidence: 0.0,

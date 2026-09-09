@@ -65,7 +65,7 @@ impl Chunk {
         }
     }
 
-    /// Bounded preview for `search_knowledge` · never the full body.
+    /// Bounded preview for `search` · never the full body.
     ///
     /// Cuts on a char boundary and prefers the last word break, so a snippet
     /// does not end mid-token. Multibyte-safe.
@@ -85,7 +85,7 @@ impl Chunk {
     }
 }
 
-/// A knowledge base, as advertised by `list_domains`.
+/// A knowledge base, as advertised by `describe`.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Domain {
     pub id: String,

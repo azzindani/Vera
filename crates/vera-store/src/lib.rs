@@ -181,7 +181,7 @@ pub trait ChunkStore: Send + Sync {
     fn exact_identifier(&self, identifier: &str, limit: usize)
     -> Result<Vec<Chunk>, StoreError>;
 
-    /// Fetch chunks by id, for snippets, `read_chunk` and provenance.
+    /// Fetch chunks by id, for snippets, `fetch` and provenance.
     ///
     /// # Errors
     /// Backend failure.
