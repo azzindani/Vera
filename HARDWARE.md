@@ -90,21 +90,87 @@ by query-distribution skew). For RAG feeding an agent, ~1–2 s for an accurate,
 
 ---
 
-## 5. Scale path (production, not the VPS)
+## 5. Scale path — where to grow, and in which direction
 
 The VPS and a production cluster are the **same architecture at two sizes** — no
-redesign.
+redesign. What changes with scale is only *which resource runs out first*.
 
-- **More QPS → replicate the engine.** It is stateless (only the small hot centroid set
-  is resident, identical per replica), so N replicas behind a load balancer scale
+### The four competing constraints
+
+| # | Constraint | Type |
+|---|---|---|
+| 1 | one cluster must fit the per-request RAM ceiling | **hard** — this is the OOM guarantee (§2) |
+| 2 | the hot centroid set must fit RAM | **hard** — the centroids *are* the index |
+| 3 | query cost = centroids scanned + rows scanned | soft — a latency budget |
+| 4 | the corpus must fit local disk | **hard** — and the one people forget |
+
+At 100M all four are satisfied at 10K clusters × 10K rows. **That agreement is a coincidence of
+scale, not a property of the design** (`ARCHITECTURE.md` §2). Away from it they
+diverge, and the binding one dictates the move:
+
+| Binding constraint | Response |
+|---|---|
+| 3 — query cost | re-cluster at k = √N |
+| 1 — cluster too big for RAM | split-on-size; cap `f` below √N |
+| 2 — too many centroids to hold or scan | **add a routing level** |
+| 4 — corpus exceeds local disk | **shard across nodes** |
+
+### Worked example: 10B rows from one source
+
+√N says 100,000 clusters × 100,000 rows. Check it:
+
+| | Value | Verdict |
+|---|---|---|
+| one cluster | 100K × 4096 halfvec = **819 MB** | ✗ 10× over constraint 1 |
+| hot centroids | 100K × 8 KB = **819 MB** | ✗ over constraint 2 |
+
+Forcing cluster size back to 10K rows gives 1,000,000 clusters — 8.2 GB of centroids
+held hot and ~4×10⁹ flops just to scan them. Worse. **Two-level routing is finished at
+10B.** But routing is not what fails first:
+
+```
+10B × 4096 dims × 2 bytes (halfvec)  =  82 TB of vectors alone
+                    + text, BM25, overhead  ≈  130 TB
+```
+
+Even at 1024 dims that is **20 TB**, against the ~1.3 TB this profile budgets for 100M.
+**Constraint 4 binds long before constraint 2 does.** At 10B you are sharding whether or
+not you deepen, so the deepening question never arises.
+
+### Deepen or shard
+
+- **Deepen** (add a routing level) when constraint 2 binds and constraint 4 does not —
+  roughly the 1B–3B range, where the corpus still fits local disk but the centroid set
+  no longer fits RAM. Cost: recall compounds multiplicatively across levels
+  (`ARCHITECTURE.md` §2).
+- **Shard** when constraint 4 binds. Each shard runs the **unmodified two-level design**
+  at ~100M — exactly the profile everything here is budgeted against.
+
+Three properties make sharding nearly free, and they are the same three that make
+multi-source work (`MULTI_DOMAIN.md`):
+
+- **Clusters live inside a partition**, so shards never share a centroid space and need
+  no coordination.
+- **RRF is rank-based**, so fusing N independently-scored shards works exactly as well
+  as fusing two lists inside one.
+- **The engine is stateless**, so a shard is a replica pointed at different data.
+
+A single source shards fine: by hash, or better by a metadata field (year, issuing body)
+so that filters align with shard boundaries and a constrained query touches few shards.
+
+### The other levers
+
+- **More QPS → replicate the engine.** Stateless, only the small hot centroid set is
+  resident and identical per replica, so N replicas behind a load balancer scale
   throughput linearly. This is the concurrency answer beyond ~4.
-- **Bigger corpus → shard the DB by cluster-range across storage nodes.** The engine's
-  router knows which node owns a routed cluster and scatter-gathers. Adding capacity =
-  adding nodes and reassigning ranges.
-- **Bigger clusters (100K/1M) → swappable per-cluster backend.** A cluster that
-  outgrows flat scan graduates to its own on-disk ANN index (hnswlib/qdrant) while small
-  clusters stay flat. The routing layer is unchanged; only what happens *inside* a leaf
-  changes.
+- **A cluster that outgrows flat scan → swappable leaf backend.** It graduates to its
+  own on-disk ANN index while small clusters stay flat. The routing layers are
+  unchanged; only what happens *inside* a leaf changes.
+- **Cheapest lever on this whole table: the rescore pattern** (`EMBEDDING.md` §3, on
+  record and not yet chosen). Index truncated 1024-dim vectors for candidate retrieval,
+  keep full 4096 only to rescore finalists. At 10B that is 20 TB instead of 82 TB and
+  shrinks every cluster 4× — it moves the sharding threshold by a factor of four and
+  costs one extra pass over a few hundred candidates.
 
 All scale limits are configuration. The 2 vCPU / 8 GB profile is the floor that proves
 the design; nothing about it blocks the ceiling.

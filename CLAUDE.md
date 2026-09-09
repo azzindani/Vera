@@ -53,9 +53,16 @@ Three routing layers, hybrid search, two containers. Full detail in
 ```
 LAYER 1  domain          → pick the knowledge base (1 at launch; future-proofed)
 LAYER 2  ~10K clusters   → pick ~5 nearest cluster centroids (k-means)
-LAYER 3  ~10K rows/cluster → flat halfvec scan + BM25, sequential load, top-50 each
-                            → RRF fuse → top-k results + provenance
+LAYER 3  ~10K rows/cluster → flat halfvec scan, sequential load, top-50 each
+         + ONE global BM25 → RRF fuse → top-k results + provenance
 ```
+
+! **The two "10K"s are the same number**: √100M = 10,000. Cluster count is **k = √N**,
+not a fixed rows-per-cluster target — applying "10K rows" at any smaller scale
+under-clusters badly (`ARCHITECTURE.md` §2). And the design is **n-layer**, not
+two-layer: a routing level exists wherever a level is too big to scan linearly, so 2 is
+simply what 100M needs. n ∈ {2, 3} in practice; past that, shard rather than deepen
+(`HARDWARE.md` §5).
 
 - **Embedding model:** Qwen3-Embedding-8B, **4096 dims**, open weights.
   Corpus is pre-embedded offline on rented GPU; queries are embedded at runtime via

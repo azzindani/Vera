@@ -87,6 +87,48 @@ Cluster size is bounded from the other side too — one cluster is the per-reque
 ceiling — so a corpus large enough that √N rows exceeds that ceiling takes the smaller
 of the two. Split-on-size (`CLUSTER_MAINTENANCE.md` §2) is what enforces it.
 
+### n layers, not two
+
+Two routing levels is what **100M** happens to need. The design is **n-layer**, and the
+number is *derived from the corpus*, never chosen.
+
+The rule is recursive and fits in one sentence:
+
+> **If a level is too big to scan linearly, route it.**
+
+Layer 2 exists because 100M rows cannot be scanned. A layer 2½ would exist for exactly
+the same reason one level up: a million centroids cannot be scanned either. Same rule
+applied to itself.
+
+With fanout `f` per level and `R` routing levels above the leaves:
+
+```
+N = f^(R+1)        →        R = log_f(N) − 1
+```
+
+`f` is bounded by the per-request RAM ceiling (one cluster must fit). `R` then falls
+out. Because each level multiplies capacity by `f`, **R grows extremely slowly**:
+
+| routing levels | max corpus at f = 10K |
+|---|---|
+| 1 | **100M** ← the design point |
+| 2 | **1 trillion** |
+| 3 | 10¹⁶ |
+
+One extra level takes 100M to 1T. So n-layer in principle, **n ∈ {2, 3} in practice**,
+and past that the answer is to shard rather than to deepen (`HARDWARE.md` §5).
+
+Two constraints on going deeper:
+
+- ! **Recall compounds multiplicatively.** Each level is a probabilistic prune, so
+  per-level recall `r` gives `r^R` end to end. At a healthy 90% per level, three levels
+  is ~73%; at the ~60% measured on the synthetic corpus it is ~22%. The compensation —
+  probing wider at every level — eats the savings that motivated the extra layer. The
+  per-level figure is exactly what the eval set exists to establish (`EVAL.md` §3).
+- **Layer 1 is not part of this recursion.** Domain/source detection selects *which
+  corpus*, not which partition of one: a different decision with a different failure
+  mode (`MULTI_DOMAIN.md` §2). The recursion lives entirely in layers 2 and below.
+
 `clusters_probed` (how many layer-2 clusters to open, default ~5) is the central
 recall/latency/RAM dial. More clusters = safer recall, more latency, but **not** more
 RAM, because of sequential loading (§4).
