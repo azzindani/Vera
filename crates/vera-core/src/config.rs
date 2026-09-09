@@ -177,6 +177,47 @@ impl Default for RoutingConfig {
 /// the choice, fail loud rather than silent.
 pub const FALLBACK_DOMAIN_THRESHOLD: f32 = 0.0;
 
+/// Thresholds behind the published `confidence` signal.
+///
+/// ! Config, ✗ constants. `EVAL.md` §1 names "the routing-confidence and
+/// `confidence:low` thresholds" among the dials that can only be set with
+/// evidence — the eval set decides them, so they must be settable without a
+/// recompile.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConfidenceConfig {
+    /// Top dense cosine at or above which agreement reads as `high`.
+    #[serde(default = "default_high_dense")]
+    pub high_dense: f32,
+    /// Top dense cosine below which the result set reads as `low`.
+    #[serde(default = "default_low_dense")]
+    pub low_dense: f32,
+    /// If the best and worst fused scores differ by less than this, the results
+    /// are "clustered" — nothing stands out — which `OUTPUT_CONTRACT.md` §4
+    /// treats as a `low` signal even when the absolute scores look acceptable.
+    #[serde(default = "default_spread_epsilon")]
+    pub spread_epsilon: f32,
+}
+
+const fn default_high_dense() -> f32 {
+    0.50
+}
+const fn default_low_dense() -> f32 {
+    0.30
+}
+const fn default_spread_epsilon() -> f32 {
+    0.002
+}
+
+impl Default for ConfidenceConfig {
+    fn default() -> Self {
+        Self {
+            high_dense: default_high_dense(),
+            low_dense: default_low_dense(),
+            spread_epsilon: default_spread_epsilon(),
+        }
+    }
+}
+
 /// Result shaping and fusion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchConfig {
@@ -191,6 +232,8 @@ pub struct SearchConfig {
     /// Candidates the keyword half keeps, per cluster and globally.
     #[serde(default = "default_bm25_limit")]
     pub bm25_limit: usize,
+    #[serde(default)]
+    pub confidence: ConfidenceConfig,
 }
 
 const fn default_max_results() -> usize {
@@ -213,6 +256,7 @@ impl Default for SearchConfig {
             snippet_chars: default_snippet_chars(),
             rrf_k: default_rrf_k(),
             bm25_limit: default_bm25_limit(),
+            confidence: ConfidenceConfig::default(),
         }
     }
 }

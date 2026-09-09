@@ -11,9 +11,10 @@
 mod metrics;
 mod synth;
 
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
-use metrics::{Latencies, recall_at_k, top1_hit};
+use metrics::{Latencies, recall_at_k, reciprocal_rank, routing_recall, top1_hit};
 use vera_core::{Config, EmbeddingSpace};
 use vera_engine::{Engine, Probe};
 use vera_index::{KMeansConfig, Rng, build_corpus};
@@ -278,6 +279,17 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("sampling {n_queries} queries (jitter {jitter})…");
     let queries = sample_queries(&store, &domain, n_queries, jitter, seed)?;
 
+    // ! Chunk → cluster, for routing recall. Built once from the store before
+    // the engine takes ownership: `EVAL.md` §3 needs to know whether a true
+    // result was *reachable*, which is a fact about the index, not the query.
+    eprintln!("mapping chunks to clusters for routing recall…");
+    let mut cluster_of: HashMap<String, i32> = HashMap::new();
+    for c in store.centroids(&domain)? {
+        store.scan_cluster(c.id, &mut |row| {
+            cluster_of.insert(row.id.to_owned(), c.id);
+        })?;
+    }
+
     let config = Config {
         embedding: space.clone(),
         search: vera_core::SearchConfig {
@@ -327,17 +339,22 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     );
     println!("             {baseline_rows_avg} rows scanned per query");
     println!();
+    // EVAL.md §3: recall@k is the primary metric, routing recall is the
+    // diagnostic that says which half to fix, MRR is ranking quality.
     println!(
-        "{:>6}  {:>9}  {:>9}  {:>9}  {:>9}  {:>10}  {:>8}  {:>7}",
-        "probe", "p50 ms", "p95 ms", "p99 ms", "speedup", "rows/query", "recall", "top-1"
+        "{:>6}  {:>9}  {:>9}  {:>9}  {:>8}  {:>10}  {:>8}  {:>8}  {:>6}  {:>6}",
+        "probe", "p50 ms", "p95 ms", "p99 ms", "speedup", "rows/query", "recall", "routing",
+        "MRR", "top-1"
     );
-    println!("{}", "-".repeat(84));
+    println!("{}", "-".repeat(100));
 
     for probe in &probes {
         let mut times = Vec::with_capacity(queries.len());
         let mut stage = StageTotals::default();
         let mut rows_scanned = 0usize;
         let mut recall_sum = 0.0f32;
+        let mut routing_sum = 0.0f32;
+        let mut mrr_sum = 0.0f32;
         let mut top1 = 0usize;
 
         for (q, baseline) in queries.iter().zip(&baselines) {
@@ -347,6 +364,9 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             rows_scanned += out.timings.rows_scanned;
             let ids: Vec<String> = out.response.results.iter().map(|r| r.id.clone()).collect();
             recall_sum += recall_at_k(&ids, baseline, k);
+            let probed: HashSet<i32> = out.probed.iter().map(|p| p.cluster_id).collect();
+            routing_sum += routing_recall(baseline, &cluster_of, &probed, k);
+            mrr_sum += reciprocal_rank(&ids, baseline);
             if top1_hit(&ids, baseline) {
                 top1 += 1;
             }
@@ -357,6 +377,10 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         #[allow(clippy::cast_precision_loss)]
         let recall = recall_sum / n as f32;
         #[allow(clippy::cast_precision_loss)]
+        let routing = routing_sum / n as f32;
+        #[allow(clippy::cast_precision_loss)]
+        let mrr = mrr_sum / n as f32;
+        #[allow(clippy::cast_precision_loss)]
         let top1_rate = top1 as f32 / n as f32;
         let speedup = if lat.p50() > 0.0 {
             baseline_lat.p50() / lat.p50()
@@ -365,17 +389,27 @@ fn cmd_run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         };
 
         println!(
-            "{probe:>6}  {:>9.2}  {:>9.2}  {:>9.2}  {:>8.1}×  {:>10}  {:>7.1}%  {:>6.1}%",
+            "{probe:>6}  {:>9.2}  {:>9.2}  {:>9.2}  {:>7.1}×  {:>10}  {:>7.1}%  {:>7.1}%  \
+             {:>6.3}  {:>5.1}%",
             lat.p50(),
             lat.p95(),
             lat.p99(),
             speedup,
             rows_scanned / n,
             recall * 100.0,
+            routing * 100.0,
+            mrr,
             top1_rate * 100.0
         );
     }
 
+    println!();
+    println!(
+        "recall  = fraction of the exhaustive top-{k} that routed search returned
+routing = fraction that was in a probed cluster at all · EVAL.md §3
+          routing high + recall low → fix fusion / per-cluster top-k
+          routing low               → fix clustering or raise clusters_probed"
+    );
     println!();
     println!("stage breakdown at probe={} (mean ms/query):", probes.last().copied().unwrap_or(5));
     let mut stage = StageTotals::default();

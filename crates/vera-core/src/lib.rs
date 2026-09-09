@@ -13,11 +13,11 @@ pub mod config;
 pub mod contract;
 
 pub use config::{
-    Config, ConcurrencyConfig, DEFAULT_QUERY_INSTRUCTION, EmbeddingSpace, ReadConfig,
+    Config, ConcurrencyConfig, ConfidenceConfig, DEFAULT_QUERY_INSTRUCTION, EmbeddingSpace, ReadConfig,
     RoutingConfig, SearchConfig, SpaceMismatch,
 };
 pub use contract::{
-    Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
+    ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
     Source, SummaryPayload,
 };
 

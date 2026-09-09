@@ -16,5 +16,6 @@ workspace = true
 
 [dev-dependencies]
 vera-index = { version = "0.0.1", path = "../vera-index" }
+serde_json = "1"
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

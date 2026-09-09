@@ -4,7 +4,7 @@
 //! matters under the concurrency ceiling: a p99 several times the p50 means
 //! some requests are starving, and averaging makes that invisible.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 /// A sorted sample of durations, queryable by percentile.
@@ -94,6 +94,48 @@ pub fn recall_at_k(routed: &[String], baseline: &[String], k: usize) -> f32 {
     }
 }
 
+/// Fraction of the true top-k that landed in a cluster the query actually
+/// probed · `EVAL.md` §3.
+///
+/// ! The diagnostic metric, and the one that says *where* to fix a low
+/// recall@k. If routing recall is high but recall@k is low, the answers were
+/// reachable and fusion or the candidate cap dropped them. If routing recall
+/// itself is low, no amount of fusion tuning helps — the clustering is wrong or
+/// `clusters_probed` is too small. Without it, a recall number says something
+/// is broken but not which half.
+#[must_use]
+pub fn routing_recall(
+    baseline: &[String],
+    cluster_of: &HashMap<String, i32>,
+    probed: &HashSet<i32>,
+    k: usize,
+) -> f32 {
+    let truth: Vec<&String> = baseline.iter().take(k).collect();
+    if truth.is_empty() {
+        return 1.0;
+    }
+    let reachable = truth
+        .iter()
+        .filter(|id| cluster_of.get(**id).is_some_and(|c| probed.contains(c)))
+        .count();
+    #[allow(clippy::cast_precision_loss)]
+    {
+        reachable as f32 / truth.len() as f32
+    }
+}
+
+/// Reciprocal rank of the first baseline result present in `routed` · `EVAL.md` §3.
+#[must_use]
+pub fn reciprocal_rank(routed: &[String], baseline: &[String]) -> f32 {
+    let Some(target) = baseline.first() else {
+        return 1.0;
+    };
+    routed
+        .iter()
+        .position(|id| id == target)
+        .map_or(0.0, |i| 1.0 / (i as f32 + 1.0))
+}
+
 /// Whether the single best baseline result survived routing.
 ///
 /// Complements recall@k: losing rank 1 matters more than losing rank 10, and an
@@ -169,6 +211,39 @@ mod tests {
     #[test]
     fn an_empty_baseline_is_perfect_recall_not_zero() {
         assert!((recall_at_k(&ids(&["a"]), &[], 10) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn routing_recall_separates_a_routing_miss_from_a_ranking_miss() {
+        // ! The whole point of the metric. Same recall@k of 0.5, two different
+        // causes — and only this number tells them apart.
+        let baseline = ids(&["a", "b"]);
+        let cluster_of: HashMap<String, i32> =
+            [("a".to_owned(), 1), ("b".to_owned(), 2)].into_iter().collect();
+
+        // `b` sat in an unprobed cluster · a routing failure.
+        let probed: HashSet<i32> = [1].into_iter().collect();
+        assert!((routing_recall(&baseline, &cluster_of, &probed, 2) - 0.5).abs() < 1e-6);
+
+        // Both clusters probed · anything lost after this is ranking, not routing.
+        let probed_both: HashSet<i32> = [1, 2].into_iter().collect();
+        assert!((routing_recall(&baseline, &cluster_of, &probed_both, 2) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn routing_recall_counts_an_unknown_chunk_as_unreachable() {
+        let baseline = ids(&["ghost"]);
+        assert!(
+            routing_recall(&baseline, &HashMap::new(), &HashSet::new(), 1).abs() < 1e-6
+        );
+    }
+
+    #[test]
+    fn reciprocal_rank_rewards_finding_the_best_answer_early() {
+        let baseline = ids(&["a"]);
+        assert!((reciprocal_rank(&ids(&["a", "b"]), &baseline) - 1.0).abs() < 1e-6);
+        assert!((reciprocal_rank(&ids(&["b", "a"]), &baseline) - 0.5).abs() < 1e-6);
+        assert!(reciprocal_rank(&ids(&["x", "y"]), &baseline).abs() < 1e-6);
     }
 
     #[test]

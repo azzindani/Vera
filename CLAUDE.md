@@ -250,9 +250,52 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    convention: `scan_cluster` hands the visitor a borrowed, reused buffer, so
    retaining a cluster would have to be written as a visible copy.
 
-6. **Recall is not yet meaningfully measured.** The synthetic corpus returns
-   100% recall@10 at every probe level, which means it is too easy rather than
-   that routing is free. A real corpus is needed before any recall claim.
+6. **Routing is doing far less work than end-to-end recall suggests.** Adding
+   `EVAL.md` §3's *routing recall* — was the true answer in a probed cluster at
+   all — splits a number that looked settled:
+
+   | probe | recall@10 | routing recall |
+   |---|---|---|
+   | 1 | 99.3% | **68.2%** |
+   | 5 | 99.5% | **77.5%** |
+   | 20 | 100% | 100% |
+
+   Dense routing reaches only ~68% of true answers at probe=1; the **global
+   BM25 half recovers the rest**. An earlier read of this project's own numbers
+   credited that 99% to routing. It is not routing — and on a corpus where
+   query and document vocabulary diverge, the keyword half will not rescue it.
+   This is precisely the split `EVAL.md` predicted the metric would expose.
+
+7. **Recall is still not measured on real data.** The synthetic corpus is too
+   easy. No recall claim should be trusted until the real corpus runs.
+
+### Known gaps against the docs
+
+Audited against every doc in the repo. These are specified and **not built**:
+
+| Doc | Requirement | Status |
+|---|---|---|
+| `EMBEDDING.md` §3, `HARDWARE.md` §3 | vectors stored as **halfvec (16-bit)** | store uses f32 — 2× the bytes, and the leaf scan is I/O-bound, so this is also a performance gap |
+| `EMBEDDING.md` §4.1 | pin the **provider id** as part of the config | `EmbeddingSpace` has no provider field |
+| `EMBEDDING.md` §5 | validated **secondary** provider for fail-over | not built |
+| `LOOPHOLES.md` §8 | store a **source hash** to detect moved/changed sources | no such column |
+| `LOOPHOLES.md` §10 | **free-space preflight** before bulk-load / split | not built |
+| `HARDWARE.md` §2 | centroids **mlock'd** | not built |
+| `MCP_ENGINE.md` §7 | **streamable-http** transport | stdio only |
+| `CLUSTER_MAINTENANCE.md` §2 | Tier-1 incremental assign, Tier-2 **split-on-size** | only full rebuild exists |
+| `EVAL.md` §2 | `eval/` labeled query set | directory does not exist |
+| `EVAL.md` §3 | **exact-match recall**, nDCG | not measured (recall@k, routing recall, MRR, p50/p95/p99 are) |
+| `CLAUDE.md` §4 | layout: `docs/`, `engine/`, `pipelines/` | actual: docs at root, `crates/` workspace, no Python pipelines |
+
+Two docs are now **wrong** rather than merely unimplemented, and should be
+edited rather than built toward:
+
+- `ARCHITECTURE.md` §5 describes the keyword half as scoped to routed clusters.
+  Measured, that costs N full-corpus scans and loses recall; it must be global.
+- `MCP_ENGINE.md` §5 and `HARDWARE.md` §2 budget `per_request_ceiling` as one
+  cluster (~82 MB). The streaming scan makes it one *row* — measured peak RSS
+  is 7 MB regardless of `clusters_probed`. The budget is correct as an upper
+  bound but overstates actual use by ~4 orders of magnitude.
 
 *Upstream standard: `https://github.com/azzindani/Standards/blob/main/local_mcp/STANDARDS.md`.*
 *Where this CLAUDE.md or `docs/STANDARDS_COMPLIANCE.md` conflicts with the upstream

@@ -341,9 +341,10 @@ impl<S: ChunkStore> Engine<S> {
         let results = self.hydrate(&fused)?;
         timings.hydrate = t.elapsed();
 
-        let confidence = confidence_for(domain.similarity, results.len());
+        let confidence =
+            confidence_for(&results, !exact_matches.is_empty(), &self.config.search.confidence);
         let citation_block = citation_block(&results);
-        let summary_payload = summary_payload(&results);
+        let summary_payload = summary_payload(&results, probed.len());
 
         timings.total = started.elapsed();
 
@@ -398,7 +399,7 @@ impl<S: ChunkStore> Engine<S> {
         results.truncate(self.config.search.max_results);
 
         let citation_block = citation_block(&results);
-        let summary_payload = summary_payload(&results);
+        let summary_payload = summary_payload(&results, 0);
         let mut response = SearchResponse {
             success: true,
             op: "search_knowledge",
@@ -460,76 +461,183 @@ impl<S: ChunkStore> Engine<S> {
     }
 }
 
-/// Map domain similarity and result count onto the published confidence.
+/// The published `confidence` signal · `OUTPUT_CONTRACT.md` §4.
 ///
-/// ! Reports how sure the *routing* was, ✗ how good the answers are — the
-/// engine has no way to judge the latter without a model, and pretending
-/// otherwise is exactly the LLM-in-the-engine this design forbids.
-fn confidence_for(domain_similarity: f32, result_count: usize) -> Confidence {
-    if result_count == 0 {
+/// The contract defines it in terms of **result quality**:
+/// > `high` — strong top scores, exact-identifier match present, or tight
+/// > agreement between dense and BM25.
+/// > `medium` — moderate scores, single-half support.
+/// > `low` — top scores clustered and low, no exact match.
+///
+/// ! Every one of those is computable without a model — an exact-match flag, a
+/// cosine, and whether both halves contributed — so there is no tension with
+/// "the engine never calls an LLM". An earlier version derived this from the
+/// layer-1 domain-anchor similarity instead, which reports how sure the
+/// *routing* was, a different quantity: on a coherent corpus the anchor
+/// similarity is nearly constant across queries (p1 0.71 to p95 0.75 on the
+/// benchmark corpus), so it carried almost no signal and would have read `high`
+/// for every query including the bad ones.
+fn confidence_for(
+    results: &[SearchResult],
+    exact_match_present: bool,
+    cfg: &vera_core::ConfidenceConfig,
+) -> Confidence {
+    if results.is_empty() {
         return Confidence::None;
     }
-    if domain_similarity >= 0.60 {
-        Confidence::High
-    } else if domain_similarity >= 0.40 {
-        Confidence::Medium
-    } else {
-        Confidence::Low
+    // An exact identifier hit is the least ambiguous evidence the engine has;
+    // it did not need routing or ranking to be right (`LOOPHOLES.md` §1).
+    if exact_match_present {
+        return Confidence::High;
     }
+
+    let top = &results[0];
+    let both_halves = top.scores.dense > 0.0 && top.scores.bm25 > 0.0;
+
+    // "top scores clustered" · nothing separated itself from the pack, so the
+    // ranking carries no information even if the absolute numbers look fine.
+    let clustered = results.len() > 1
+        && (top.score - results[results.len() - 1].score).abs() < cfg.spread_epsilon;
+
+    if clustered || top.scores.dense < cfg.low_dense {
+        return Confidence::Low;
+    }
+    if both_halves && top.scores.dense >= cfg.high_dense {
+        return Confidence::High;
+    }
+    Confidence::Medium
 }
 
-/// De-duplicated snippets and sources for the agent to write prose from.
-fn summary_payload(results: &[SearchResult]) -> SummaryPayload {
-    let mut sources: Vec<String> = Vec::new();
+/// De-duplicated snippets and citation references for the agent.
+///
+/// ! `sources` holds `"[1]"`-style references into `citation_block`, ✗ repeated
+/// title+url lines (`OUTPUT_CONTRACT.md` §2). `coverage` says how broadly the
+/// corpus was consulted, which is what the agent needs to decide whether to
+/// widen the search — a bare result count says nothing about that.
+fn summary_payload(results: &[SearchResult], clusters_probed: usize) -> SummaryPayload {
+    let mut documents: Vec<&str> = Vec::new();
     for r in results {
-        let line = format!("{} — {}", r.source.title, r.source.url);
-        if !sources.contains(&line) {
-            sources.push(line);
+        if !documents.contains(&r.source.url.as_str()) {
+            documents.push(&r.source.url);
         }
     }
+    let top_score = results.first().map_or(0.0, |r| r.score);
     SummaryPayload {
         snippets: results.iter().map(|r| r.snippet.clone()).collect(),
-        sources,
-        coverage: format!("{} result(s)", results.len()),
+        sources: (1..=results.len()).map(|i| format!("[{i}]")).collect(),
+        coverage: format!(
+            "{clusters_probed} clusters probed, {} distinct documents, top score {top_score:.3}",
+            documents.len()
+        ),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vera_core::{ConfidenceConfig, Locator, Source};
+
+    fn result(id: &str, fused: f32, dense: f32, bm25: f32) -> SearchResult {
+        SearchResult {
+            id: id.into(),
+            snippet: "Wajib Pajak…".into(),
+            score: fused,
+            scores: ComponentScores { dense, bm25 },
+            source: Source {
+                title: "Doc".into(),
+                url: format!("https://e/{id}"),
+                locator: Locator::default(),
+            },
+        }
+    }
+
+    fn cfg() -> ConfidenceConfig {
+        ConfidenceConfig::default()
+    }
 
     #[test]
-    fn confidence_tracks_routing_certainty() {
-        assert_eq!(confidence_for(0.9, 5), Confidence::High);
-        assert_eq!(confidence_for(0.5, 5), Confidence::Medium);
-        assert_eq!(confidence_for(0.3, 5), Confidence::Low);
+    fn an_exact_identifier_match_is_always_high() {
+        // OUTPUT_CONTRACT.md §4 · the least ambiguous evidence the engine has.
+        let weak = [result("a", 0.01, 0.05, 0.0)];
+        assert_eq!(confidence_for(&weak, true, &cfg()), Confidence::High);
+    }
+
+    #[test]
+    fn agreement_between_both_halves_at_a_strong_score_is_high() {
+        let r = [result("a", 0.03, 0.82, 5.0), result("b", 0.01, 0.4, 0.0)];
+        assert_eq!(confidence_for(&r, false, &cfg()), Confidence::High);
+    }
+
+    #[test]
+    fn a_strong_dense_score_with_no_keyword_support_is_medium() {
+        // "single-half support" · one signal, however strong, is one signal.
+        let r = [result("a", 0.03, 0.82, 0.0), result("b", 0.01, 0.2, 0.0)];
+        assert_eq!(confidence_for(&r, false, &cfg()), Confidence::Medium);
+    }
+
+    #[test]
+    fn a_weak_top_score_is_low() {
+        let r = [result("a", 0.03, 0.12, 3.0), result("b", 0.01, 0.05, 0.0)];
+        assert_eq!(confidence_for(&r, false, &cfg()), Confidence::Low);
+    }
+
+    #[test]
+    fn clustered_scores_are_low_even_when_the_absolute_numbers_look_fine() {
+        // ! "top scores clustered and low" · nothing separated itself, so the
+        // ranking carries no information. A threshold on the top score alone
+        // would call this high and be confidently useless.
+        let r = [
+            result("a", 0.0300, 0.90, 5.0),
+            result("b", 0.0299, 0.89, 4.9),
+            result("c", 0.0298, 0.89, 4.8),
+        ];
+        assert_eq!(confidence_for(&r, false, &cfg()), Confidence::Low);
     }
 
     #[test]
     fn no_results_is_never_reported_as_confident() {
-        // ! Even a perfect domain match means nothing if the leaves were empty.
-        assert_eq!(confidence_for(0.99, 0), Confidence::None);
+        assert_eq!(confidence_for(&[], true, &cfg()), Confidence::None);
+        assert_eq!(confidence_for(&[], false, &cfg()), Confidence::None);
     }
 
     #[test]
-    fn the_summary_payload_dedupes_sources_but_keeps_every_snippet() {
-        let r = |snippet: &str, title: &str| SearchResult {
-            id: "x".into(),
-            snippet: snippet.into(),
-            score: 1.0,
-            scores: ComponentScores {
-                dense: 0.0,
-                bm25: 0.0,
-            },
-            source: vera_core::Source {
-                title: title.into(),
-                url: "https://e/1".into(),
-                locator: vera_core::Locator::default(),
-            },
+    fn the_thresholds_are_config_so_the_eval_set_can_move_them() {
+        // EVAL.md §1 lists the confidence thresholds among the dials evidence
+        // must set. A stricter high bar must demote the same result set.
+        let r = [result("a", 0.03, 0.55, 5.0), result("b", 0.01, 0.2, 0.0)];
+        assert_eq!(confidence_for(&r, false, &cfg()), Confidence::High);
+        let strict = ConfidenceConfig {
+            high_dense: 0.9,
+            ..ConfidenceConfig::default()
         };
-        // Two chunks from one document · one source line, two snippets.
-        let p = summary_payload(&[r("a", "Doc"), r("b", "Doc")]);
-        assert_eq!(p.snippets.len(), 2);
-        assert_eq!(p.sources.len(), 1);
+        assert_eq!(confidence_for(&r, false, &strict), Confidence::Medium);
+    }
+
+    #[test]
+    fn summary_sources_are_citation_references_in_rank_order() {
+        // OUTPUT_CONTRACT.md §2 · they index into citation_block.
+        let p = summary_payload(&[result("a", 1.0, 0.5, 1.0), result("b", 0.9, 0.4, 1.0)], 5);
+        assert_eq!(p.sources, ["[1]", "[2]"]);
+        assert_eq!(p.snippets.len(), 2, "every snippet is kept");
+    }
+
+    #[test]
+    fn coverage_reports_clusters_distinct_documents_and_top_score() {
+        let mut a = result("a", 0.871, 0.5, 1.0);
+        let mut b = result("b", 0.5, 0.4, 1.0);
+        // Two chunks of one document · one distinct document.
+        a.source.url = "https://e/doc1".into();
+        b.source.url = "https://e/doc1".into();
+        let p = summary_payload(&[a, b], 5);
+        assert!(p.coverage.contains("5 clusters probed"), "{}", p.coverage);
+        assert!(p.coverage.contains("1 distinct documents"), "{}", p.coverage);
+        assert!(p.coverage.contains("top score 0.871"), "{}", p.coverage);
+    }
+
+    #[test]
+    fn coverage_over_nothing_does_not_panic() {
+        let p = summary_payload(&[], 0);
+        assert!(p.sources.is_empty());
+        assert!(p.coverage.contains("0 distinct documents"), "{}", p.coverage);
     }
 }

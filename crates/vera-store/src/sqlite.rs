@@ -230,9 +230,18 @@ impl ChunkStore for SqliteStore {
 
     fn centroids(&self, domain_id: &str) -> Result<Vec<Centroid>, StoreError> {
         let conn = self.conn.lock().expect("store lock poisoned");
+        // ! Pinned to a single generation. `CLUSTER_MAINTENANCE.md` §3 requires a
+        // query to see one cluster-version for its lifetime: a Tier-3 re-cluster
+        // publishes a new generation alongside the live one, so selecting
+        // without this filter would mix old and new centroids and probe exactly
+        // the half-updated index the atomic swap exists to prevent. The engine
+        // loads centroids once at startup, so "the newest complete generation"
+        // is the version it pins until it reloads.
         let mut stmt = conn.prepare(
             "SELECT id, domain_id, centroid, row_count FROM clusters \
-             WHERE domain_id = ?1 ORDER BY id",
+             WHERE domain_id = ?1 \
+               AND generation = (SELECT MAX(generation) FROM clusters WHERE domain_id = ?1) \
+             ORDER BY id",
         )?;
         let mut out = Vec::new();
         let mut rows = stmt.query(params![domain_id])?;
@@ -504,6 +513,31 @@ mod tests {
             .unwrap();
         assert_eq!(addresses.len(), 2);
         assert_eq!(addresses[0], addresses[1], "buffer was not reused");
+    }
+
+    #[test]
+    fn a_new_cluster_generation_completely_replaces_the_old_one() {
+        // ! CLUSTER_MAINTENANCE.md §3. A Tier-3 re-cluster writes generation 2
+        // alongside the live generation 1. Without the generation filter the
+        // engine probes a mix of both — the half-updated index the atomic swap
+        // exists to prevent — and the mix is silent: routing simply gets worse.
+        let (_d, store) = fixture();
+        store.with_connection(|conn| {
+            conn.execute(
+                "INSERT INTO clusters (id, domain_id, centroid, row_count, generation) \
+                 VALUES (?1,?2,?3,?4,2)",
+                params![99, "reg", encode_vector(&[0.0, 0.0, 1.0, 0.0]), 3],
+            )
+            .unwrap();
+        });
+        let centroids = store.centroids("reg").unwrap();
+        assert_eq!(
+            centroids.len(),
+            1,
+            "expected only generation 2, got {:?}",
+            centroids.iter().map(|c| c.id).collect::<Vec<_>>()
+        );
+        assert_eq!(centroids[0].id, 99);
     }
 
     #[test]

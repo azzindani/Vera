@@ -532,6 +532,7 @@ dependencies = [
 name = "vera-engine"
 version = "0.0.1"
 dependencies = [
+ "serde_json",
  "tempfile",
  "thiserror",
  "tokio",
