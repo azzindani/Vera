@@ -300,6 +300,78 @@ feature of the retrieval core.
 
 ---
 
+## 10b. The operation surface: primitives, not verbs
+
+Today: **5 tools** — `list_domains`, `search_knowledge`, `read_chunk`,
+`get_provenance`, `explain_routing`. Each is a fixed verb over a fixed corpus shape.
+
+Adding the capabilities in this document *as verbs* is the obvious path and the wrong
+one: `search_by_filter`, `search_hierarchy`, `search_as_of`, `list_children`,
+`get_ancestors`, `get_citations`, `get_cited_by`, `list_versions`, `search_batch`,
+`list_sources`, `describe_schema`… ~15 tools, past the ≤8 budget, and every new source
+type tempts another.
+
+! **The unit of extension must be a declared parameter, not a new tool.** A capability
+that arrives as a tool means the engine grew a verb; a capability that arrives as a
+manifest field means the engine stayed the same size. Only the second scales to fifty
+sources.
+
+### The four primitives
+
+| Op | Role | Replaces / absorbs |
+|---|---|---|
+| `describe` | what exists: sources, their filterable fields, identifier grammars, edge types, validity model | `list_domains`, and everything an agent needs before it can express a constraint |
+| `search` | find candidates: query + constraints → ranked, cited results | `search_knowledge`, plus filtered / hierarchical / temporal / batch search |
+| `fetch` | by id: provenance, snippet, or full text | `read_chunk` + `get_provenance` — the same operation at two depths |
+| `traverse` | from id, follow a declared edge | hierarchy (`parent`, `children`, `ancestors`), graph (`cites`, `cited_by`), time (`versions`, `supersedes`) |
+
+`explain_routing` folds into `search` as a dry-run flag: it is the same planning work
+with execution suppressed, and keeping it as a separate tool duplicates the whole
+constraint surface. *(Divergence from `MCP_ENGINE.md` §2, which lists it separately.)*
+
+**Four tools cover strictly more capability than today's five**, and adding a source, an
+edge type, a filterable field, or a validity model adds **zero** tools.
+
+### The line that must not move
+
+The agent expresses **intent**; the engine owns **strategy**.
+
+| Agent may pass | Engine owns, always |
+|---|---|
+| query text | which source(s) — detected, never named by the agent (`CLAUDE.md` §7 rule 13) |
+| constraints (filter / as-of / subtree) | which rankers run, and their fusion weights |
+| `k`, fetch depth, edge name | which clusters are probed |
+| dry-run | the fusion method |
+
+! Constraints are safe to accept because they are *intent* ("only Supreme Court, only
+in force in 2019"). Ranker selection and weighting are *strategy* and must never be
+agent-supplied — that is the same hole as letting the agent name a domain, one level
+down. An agent that can set fusion weights can silently disable the keyword half.
+
+### Two rules that make this safe
+
+1. **Bulk is a parameter shape, ✗ a tool.** `search` takes one query or many; `fetch`
+   and `traverse` take one id or many. This amortises the embedding round-trip
+   (`MCP_ENGINE.md` §6.6) and lets one admission slot cover a batch, without a
+   `search_batch` verb. *(Supersedes the `search_batch` suggestion in §10.)*
+
+2. **An unrecognised constraint fails loudly.** If the agent filters on `court` and the
+   detected source has no `court` field, the engine returns an error naming the valid
+   fields — it must **never** ignore the field and return unfiltered results the agent
+   believes are filtered. Silently dropping a constraint is the same failure family as
+   filtering after routing (§5): a confident answer to a question that was not asked.
+   `describe` exists so the agent can avoid this rather than discover it.
+
+### Why this is also the multi-step answer
+
+Multi-step search (§10) is these four composed by the agent: `describe` → `search` →
+`traverse` → `fetch`. The engine needs no planner because the primitives compose, and it
+gains no planner because composition happens on the caller's side. Adding a fifth
+primitive should be treated as evidence that something is missing from the *model*, not
+from the tool list.
+
+---
+
 ## 11. Validating a multi-source foundation with one source
 
 The practical constraint: one source at volume, today.
@@ -393,3 +465,7 @@ Steps 1 and 2 are one decision, made once. Step 3 is what keeps steps 4–5 hone
    several tiny ones prove the second.
 10. **Schema and storage layout are one decision, made once**, because both are paid for
     in re-ingest.
+11. **Four primitives, not fifteen verbs.** `describe` · `search` · `fetch` ·
+    `traverse`. Capability grows through manifest-declared parameters; a new tool means
+    the model was wrong.
+12. **The agent passes intent, never strategy.** Constraints yes; ranker weights never.
