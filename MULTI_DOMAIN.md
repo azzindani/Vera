@@ -142,6 +142,103 @@ configuration layer. Not N engines.
 
 ---
 
+## 4b. The metadata model
+
+§4 says metadata is the thing that genuinely differs per source. This is how it is
+stored. **It is the first foundation decision (§12) because it is the one paid for in a
+full re-ingest.**
+
+`FACTORS.md` §5b separates three kinds of per-source variable — corpus *statistics*
+(one per corpus, drive dial derivation), row *metadata* (one per row, drive
+constraints), and *graph* relations (one per relation, drive traversal). They are stored
+differently because their cardinality and access patterns differ. Conflating them in one
+blob is the mistake this section exists to avoid.
+
+### The shape
+
+```sql
+sources(id, domain, manifest, embedding_space, profile)   -- one row per source
+                     └ declarative (§6)      └ measured stats (FACTORS.md §2)
+
+chunks(
+  id, source_id, cluster_id, body, embedding,
+
+  -- PROVENANCE · first-class, never in the blob
+  source_url, locator, source_hash,
+
+  -- VALIDITY · first-class, indexed, default-filtered
+  valid_from, valid_until, status, superseded_by,
+
+  -- EVERYTHING ELSE · per-source, schema declared by the manifest
+  metadata        -- JSONB
+)
+
+entities(id, source_id, type, canonical, aliases)   -- resolved once
+mentions(chunk_id, entity_id)                       -- generalises `identifier`
+edges(from_entity, to_entity, type, evidence_chunk)  -- the graph
+```
+
+### Why each boundary is where it is
+
+**Provenance is not metadata.** It is structurally special: always required, immutable
+after ingest (`LOOPHOLES.md` §8), and it *is the product*. Burying it in a JSONB blob
+makes it optional by construction and makes the immutability trigger unenforceable.
+`locator` stays a small typed object whose *shape* the manifest declares — page+section
+for a statute, paragraph for a judgment, a path for an ontology node — rendered to a
+string by a manifest template. `source_hash` is added here to close `LOOPHOLES.md` §8's
+"detect a moved or changed source", which nothing currently implements.
+
+**Validity is not metadata either.** It is a filter applied to *almost every query by
+default* (§9), so it needs real columns and real indexes. Putting it in the blob makes
+the most common constraint in the system the slowest one.
+
+**Everything else is JSONB, with declared fields promoted to indexes.** The three
+candidate designs, and why:
+
+| Design | Fails because |
+|---|---|
+| a column per source field | schema explosion; a new source is a migration, which is the thing this document exists to prevent |
+| EAV (`entity, attribute, value` rows) | unindexable in practice; every filter becomes a self-join; row count multiplies by field count |
+| **JSONB + expression indexes on manifest-declared filterable fields** | ✅ new source = new manifest, no migration; only declared fields cost an index |
+
+! The manifest declares which fields are filterable, and **only those get indexes**.
+That is not just cost control — it is what makes `describe` able to answer honestly
+(`MCP_ENGINE.md` §2) and what makes the cardinality rule (§7) computable, since
+selectivity statistics are collected for exactly those fields at ingest.
+
+**The graph is a separate table, not an array in the blob.** Three reasons:
+
+1. **Cardinality.** Relations are O(edges), not O(rows). A JSONB array of citations on
+   each chunk stores every edge twice and cannot be traversed in reverse.
+2. **Traversal needs both directions.** `cites` and `cited_by` are the same edge read
+   two ways; an edge table indexes both, an embedded array indexes neither.
+3. **Provenance for edges.** `evidence_chunk` records *where* the relation was asserted,
+   so a traversal result can be verified the same way a search result can. An edge
+   nobody can check is worse than no edge — `traverse` presents it as fact.
+
+**Entities are separate from mentions** because entity *resolution* happens once
+("Mahkamah Agung", "MA", and a typo are one entity) while mentions are many. Merging
+them would redo resolution per occurrence, which is where a knowledge graph usually
+goes wrong.
+
+### The migration path already exists
+
+! The current `identifier` column **is** a degenerate `mentions` table: one entity type,
+resolved by a hand-written grammar, denormalised onto the chunk. The generalisation is
+therefore not a redesign — `identifier` becomes a `mentions` row pointing at an
+`entities` row, the exact-identifier path becomes an entity lookup, and
+`traverse(edge="cites")` becomes reachable. Anything built on `identifier` today keeps
+working through that change.
+
+### What this does not decide
+
+Chunking, extraction and entity resolution are **pipeline** concerns and stay out of
+this schema. The engine reads what ingest wrote; how the entities got there — a
+grammar, a model, a hand-curated list — is per-source and lives in the pipeline
+(`FACTORS.md` §5b lists what that costs, and why the graph is last in §12).
+
+---
+
 ## 5. Retrieval primitives: rankers vs constraints
 
 The critical distinction, and the one that most affects correctness.
@@ -419,8 +516,9 @@ Concrete tactics, in order of value:
 
 Ordered by cost-of-being-wrong, not by visibility.
 
-1. **Data model** — source as a first-class entity; metadata as a validated per-source
-   document; polymorphic provenance; validity fields; hierarchy and graph edges.
+1. **Data model** (§4b) — source as a first-class entity; provenance and validity as
+   first-class columns; everything else JSONB with manifest-declared filterable fields
+   promoted to indexes; entities/mentions/edges as separate tables.
    *First, because changing it later re-ingests every row.*
 2. **Storage layout** — contiguous per-cluster vector blobs, halfvec. Same re-ingest
    cost, so it is the *same decision* as (1), not a later optimisation. It also fixes
@@ -469,7 +567,12 @@ Steps 1 and 2 are one decision, made once. Step 3 is what keeps steps 4–5 hone
    several tiny ones prove the second.
 10. **Schema and storage layout are one decision, made once**, because both are paid for
     in re-ingest.
-11. **Four primitives, not fifteen verbs.** `describe` · `search` · `fetch` ·
+11. **Provenance and validity are not metadata.** They are first-class columns: one is
+    the product and is immutable, the other is a default filter on nearly every query.
+    Everything else is JSONB, and only manifest-declared filterable fields get indexes.
+12. **The graph is an edge table, ✗ an array in the blob** — relations are O(edges),
+    traversal needs both directions, and every edge carries the chunk that asserts it.
+13. **Four primitives, not fifteen verbs.** `describe` · `search` · `fetch` ·
     `traverse`. Capability grows through manifest-declared parameters; a new tool means
     the model was wrong.
-12. **The agent passes intent, never strategy.** Constraints yes; ranker weights never.
+14. **The agent passes intent, never strategy.** Constraints yes; ranker weights never.
