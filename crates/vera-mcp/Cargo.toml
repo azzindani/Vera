@@ -3,9 +3,15 @@ name = "vera-mcp"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-description = "MCP tool surface and transports. No domain logic."
+description = "MCP tool surface, transports and admission control. No retrieval logic."
 
 [dependencies]
+vera-core = { version = "0.0.1", path = "../vera-core" }
+vera-embed = { version = "0.0.1", path = "../vera-embed" }
+vera-engine = { version = "0.0.1", path = "../vera-engine" }
+vera-store = { version = "0.0.1", path = "../vera-store" }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "sync", "time"] }
 
 [lints]
 workspace = true

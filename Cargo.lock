@@ -555,6 +555,14 @@ dependencies = [
 [[package]]
 name = "vera-mcp"
 version = "0.0.1"
+dependencies = [
+ "serde_json",
+ "tokio",
+ "vera-core",
+ "vera-embed",
+ "vera-engine",
+ "vera-store",
+]
 
 [[package]]
 name = "vera-store"
