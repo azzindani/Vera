@@ -16,8 +16,8 @@ use crate::{Matrix, Rng};
 
 #[derive(Debug, Clone)]
 pub struct KMeansConfig {
-    /// Number of clusters. `ARCHITECTURE.md` targets ~10K rows per cluster, so
-    /// a good default is `rows / 10_000`, floored at 1.
+    /// Number of clusters. Use [`KMeansConfig::sqrt_n`] unless something other
+    /// than query cost bounds cluster size.
     pub k: usize,
     pub max_iters: usize,
     /// Stop when this fraction of points changes assignment in an iteration.
@@ -45,7 +45,37 @@ impl Default for KMeansConfig {
 }
 
 impl KMeansConfig {
-    /// The cluster count the architecture implies for a corpus of `rows`.
+    /// The cluster count that minimises total query cost · **the default**.
+    ///
+    /// A routed query pays two costs: comparing the query against every
+    /// centroid, and flat-scanning the clusters it probes.
+    ///
+    /// ```text
+    /// cost(k) = k  +  nprobe · N/k
+    /// ```
+    ///
+    /// which is minimised where the two terms meet, at `k = sqrt(nprobe · N)`.
+    /// With `nprobe` treated as a small constant this is the familiar **√N**
+    /// rule, and it is what `ARCHITECTURE.md` actually describes: at 100M rows
+    /// √N is 10,000, giving ~10K clusters of ~10K rows.
+    ///
+    /// ! The two figures in that sentence coincide **only at 100M**. Reading
+    /// "10K rows per cluster" as a target at any other scale is the trap: on a
+    /// 200K-row corpus it yields 20 clusters, so probing 5 touches a quarter of
+    /// the corpus and routing prunes almost nothing. The benchmark was built
+    /// that way and its speedup numbers were meaningless as a result.
+    #[must_use]
+    pub fn sqrt_n(rows: usize) -> usize {
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let k = (rows as f64).sqrt().round() as usize;
+        k.clamp(1, rows.max(1))
+    }
+
+    /// Cluster count for an explicitly chosen rows-per-cluster target.
+    ///
+    /// ! Use [`sqrt_n`](Self::sqrt_n) unless you have a reason not to. This
+    /// exists for the case where cluster size is bounded by something other
+    /// than query cost — a RAM ceiling per probe, or a split-on-size policy.
     #[must_use]
     pub const fn clusters_for(rows: usize, rows_per_cluster: usize) -> usize {
         let k = rows / rows_per_cluster;
@@ -417,6 +447,35 @@ mod tests {
     fn the_cluster_count_heuristic_never_returns_zero() {
         assert_eq!(KMeansConfig::clusters_for(200_000, 10_000), 20);
         assert_eq!(KMeansConfig::clusters_for(500, 10_000), 1, "tiny corpus");
+    }
+
+    #[test]
+    fn sqrt_n_is_the_default_and_scales_with_the_corpus() {
+        assert_eq!(KMeansConfig::sqrt_n(100_000_000), 10_000, "the 100M design point");
+        assert_eq!(KMeansConfig::sqrt_n(200_000), 447);
+        assert_eq!(KMeansConfig::sqrt_n(750_000), 866);
+    }
+
+    #[test]
+    fn sqrt_n_prunes_far_harder_than_a_fixed_rows_per_cluster_target() {
+        // ! The bug this replaced. At 200K rows a 10K-per-cluster target gives
+        // 20 clusters, so probing 5 scans a quarter of the corpus — routing
+        // that prunes 4x is not routing.
+        let rows = 200_000usize;
+        let nprobe = 5usize;
+        let fixed = KMeansConfig::clusters_for(rows, 10_000);
+        let sqrt = KMeansConfig::sqrt_n(rows);
+        let scanned = |k: usize| nprobe * (rows / k);
+        assert_eq!(scanned(fixed), 50_000, "25% of the corpus");
+        assert!(scanned(sqrt) < 2_500, "{}", scanned(sqrt));
+        assert!(scanned(fixed) / scanned(sqrt) > 20, "should prune ~20x harder");
+    }
+
+    #[test]
+    fn sqrt_n_degrades_sanely_on_a_tiny_or_empty_corpus() {
+        assert_eq!(KMeansConfig::sqrt_n(0), 1);
+        assert_eq!(KMeansConfig::sqrt_n(1), 1);
+        assert_eq!(KMeansConfig::sqrt_n(2), 1, "round(1.41) = 1");
     }
 
     #[test]

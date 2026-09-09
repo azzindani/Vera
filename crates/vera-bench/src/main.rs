@@ -41,7 +41,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!(
                 "usage:
   vera-bench synth --out <db> [--rows N] [--dim N] [--topics N] [--spread F]
-                   [--anisotropy F] [--per-cluster N] [--iters N] [--seed N]
+                   [--anisotropy F] [--iters N] [--seed N]
+                   [--per-cluster N]   override sqrt(N) cluster sizing
   vera-bench info  --corpus <db>
   vera-bench run   --corpus <db> [--queries N] [--probe 1,2,5,10] [--k N] [--jitter F]
 
@@ -89,7 +90,14 @@ fn cmd_synth(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         anisotropy: parsed(args, "--anisotropy", 0.7f32)?,
         seed: parsed(args, "--seed", 0xC0FFEEu64)?,
     };
-    let per_cluster = parsed(args, "--per-cluster", 10_000usize)?;
+    // ! Default is sqrt(N), ✗ a fixed rows-per-cluster target. See
+    // KMeansConfig::sqrt_n: "10K rows per cluster" is the 100M design point, and
+    // applying it to a 200K corpus gives 20 clusters, so probing 5 scans a
+    // quarter of the corpus and the measured speedup is meaningless.
+    let k = match flag(args, "--per-cluster") {
+        Some(v) => KMeansConfig::clusters_for(cfg.rows, v.parse::<usize>()?),
+        None => KMeansConfig::sqrt_n(cfg.rows),
+    };
 
     eprintln!(
         "generating {} rows × {} dims across {} topics (spread {})…",
@@ -109,8 +117,10 @@ fn cmd_synth(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         normalized: true,
         query_instruction: String::new(),
     };
-    let k = KMeansConfig::clusters_for(cfg.rows, per_cluster);
-    eprintln!("clustering into {k} clusters (~{per_cluster} rows each)…");
+    eprintln!(
+        "clustering into {k} clusters (~{} rows each)…",
+        cfg.rows / k.max(1)
+    );
 
     let report = build_corpus(
         &out,

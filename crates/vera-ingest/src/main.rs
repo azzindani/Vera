@@ -40,7 +40,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                       [--title-col <c>] [--url-col <c>] [--page-col <c>]
                       [--section-col <c>] [--heading-col <c>] [--identifier-col <c>]
                       [--domain <id>] [--description <text>]
-                      [--per-cluster N] [--iters N] [--limit N]
+                      [--iters N] [--limit N]
+                      [--per-cluster N]  override sqrt(N) cluster sizing
 
   inspect  report tables, columns, row counts and the detected vector encoding
   import   cluster the vectors and write a Vera corpus
@@ -396,8 +397,12 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let per_cluster = parsed(args, "--per-cluster", 10_000usize)?;
-    let k = KMeansConfig::clusters_for(ingest.len(), per_cluster);
+    // ! sqrt(N) by default · see KMeansConfig::sqrt_n for why a fixed
+    // rows-per-cluster target under-clusters everything below 100M rows.
+    let k = match flag(args, "--per-cluster") {
+        Some(v) => KMeansConfig::clusters_for(ingest.len(), v.parse::<usize>()?),
+        None => KMeansConfig::sqrt_n(ingest.len()),
+    };
     eprintln!("clustering {} rows into {k} clusters…", ingest.len());
 
     let report = build_corpus(
