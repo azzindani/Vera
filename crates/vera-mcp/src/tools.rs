@@ -362,6 +362,11 @@ pub fn fetch<S: ChunkStore>(engine: &Engine<S>, ids: &[String], depth: Depth) ->
                 ),
             });
             let obj = item.as_object_mut().expect("object");
+            // ! Every depth carries it, because it qualifies the citation rather
+            // than adding to it (`LOOPHOLES.md` §8). `null` reads as *unknown*,
+            // ✗ as unchanged: a corpus ingested without hashes must not look
+            // like one whose sources are all verified intact.
+            obj.insert("source_hash".into(), json!(chunk.source_hash));
             match depth {
                 Depth::Provenance => {}
                 Depth::Snippet => {

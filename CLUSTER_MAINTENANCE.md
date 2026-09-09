@@ -33,6 +33,30 @@ touching any other cluster. This is also the **scale hook**: splitting is how cl
 stay ~10K instead of ballooning toward the 100K/1M sizes a production deployment might
 allow.
 
+**Status: the algorithm is built and runs at build time; the online trigger is not.**
+`vera_index::split::split_oversized`, wired into `build_corpus` behind
+`KMeansConfig.max_cluster_rows` (`--max-cluster-rows` on both CLIs).
+
+! **Two independent bounds on cluster size, and they are not the same bound.** `k = √N`
+minimises *query cost* and says nothing about the largest cluster; measured at √N the
+spread was 2.4× (p50 395, max 1085 against a mean of 447). The largest cluster is what
+sets `per_request_ceiling` and worst-case probe latency, so a corpus can sit exactly at
+the query-cost optimum and still exceed the memory bound. `METRICS.md` §4 wants
+max ≤ 2× mean; this is what enforces it.
+
+! **Why build time and not online.** The schema stores one `cluster_id` per chunk, so a
+live split either mutates rows while queries read them — `CLAUDE.md` §7 rule 9 forbids
+it — or needs a per-generation assignment table. That is a schema change, and
+`MULTI_DOMAIN.md` §12 holds that schema and storage layout are **one decision made
+once**, because both are paid for in re-ingest. Building half of it now to unblock Tier 2
+is how a schema ends up designed in fragments. So Tier 2's *algorithm* ships proven, run
+where nothing is live and there is nothing to swap, and its *trigger* waits for §12.
+
+! The recursion is bounded by a pass budget, not by "until every cluster fits". A cluster
+of near-identical vectors does not divide — k=2 over 500 copies of one point puts them
+all in one half — and an unbounded loop would spin on it. Hitting the bound leaves
+`largest_after` above the cap, which is **reported**, not swallowed.
+
 ### Tier 3 — Periodic full re-cluster (expensive, rare)
 On the GPU box, re-run minibatch / FAISS k-means over the corpus, recompute all
 centroids and assignments, then publish via **atomic version swap** (§3). Triggered

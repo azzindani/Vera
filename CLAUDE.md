@@ -82,6 +82,27 @@ simply what 100M needs. n ∈ {2, 3} in practice; past that, shard rather than d
 
 ## 4. Repository structure
 
+! **The tree below is the intended layout, ✗ the current one.** Docs live at the repo
+root, not under `docs/`; the code is a `crates/` Cargo workspace, not `engine/` +
+`pipelines/`; and there is no Python yet. Cross-references in the docs are written as
+`docs/X.md` and resolve to `X.md`. Actual:
+
+```
+vera/
+├── *.md                           ← every doc, at the root
+├── Cargo.toml                     ← workspace
+├── crates/
+│   ├── vera-core/                 ← types, config, output contract, calibration, profile
+│   ├── vera-embed/                ← provider trait, canary, stub (no HTTP client yet)
+│   ├── vera-store/                ← ChunkStore trait + SQLite backend
+│   ├── vera-engine/               ← routing, leaf scan, fusion, orchestration
+│   ├── vera-index/                ← k-means, corpus build, free-space preflight
+│   ├── vera-ingest/               ← import an already-embedded corpus
+│   ├── vera-mcp/                  ← the four primitives over stdio
+│   └── vera-bench/                ← fixture generation + the eval sweep
+└── migrations/                    ← Postgres schema (the production target)
+```
+
 ```
 vera/
 ├── CLAUDE.md                      ← you are here
@@ -218,8 +239,10 @@ Every tool returns a dict with `success` first, plus `token_estimate`, `progress
 
 - [x] Engine skeleton: MCP server (stdio), tool stubs, return contract
 - [ ] OpenRouter provider client: pin, batch, retry/backoff, canary check
-      *(trait, validation and `canary_check` exist; the HTTP client does not —
-      a deterministic stub stands in and logs a warning at startup)*
+      *(trait, validation, `canary_check` and the **provider allowlist** exist —
+      `EmbeddingSpace.validated_providers` + `ProviderConfig`, both checked at
+      startup. The HTTP client does not — a deterministic stub stands in and
+      logs a warning)*
 - [x] Routing: layer-1 anchors + layer-2 centroids loaded hot at startup
 - [x] Retrieval: sequential cluster scan + cosine + BM25 + RRF fusion
 - [x] Global exact-identifier keyword path (routing bypass)
@@ -229,12 +252,18 @@ Every tool returns a dict with `success` first, plus `token_estimate`, `progress
       *(`vera-ingest` imports an already-embedded corpus; document embedding is
       not built)*
 - [x] Consistency: pinned model/version metadata + space check at startup
-- [ ] Cluster maintenance: incremental assign, split-on-size, periodic re-cluster
-      *(k-means and atomic rebuild exist in `vera-index`; incremental
-      maintenance does not. **Split-on-size is needed sooner than expected** —
-      see finding 4 below)*
-- [x] Eval harness: `vera-bench` sweeps clusters_probed reporting latency and
-      recall against an exhaustive baseline
+- [~] Cluster maintenance: incremental assign, split-on-size, periodic re-cluster
+      *(k-means, atomic rebuild and **split-on-size** exist in `vera-index`.
+      Split runs at build time behind `--max-cluster-rows`; the online Tier-2
+      trigger needs a per-generation assignment table, which is a schema change
+      and belongs with `MULTI_DOMAIN.md` §12. Tier-1 incremental assign does
+      not exist)*
+- [x] Eval harness: `vera-bench` sweeps clusters_probed reporting latency,
+      recall, nDCG, exact-match recall and a **recall-loss decomposition**
+      (routing / cap / fusion / by-design) against an exhaustive baseline
+- [x] Corpus profile at ingest: vocabulary, occurrence-weighted IDF, Zipf slope,
+      doc lengths, identifier density — stored with the corpus so the caveat
+      that qualifies a keyword number travels with the data
 - [ ] Hardware validation on 2 vCPU / 8 GB VPS under concurrency
 
 ! **`METRICS.md` holds the targets.** The findings below are what has been *measured*;
@@ -291,10 +320,8 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    now buys ~27% of query time rather than ~76% — **it is no longer the first
    thing to fix.**
 
-   ! Caveat: the fixture's vocabulary is 50 words, so an 8-term OR matches a
-   large fraction of the corpus. Real text is Zipfian and most query terms are
-   selective, so this figure is probably inflated. It needs the real corpus
-   before any BM25 optimisation is justified.
+   ! That caveat blamed the fixture, and **it was the wrong diagnosis** — see
+   finding 11.
 
 5. **Recall now behaves like a real curve** — it did not before, because
    routing was barely pruning. Post-fix, on the √N-clustered 200K corpus:
@@ -361,10 +388,69 @@ Run `vera-bench run --corpus <db>` to reproduce. Numbers below are a synthetic
    retaining a cluster would have to be written as a visible copy.
 
 10. **Recall is still not measured on real data.** Every number above comes from
-   a synthetic corpus whose vocabulary is 50 words and whose topic structure was
-   generated to be findable. It is enough to show the *mechanism* works and to
-   catch the mis-clustering; it cannot say whether routing pays on Indonesian
-   regulation text. No recall claim should be trusted until the real corpus runs.
+   a synthetic corpus whose topic structure was generated to be findable. It is
+   enough to show the *mechanism* works and to catch the mis-clustering; it
+   cannot say whether routing pays on Indonesian regulation text. No recall
+   claim should be trusted until the real corpus runs.
+
+11. **BM25 cost is set by query-term reach, ✗ by vocabulary size — and Vera's
+   query construction makes it corpus-proportional.** Finding 4 blamed the
+   fixture's 50-word vocabulary and predicted real Zipfian text would be
+   selective. The fixture is now Zipfian (20K terms, slope −0.95 at 200K) and
+   **BM25 is still ~82% of query time.** On that corpus:
+
+   | | |
+   |---|---|
+   | mean IDF per term **type** | 8.68 → "average term reaches 0.02% of rows" |
+   | rows an 8-term query **actually** reaches | **20,928 of 20,000** |
+
+   Both are correct. The type average is dominated by the rare tail, and a query
+   never draws from the tail — it draws from a document's words, which are mostly
+   head terms. The commonest term is in 16,499 of 20,000 rows, and
+   `fts_match_expression` ORs **every** query token, so the union of postings is
+   bounded below by that term however selective the other seven are.
+
+   ! This breaks the second half of `ARCHITECTURE.md` §5's argument. "BM25 *is*
+   an index, so it needs no routing" is true **per term** and false for an
+   unfiltered OR over all of them. The fix — selectivity-aware term capping —
+   is named in `METRICS.md` §2.3 and is **deliberately not built**: it changes
+   which documents come back, `EVAL.md` §5 rejects any change that lowers
+   recall@k, and there is no labelled set to measure that against. It is the
+   first thing to build once there is one, and must not land before it.
+
+12. **A representativeness check keyed on the wrong average would have passed the
+   corpus it exists to reject.** `CorpusProfile` originally gated on type-level
+   mean IDF, which reads 8.68 on the fixture above — comfortably "representative"
+   while its queries touch every row. It now gates on **occurrence-weighted** IDF
+   via `expected_query_reach(8)`. Two corpora can agree on vocabulary size, Zipf
+   slope and type-level IDF and disagree completely on what BM25 costs.
+
+13. **The recall-loss decomposition reproduced its own blind spot on the first
+   attempt.** Scored against the exhaustive *fused* result — the obvious
+   reference — the candidate-cap column is **structurally pinned at 0.0%**,
+   because that baseline applies the same `per_cluster_top_k` to the same
+   clusters, so every row it keeps the routed run keeps too. Turning the cap from
+   50 to 1 moved the *routing* column instead. That is precisely the flaw
+   `METRICS.md` §3.1 says recall@k has, rebuilt inside the metric written to fix
+   it, and the output looked healthy throughout. Cap loss is only visible against
+   an **uncapped dense** top-k. Verified: cap now reads 0.0% → 9.2% → 62.8% as
+   the dial goes 50 → 5 → 1, while `route/D` sits flat at 99.2% across a recall
+   collapse from 98.2% to 85.5%.
+
+14. **A fourth attribution column was needed, and it is not a defect.** Against
+   dense-only truth, two thirds of the set reads as "fusion loss" while
+   end-to-end recall is 98% — those rows are outranked by keyword hits at *every*
+   probe count including exhaustive. Reporting that as loss would argue for
+   retuning `rrf_k` to fix nothing, so `fusion` is split by whether the
+   exhaustive fused run returned the row: **`fusion`** if it did, **`by design`**
+   if it did not.
+
+15. **`per_cluster_top_k` and `rrf_k` are coupled.** RRF scores by rank *within
+   each list*, so a longer dense candidate list gives documents present in both
+   halves a second contribution and pushes dense-only documents down. Dense
+   faithfulness is therefore **non-monotonic** in the cap (33.0% → 53.0% → 32.8%
+   at caps 50 → 5 → 1) even though end-to-end recall is monotonic. The
+   one-dial-per-cause table in `METRICS.md` §3.1 is an approximation.
 
 ### Known gaps against the docs
 
@@ -372,28 +458,35 @@ Audited against every doc in the repo. These are specified and **not built**:
 
 | Doc | Requirement | Status |
 |---|---|---|
-| `EMBEDDING.md` §3, `HARDWARE.md` §3 | vectors stored as **halfvec (16-bit)** | store uses f32 — 2× the bytes. Now a *secondary* perf gap: since the √N fix the leaf scan is only ~27% of query time (finding 4) |
-| `EMBEDDING.md` §4.1 | pin the **provider id** as part of the config | `EmbeddingSpace` has no provider field |
-| `EMBEDDING.md` §5 | validated **secondary** provider for fail-over | not built |
-| `LOOPHOLES.md` §8 | store a **source hash** to detect moved/changed sources | no such column |
-| `LOOPHOLES.md` §10 | **free-space preflight** before bulk-load / split | not built |
-| `HARDWARE.md` §2 | centroids **mlock'd** | not built |
+| `EMBEDDING.md` §5 | **retry/backoff** through transient provider blips | not built (the allowlist it protects now exists) |
+| `HARDWARE.md` §2 | centroids **mlock'd** | not built — and `mlock` is FFI, which the workspace's `unsafe_code = "forbid"` rules out without a wrapper crate. Decide before building |
 | `MCP_ENGINE.md` §7 | **streamable-http** transport | stdio only |
-| `CLUSTER_MAINTENANCE.md` §2 | Tier-1 incremental assign, Tier-2 **split-on-size** | only full rebuild exists |
-| `EVAL.md` §2 | `eval/` labeled query set | directory does not exist |
-| `EVAL.md` §3 | **exact-match recall**, nDCG | not measured (recall@k, routing recall, MRR, p50/p95/p99 are) |
-| `EVAL.md` §4, `LOOPHOLES.md` §7 | **candidate-cap loss** — is the true answer cut by `per_cluster_top_k` before fusion? | **not measurable** · both recall@k and route/D are blind to it by construction (`METRICS.md` §3.1). Fix before tuning any dial on real data |
-| `CLAUDE.md` §4 | layout: `docs/`, `engine/`, `pipelines/` | actual: docs at root, `crates/` workspace, no Python pipelines |
+| `CLUSTER_MAINTENANCE.md` §2 | Tier-1 incremental assign; the Tier-2 **online trigger** | the split *algorithm* is built and runs at build time; triggering it on a live corpus needs a per-generation assignment table (schema change · `MULTI_DOMAIN.md` §12) |
+| `EVAL.md` §2 | `eval/` labeled query set | **directory does not exist — now the top blocker** (`METRICS.md` §8). It gates the knee, honest exact-match recall, and every fix in `METRICS.md` §2.3 |
+| `EMBEDDING.md` §3, `HARDWARE.md` §3 | vectors stored as **halfvec (16-bit)** | store uses f32. Secondary since the √N fix: the leaf scan is ~16–27% of query time, BM25 is the rest |
+| `CLAUDE.md` §4 | layout: `docs/`, `engine/`, `pipelines/` | actual: docs at root, `crates/` workspace, no Python pipelines. **§4 now states this** rather than only listing the intent |
 
-Two docs are now **wrong** rather than merely unimplemented, and should be
+Closed since the last audit:
+
+| Doc | Requirement | Closed by |
+|---|---|---|
+| `EMBEDDING.md` §4.1 | pin the **provider id** | `EmbeddingSpace.validated_providers` + `ProviderConfig` |
+| `EMBEDDING.md` §5 | validated **secondary** for fail-over | same, both checked at startup |
+| `LOOPHOLES.md` §8 | **source hash** | `chunks.source_hash`, `--hash-col`, returned by `fetch` |
+| `LOOPHOLES.md` §10 | **free-space preflight** | `vera_index::preflight`, before the k-means |
+| `CLUSTER_MAINTENANCE.md` §2 | Tier-2 **split-on-size** algorithm | `vera_index::split`, at build time via `--max-cluster-rows` |
+| `EVAL.md` §3 | **exact-match recall**, nDCG | both in the sweep; exact-match runs adversarially |
+| `EVAL.md` §4, `LOOPHOLES.md` §7 | **candidate-cap loss** | the decomposition · findings 13–15 |
+| `FACTORS.md` §7 | Zipfian fixture, corpus profile | `--vocab`/`--zipf`, `CorpusProfile` |
+
+One doc statement is still **wrong** rather than unimplemented, and should be
 edited rather than built toward:
 
-- `ARCHITECTURE.md` §5 describes the keyword half as scoped to routed clusters.
-  Measured, that costs N full-corpus scans and loses recall; it must be global.
-- `MCP_ENGINE.md` §5 and `HARDWARE.md` §2 budget `per_request_ceiling` as one
-  cluster (~82 MB). The streaming scan makes it one *row* — measured peak RSS
-  is 7 MB regardless of `clusters_probed`. The budget is correct as an upper
-  bound but overstates actual use by ~4 orders of magnitude.
+- `ARCHITECTURE.md` §5 argues the keyword half needs no routing because "BM25 is
+  an index". True per term; false for an OR over every query token, which is what
+  the engine sends. Finding 11 and `METRICS.md` §2.3 have the correction — the
+  *conclusion* (global, never per-cluster) still holds and is measured; the
+  *reason given for it being cheap* does not.
 
 ---
 

@@ -24,6 +24,8 @@ pub struct IngestRow {
     pub heading_path: Option<String>,
     /// Canonical regulation id, e.g. `UU 28/2007` · powers the routing bypass.
     pub identifier: Option<String>,
+    /// Digest of the source document · `LOOPHOLES.md` §8.
+    pub source_hash: Option<String>,
 }
 
 /// What a build produced · reported so an operator can sanity-check the index
@@ -47,6 +49,8 @@ pub struct BuildReport {
     /// Lexical shape of the corpus · what decides whether a keyword measurement
     /// taken here means anything anywhere else (`vera_core::profile`).
     pub profile: CorpusProfile,
+    /// What split-on-size changed, if `max_cluster_rows` was set.
+    pub split: crate::split::SplitReport,
 }
 
 /// Measure a corpus against its layer-1 anchor.
@@ -112,6 +116,8 @@ pub enum BuildError {
     Backend(String),
     #[error("{rows} rows but {vectors} vectors · every row needs exactly one vector")]
     Mismatched { rows: usize, vectors: usize },
+    #[error(transparent)]
+    Preflight(#[from] crate::preflight::PreflightError),
     #[error("row {index} has {got} dimensions, corpus declares {expected}")]
     Width {
         index: usize,
@@ -158,7 +164,37 @@ pub fn build_corpus(
         });
     }
 
+    // ! Before the k-means, not just before the write. Clustering 100M vectors
+    // is hours of work, and finishing it only to discover the disk cannot hold
+    // the result wastes all of it (`LOOPHOLES.md` §10).
+    let mean_body_bytes = if rows.is_empty() {
+        0
+    } else {
+        rows.iter().map(|r| r.body.len()).sum::<usize>() / rows.len()
+    };
+    crate::preflight::require_free_space(
+        path.as_ref(),
+        crate::preflight::estimated_bytes(rows.len(), space.dim, mean_body_bytes),
+    )?;
+
     let km: KMeans = kmeans(vectors, cfg);
+    // ! Tier-2 split-on-size, run offline where nothing is live
+    // (`CLUSTER_MAINTENANCE.md` §2, `crate::split`). k = √N minimises query cost
+    // and says nothing about the *largest* cluster, which is what sets the
+    // per-request RAM ceiling — so the two bounds are enforced separately.
+    let (km, split) = match cfg.max_cluster_rows {
+        Some(cap) => crate::split::split_oversized(vectors, km, cap, cfg, 16),
+        None => (
+            km,
+            crate::split::SplitReport {
+                splits: 0,
+                clusters_before: 0,
+                clusters_after: 0,
+                largest_before: 0,
+                largest_after: 0,
+            },
+        ),
+    };
     let anchor = domain_anchor(vectors);
     let anchor_stats = measure_anchor(vectors, &anchor);
 
@@ -238,8 +274,9 @@ pub fn build_corpus(
         {
             let mut stmt = conn.prepare(
                 "INSERT INTO chunks (rowid, id, domain_id, cluster_id, body, embedding, \
-                 source_title, source_url, locator_page, locator_section, heading_path, identifier) \
-                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
+                 source_title, source_url, locator_page, locator_section, heading_path, \
+                 identifier, source_hash) \
+                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
             )?;
             for (i, row) in rows.iter().enumerate() {
                 stmt.execute(params![
@@ -255,6 +292,7 @@ pub fn build_corpus(
                     row.locator_section,
                     row.heading_path,
                     row.identifier,
+                    row.source_hash,
                 ])?;
             }
         }
@@ -277,6 +315,7 @@ pub fn build_corpus(
         build_seconds: started.elapsed().as_secs_f64(),
         anchor: anchor_stats,
         profile,
+        split,
     })
 }
 
@@ -301,6 +340,7 @@ mod tests {
                 locator_section: Some(format!("Pasal {i}")),
                 heading_path: None,
                 identifier: (i == 7).then(|| "UU 28/2007".to_owned()),
+                source_hash: None,
             });
         }
         (rows, m)
@@ -358,6 +398,58 @@ mod tests {
             total += store.scan_cluster(c.id, &mut |_| {}).unwrap();
         }
         assert_eq!(total, 40, "rows were lost or duplicated across clusters");
+    }
+
+    #[test]
+    fn a_max_cluster_cap_bounds_the_per_request_ram_ceiling() {
+        // ! `METRICS.md` §4: the ceiling is set by the LARGEST cluster, not the
+        // mean, so cluster-size skew is a memory risk and not only a latency
+        // one. k=1 puts all 40 rows in one cluster; the cap must break it up.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("c.db");
+        let (rows, vectors) = tiny();
+        let report = build_corpus(
+            &path,
+            &space(),
+            "reg",
+            "t",
+            &rows,
+            &vectors,
+            &KMeansConfig {
+                k: 1,
+                max_cluster_rows: Some(12),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert!(report.split.splits > 0, "{:?}", report.split);
+        assert!(report.largest_cluster <= 12, "largest {}", report.largest_cluster);
+
+        // The split index must still be complete and searchable.
+        let store = SqliteStore::open(&path).unwrap();
+        let mut total = 0;
+        for c in store.centroids("reg").unwrap() {
+            total += store.scan_cluster(c.id, &mut |_| {}).unwrap();
+        }
+        assert_eq!(total, 40, "rows were lost or duplicated by the split");
+    }
+
+    #[test]
+    fn without_a_cap_the_build_is_unchanged() {
+        let dir = tempfile::tempdir().unwrap();
+        let (rows, vectors) = tiny();
+        let report = build_corpus(
+            dir.path().join("c.db"),
+            &space(),
+            "reg",
+            "t",
+            &rows,
+            &vectors,
+            &KMeansConfig { k: 4, ..Default::default() },
+        )
+        .unwrap();
+        assert_eq!(report.split.splits, 0);
+        assert_eq!(report.clusters, 4);
     }
 
     #[test]

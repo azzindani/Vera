@@ -29,6 +29,14 @@ Peak RAM = fixed_costs + (concurrency_limit × per_request_ceiling)
 Sequential cluster loading fixes `per_request_ceiling ≈ one cluster (~82 MB) + buffers`,
 independent of how many clusters a query probes.
 
+! **That ceiling is a bound, not a measurement, and the gap is four orders of
+magnitude.** The streaming scan API hands the visitor one *row* against a reused buffer,
+so nothing ever holds a cluster: measured peak RSS over a 903 MB corpus is **7 MB at
+probe=1 and 7 MB at probe=20**. The 82 MB figure stays in the table because it is the
+number the guarantee is *proved* against — a caller that chose to retain rows could reach
+it, and the budget must survive that — but the table below overstates real use by ~4
+orders of magnitude and should be read as a worst case, not a forecast.
+
 | Component | RAM |
 |---|---|
 | OS + container runtime | ~0.8 GB |
@@ -70,6 +78,13 @@ Per-request, full 4096, ~5 clusters sequential, hybrid scoring, no model reranke
 | 5 clusters sequential (scan + BM25) | ~50 ms | ~325 ms |
 | Fuse + provenance | ~7 ms | ~7 ms |
 | **Single-request total** | **~180 ms** | **~455 ms** |
+
+! **This table is superseded by `METRICS.md` §2.1** and is kept for the shape only. It
+bundles BM25 into the per-cluster scan line, which assumed the keyword half ran per
+cluster; it does not (`ARCHITECTURE.md` §5), and as one global query it needs its own
+budget. Measured, it is the **dominant** stage rather than a rounding error inside
+another one, and `METRICS.md` §2.3 explains why that is structural rather than a
+tuning problem.
 
 Concurrency (2 cores; embedding overlaps, scans contend):
 

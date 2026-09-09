@@ -23,6 +23,16 @@ pub struct KMeansConfig {
     /// Stop when this fraction of points changes assignment in an iteration.
     pub tolerance: f32,
     pub seed: u64,
+    /// Hard cap on rows per cluster · `None` means "√N decides".
+    ///
+    /// ! A **second, independent** bound on cluster size, and it wins where it
+    /// binds. `k = √N` minimises *query cost*; this one bounds the largest
+    /// cluster, which sets the per-request RAM ceiling and the worst-case probe
+    /// latency (`HARDWARE.md` §5 constraint 1). k-means gives no guarantee about
+    /// its largest cluster — measured at √N the spread was 2.4× — so a corpus
+    /// can satisfy the query-cost optimum and still blow the memory bound.
+    /// Enforced by splitting after convergence (`crate::split`).
+    pub max_cluster_rows: Option<usize>,
     /// Cap on the sample k-means++ initializes from.
     ///
     /// ! Seeding from a sample rather than the full corpus. Full k-means++ costs
@@ -39,6 +49,7 @@ impl Default for KMeansConfig {
             max_iters: 25,
             tolerance: 0.001,
             seed: 0x5EED,
+            max_cluster_rows: None,
             sample_for_init: 50_000,
         }
     }

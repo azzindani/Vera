@@ -39,9 +39,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                       [--model <id>] [--dim N] [--no-normalize] [--provider <id>]
                       [--title-col <c>] [--url-col <c>] [--page-col <c>]
                       [--section-col <c>] [--heading-col <c>] [--identifier-col <c>]
+                      [--hash-col <c>]   digest of the source · LOOPHOLES.md §8
                       [--domain <id>] [--description <text>]
                       [--iters N] [--limit N]
                       [--per-cluster N]  override sqrt(N) cluster sizing
+                      [--max-cluster-rows N]  split-on-size cap · bounds the
+                                              per-request RAM ceiling
 
   inspect  report tables, columns, row counts and the detected vector encoding
   import   cluster the vectors and write a Vera corpus
@@ -269,6 +272,7 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         ("section", flag(args, "--section-col")),
         ("heading", flag(args, "--heading-col")),
         ("identifier", flag(args, "--identifier-col")),
+        ("hash", flag(args, "--hash-col")),
     ]
     .into_iter()
     .collect();
@@ -279,7 +283,7 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     // ones the caller mapped.
     let mut columns = vec![id_col.clone(), body_col.clone(), vector_col.clone()];
     let mut slot: HashMap<&str, usize> = HashMap::new();
-    for key in ["title", "url", "page", "section", "heading", "identifier"] {
+    for key in ["title", "url", "page", "section", "heading", "identifier", "hash"] {
         if let Some(Some(col)) = optional.get(key) {
             slot.insert(key, columns.len());
             columns.push(col.clone());
@@ -364,6 +368,12 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             locator_section: text(slot.get("section")),
             heading_path: text(slot.get("heading")),
             identifier: text(slot.get("identifier")),
+            // ! Copied from the source, never computed here. A hash of the
+            // *chunk body* would be a checksum of our own storage and would
+            // still match after the upstream document changed — the failure
+            // LOOPHOLES.md §8 is about. Only the ingesting pipeline, which held
+            // the original file, can produce a meaningful digest.
+            source_hash: text(slot.get("hash")),
         });
         vectors.as_mut().expect("initialized above").push(&vector);
     }
@@ -428,6 +438,9 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         &KMeansConfig {
             k,
             max_iters: parsed(args, "--iters", 20usize)?,
+            max_cluster_rows: flag(args, "--max-cluster-rows")
+                .map(|v| v.parse::<usize>())
+                .transpose()?,
             ..Default::default()
         },
     )?;
@@ -442,6 +455,12 @@ fn cmd_import(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         "cluster sizes:     {} min / {} max",
         report.smallest_cluster, report.largest_cluster
     );
+    if report.split.splits > 0 {
+        println!(
+            "split-on-size:     {} splits · largest {} → {}",
+            report.split.splits, report.split.largest_before, report.split.largest_after
+        );
+    }
     println!("build time:        {:.1}s", report.build_seconds);
     println!(
         "anchor p1/p50/p95: {:.4} / {:.4} / {:.4}",

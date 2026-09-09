@@ -76,6 +76,28 @@ impl Matrix {
         &self.data[start..start + self.dim]
     }
 
+    /// Overwrite row `i` in place.
+    ///
+    /// ! Exists for split-on-size, which **replaces** an oversized centroid with
+    /// the first half and appends the second (`crate::split`). Reusing the slot
+    /// is what keeps every untouched row's assignment valid, so a split costs
+    /// O(members) rather than a corpus-wide renumbering.
+    ///
+    /// # Panics
+    /// If `i` is out of range, or `row.len() != dim` — same reasoning as
+    /// [`push`](Self::push).
+    pub fn set_row(&mut self, i: usize, row: &[f32]) {
+        assert_eq!(
+            row.len(),
+            self.dim,
+            "row width {} does not match matrix width {}",
+            row.len(),
+            self.dim
+        );
+        let start = i * self.dim;
+        self.data[start..start + self.dim].copy_from_slice(row);
+    }
+
     /// Iterate rows.
     pub fn iter_rows(&self) -> impl Iterator<Item = &[f32]> {
         self.data.chunks_exact(self.dim)

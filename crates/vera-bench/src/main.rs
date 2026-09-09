@@ -46,6 +46,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
   vera-bench synth --out <db> [--rows N] [--dim N] [--topics N] [--spread F]
                    [--anisotropy F] [--iters N] [--seed N]
                    [--vocab N] [--zipf F] [--body-tokens N] [--topic-terms N]
+                   [--max-cluster-rows N]  split-on-size cap · CLUSTER_MAINTENANCE §2
                    [--per-cluster N]   override sqrt(N) cluster sizing
   vera-bench info  --corpus <db>
   vera-bench run   --corpus <db> [--queries N] [--probe 1,2,5,10] [--k N] [--jitter F]
@@ -146,6 +147,13 @@ fn cmd_synth(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         &KMeansConfig {
             k,
             max_iters: parsed(args, "--iters", 15usize)?,
+            // ! A second bound, independent of k. sqrt(N) minimises query cost;
+            // this bounds the LARGEST cluster, which is what sets the
+            // per-request RAM ceiling and worst-case probe latency
+            // (CLUSTER_MAINTENANCE.md §2 Tier 2, METRICS.md §4).
+            max_cluster_rows: flag(args, "--max-cluster-rows")
+                .map(|v| v.parse::<usize>())
+                .transpose()?,
             ..Default::default()
         },
     )?;
@@ -162,6 +170,16 @@ fn cmd_synth(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         "cluster sizes:     {} min / {} max",
         report.smallest_cluster, report.largest_cluster
     );
+    if report.split.splits > 0 {
+        println!(
+            "split-on-size:     {} splits · {} → {} clusters · largest {} → {}",
+            report.split.splits,
+            report.split.clusters_before,
+            report.split.clusters_after,
+            report.split.largest_before,
+            report.split.largest_after
+        );
+    }
     println!("build time:        {:.1}s", report.build_seconds);
     println!();
     println!("layer-1 anchor (cosine of a row to the domain anchor):");

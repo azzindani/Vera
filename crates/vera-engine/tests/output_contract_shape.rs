@@ -38,6 +38,7 @@ fn response(dir: &std::path::Path) -> Value {
             locator_section: Some("Pasal 9 ayat (3)".into()),
             heading_path: None,
             identifier: (i == 3).then(|| "UU 28/2007".to_owned()),
+            source_hash: None,
         });
     }
     let path = dir.join("c.db");

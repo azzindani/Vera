@@ -275,6 +275,8 @@ pub fn generate(cfg: &SynthConfig) -> (Vec<IngestRow>, Matrix) {
             locator_section: Some(format!("Pasal {}", i % 90 + 1)),
             heading_path: None,
             identifier,
+            // A generated fixture has no upstream document to hash.
+            source_hash: None,
         });
     }
 

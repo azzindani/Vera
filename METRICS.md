@@ -99,17 +99,61 @@ single largest lever on T2 latency.
 
 ### 2.3 ⚠️ The biggest unvalidated assumption
 
-**Global BM25 latency at 100M is unknown, and it is now the dominant stage.**
+**Global BM25 latency at 100M is unknown, and it is the dominant stage.**
 
-Measured 291 ms on a *200K-row* corpus — 72% of query time. But that fixture has a
-**50-word vocabulary**, so an 8-term OR matches a large fraction of the corpus. Real
-text is Zipfian and most query terms are selective, so the true figure could be far
-lower — or, at 500× the rows, far higher.
+This section previously blamed the fixture: a 50-word vocabulary, so an 8-term OR
+matched a large share of the corpus, and real Zipfian text would be selective. The
+fixture is now Zipfian (20K terms, exponent 1.0, `vera-bench synth --vocab/--zipf`) and
+**BM25 is still ~82% of query time.** The diagnosis was wrong, and the corrected one is
+worse, because it is about the engine rather than the fixture.
 
-Nothing else in this document is worth optimising until this is measured on real text.
-If BM25 at 100M cannot be made to fit ~100 ms, the hybrid design needs rethinking (term
-capping, selectivity-aware query planning, or a different keyword backend), and that is
-a bigger change than anything else listed here.
+#### The real mechanism: query-term reach, not vocabulary size
+
+The number that predicts BM25 cost is not how many distinct terms a corpus has. It is
+**how many rows the terms in an actual query reach.** Those are different, and on
+Zipfian text they point in opposite directions:
+
+| Measure | Zipfian fixture, 20K rows | Reads as |
+|---|---|---|
+| vocabulary | 16,388 terms | large ✅ |
+| Zipf slope | −0.79 | natural ✅ |
+| mean IDF **per term type** | 8.68 | "average term reaches 0.02% of rows" ✅ |
+| **rows an 8-term query actually reaches** | **20,928 of 20,000** | **the whole corpus** ❌ |
+
+Both are true. The type-level average is dominated by the rare tail, and **a query never
+draws from the tail** — it draws from a document's words, which are mostly head terms.
+The commonest term in that corpus appears in 16,499 of 20,000 rows. One such term in the
+query puts nearly every row in the union, however selective the other seven are.
+
+! `CorpusProfile` therefore reports **occurrence-weighted** IDF as the headline and
+`expected_query_reach(8)` as the verdict. An earlier version of that check used the type
+average and would have certified this corpus as representative — the precise corpus it
+exists to reject.
+
+#### What this means for the design
+
+`ARCHITECTURE.md` §5 argues the keyword half needs no routing because "BM25 **is** an
+index" and an inverted index already prunes to the matching postings. That argument
+holds **per term**. It does not survive `fts_match_expression` ORing *every* query token:
+the union of the postings lists is bounded below by the commonest term in the query, so
+cost tracks corpus size no matter how good the index is.
+
+So the ≤ 40 ms budget in §2.1 is not reachable at 100M by the current query construction.
+The three candidate responses, in increasing order of cost:
+
+1. **Selectivity-aware term capping** — drop query terms whose `df` exceeds a threshold,
+   keeping at least one. Data-driven stopwords. `CorpusProfile::head_terms` stores what
+   this needs. Cheap, and it is where to start.
+2. **Score-only inclusion** — keep every term for scoring but restrict the *candidate*
+   set to the selective ones. More faithful, more work.
+3. **A different keyword backend** with block-max WAND or similar early termination.
+
+! **None of them is implemented, deliberately.** All three change which documents come
+back, `EVAL.md` §5 rejects any change that lowers recall@k, and there is no labelled set
+to measure that against yet (§8 blocker 2). Making retrieval faster by silently dropping
+query terms, with no way to detect the recall it costs, is the trade this project exists
+to refuse. **Term capping is the first thing to build once the eval set exists, and must
+not land before it.**
 
 ### 2.4 Under concurrency (T2)
 
@@ -130,14 +174,23 @@ replicate (stateless).
 
 | Metric | Target | Measured | Status |
 |---|---|---|---|
-| **Exact-match recall** (identifier queries) | **100%** — no exceptions | not measured | ❌ needs labelled set |
+| **Exact-match recall** (identifier queries) | **100%** — no exceptions | 100% | ⚠️ *synthetic · see below* |
 | **Recall@10** vs exhaustive | ≥ 95% at probe=5 | 99.8% | ✅ *synthetic* |
 | **Routing recall** (route/D) at probe=5 | ≥ 95% | 99.8% | ✅ *synthetic* |
 | **Layer-1 false rejection** | **≤ 1%** | 0% | ✅ *synthetic* |
 | **top-1 agreement** | ≥ 95% | 100% | ✅ *synthetic* |
 | **MRR** | ≥ 0.90 | 1.000 | ✅ *synthetic* |
-| **nDCG@10** | ≥ 0.85 | not implemented | ❌ |
-| **Candidate-cap loss** | ≤ 1% | **not measurable** | ❌ see §3.1 |
+| **nDCG@10** | ≥ 0.85 | 0.986 at probe=5 | ✅ *synthetic* |
+| **Candidate-cap loss** | ≤ 1% | 0.0% at `per_cluster_top_k` 50 | ✅ *synthetic* · §3.1 |
+
+! **Exact-match recall is measured against a deliberately unrelated query vector.** A
+named regulation has to come back *because it was named*, so the harness routes each
+identifier query with a random direction — the worst case for layer 1. Measured with a
+well-aimed vector it would pass even with the bypass fully gated by routing, which is a
+regression this project has shipped once (`CLAUDE.md` §8 finding, `LOOPHOLES.md` §1).
+It reads 100% on the synthetic corpus, which proves the *plumbing*, not the grammar: the
+fixture's identifiers are already in canonical form, so extraction is never tested
+against how a person writes a citation. That still needs the labelled set.
 
 ! **Exact-match recall is the only one with no tolerance.** A named regulation that
 exists and is not returned is the failure this whole architecture is shaped around
@@ -148,7 +201,12 @@ exists and is not returned is the failure this whole architecture is shaped arou
 therefore capped tighter than recall, and measured separately (`L1-rej` in the sweep)
 rather than folded into a recall figure where it would hide.
 
-### 3.1 ⚠️ Candidate-cap loss is invisible to every metric we have
+### 3.1 ✅ Candidate-cap loss — now measured, and what it took
+
+**Status: built.** `vera-bench run` prints a recall-loss decomposition, and
+`--per-cluster-top-k` makes the dial sweepable. The rest of this section is kept because
+the reasoning is what makes the numbers readable — and because getting the *reference*
+right took two attempts, both of which produced clean-looking output.
 
 `LOOPHOLES.md` §7: the leaf scan keeps only `per_cluster_top_k` (50) candidates per
 cluster. **If the correct chunk ranks 51st inside its own cluster, it is discarded
@@ -167,22 +225,53 @@ So a cap set too low would show up as **nothing at all** in the sweep — the sa
 of silent failure as the layer-1 over-rejection (finding 7), and found the same way:
 by decomposing a number that was hiding two causes.
 
-**The fix — decompose recall loss into its three causes.** For each item of the
-dense-only truth that the routed search failed to return, attribute it:
+**The fix — decompose recall loss by the stage that dropped the row.** The engine now
+reports which candidates reached fusion, so each miss can be charged to one stage:
 
 | Cause | Test | Dial |
 |---|---|---|
-| **routing** | not in any probed cluster | `clusters_probed` |
-| **cap** | in a probed cluster, but cut before fusion | `per_cluster_top_k`, `candidate_cap` |
-| **fusion** | reached fusion, ranked out of top-k | `rrf_k`, weights |
+| **routing** | never reached fusion, in no probed cluster | `clusters_probed` |
+| **cap** | probed and scanned, cut before fusion | `per_cluster_top_k`, `candidate_cap` |
+| **fusion** | reached fusion, ranked out — *and the exhaustive search returned it* | `rrf_k`, weights |
+| **by design** | reached fusion, ranked out — *and the exhaustive search dropped it too* | none · not a defect |
 
-Today only the first is measured. The three are dialled by different knobs, so an
-undecomposed recall figure cannot say which one to turn — and `EVAL.md` §4 lists
-"per-cluster top-k · recall@k vs candidate-cap misses" as a dial evidence must set,
-which is not possible until this exists.
+#### The reference is the hard part
+
+! **Cap loss is only visible against an *uncapped* dense top-k.** The obvious reference —
+what this same engine returns probing every cluster — applies the same `per_cluster_top_k`
+to the same clusters, so any row it keeps the routed run keeps too. Measured that way the
+cap column is **structurally pinned at 0.0%**: turning the dial from 50 to 1 moved
+*routing* instead and left *cap* at zero. That is the identical blind spot recall@k has,
+reproduced inside the metric built to fix it, and it looked entirely healthy.
+
+! **The fourth column exists because three were not enough.** Scored against dense-only
+truth, two thirds of the set reads as "fusion loss" while end-to-end recall against the
+fused baseline is 98%. Those rows are outranked by keyword hits at *every* probe count
+including exhaustive — RRF working as specified. Reporting that as loss would argue for
+retuning `rrf_k` to fix nothing. So `fusion` is split by whether the exhaustive fused run
+returned the row: if it did, fewer candidates cost the rank and the loss is real; if it
+did not, it is `by design`.
+
+Verified on the 20K fixture at probe=5 — the cap column moves with its own dial while
+`route/D` cannot see it at all:
+
+| `per_cluster_top_k` | found | cap | recall@10 | route/D |
+|---|---|---|---|---|
+| 50 | 33.0% | **0.0%** | 98.2% | 99.2% |
+| 5 | 53.0% | **9.2%** | 97.2% | 99.2% |
+| 1 | 32.8% | **62.8%** | 85.5% | 99.2% |
+
+! `route/D` is flat at 99.2% across a recall collapse from 98.2% to 85.5%. That is the
+blindness this section claimed, demonstrated.
+
+! The cap is **not a pure recall/cost dial**. `found` above is non-monotonic because RRF
+scores by rank *within each list*, so a longer dense list gives documents present in both
+halves a second contribution and pushes dense-only documents down. `per_cluster_top_k`
+and `rrf_k` are therefore coupled, and the one-dial-per-cause table above is an
+approximation. End-to-end recall is monotonic in the cap; dense faithfulness is not.
 
 **Do this before tuning any retrieval dial on real data.** Tuning against a metric that
-cannot observe one of the three failure modes will drive the wrong knob.
+cannot observe one of the failure modes will drive the wrong knob.
 
 **The knee.** `clusters_probed` should be the smallest value holding recall@10 ≥ 95%.
 Currently **5**, which matches the documented default. Re-derive this on real data — it
@@ -247,11 +336,18 @@ is broken. Each is guarded by a test.
 
 | Area | T1 (real 750K) | T2 (100M on 2/8) |
 |---|---|---|
-| Latency | ❌ no real corpus | ⚠️ scan 11× over budget; BM25 unbudgeted |
+| Latency | ❌ no real corpus | ⚠️ scan 11× over budget; **BM25 over budget by construction** (§2.3) |
 | Recall | ❌ no labelled set | ❌ |
 | Memory | ✅ synthetic | ❌ not measured |
 | Disk | — | ⚠️ f32 not halfvec |
 | Invariants | ✅ all guarded | ✅ |
+| **Instrumentation** | ✅ **complete** | ✅ |
+
+! The instrumentation row is new and is the point of this round: recall loss decomposes
+by dial, the corpus reports its own lexical shape, exact-match recall runs adversarially,
+and every keyword number now arrives with a machine-checked caveat about whether it
+transfers. Nothing about retrieval got faster; what changed is that a wrong number can
+no longer look right.
 
 ---
 
@@ -259,24 +355,27 @@ is broken. Each is guarded by a test.
 
 Ordered by what unblocks the most.
 
-1. **A real corpus** → unblocks every latency and recall figure, and settles §2.3, the
-   single biggest risk in the document. *Blocked on: the dataset.*
+1. **A real corpus** → unblocks every latency and recall figure. *Blocked on: the
+   dataset.* ! `huggingface.co` is refused by this environment's egress policy, so the
+   planned source cannot be fetched from here; the import path (`vera-ingest`) is built
+   and waiting.
 2. **A labelled eval set** (50–100 queries with expert-confirmed answers, `EVAL.md` §2)
-   → unblocks exact-match recall, nDCG, and the real knee. Without it, recall is
-   measured against an exhaustive scan of the same flawed retrieval, which cannot detect
-   a systematic error. *Blocked on: domain expertise, not engineering.*
-3. **Recall-loss decomposition** (§3.1) → unblocks tuning `per_cluster_top_k` and
-   `candidate_cap` at all, and closes a silent failure mode no current metric can see.
-   *Blocked on: nothing — it is a bench change, ~an afternoon, and it needs no real
-   data to build (only to be useful).* **Do it before tuning any dial on real data.**
+   → unblocks the real knee, honest exact-match recall against how people actually write
+   citations, and **every keyword optimisation in §2.3**. Without it, recall is measured
+   against an exhaustive scan of the same retrieval, which cannot detect a systematic
+   error. *Blocked on: domain expertise, not engineering.* **This is now the top
+   engineering-adjacent blocker**, because §2.3 has a named fix that must not ship
+   without it.
+3. ~~**Recall-loss decomposition**~~ → **done** (§3.1). Alongside it: the corpus profile,
+   nDCG@10, exact-match recall, a Zipfian fixture, and `--per-cluster-top-k`.
 4. **Contiguous per-cluster storage + halfvec** → the only path to the §2.2 target.
-   *Blocked on: nothing. This is the next engineering task, and it is a schema change,
-   so it belongs with the source/metadata work (`MULTI_DOMAIN.md` §12).*
+   *Blocked on: nothing. It is a schema change, so it belongs with the source/metadata
+   work (`MULTI_DOMAIN.md` §12).*
 5. **A 2 vCPU / 8 GB box** → unblocks every T2 resource number. *Blocked on:
    provisioning. Constrained-cgroup runs are a partial substitute.*
 
-! Two of these are not blocked on anything external. **(3) is cheap and should be done
-first** — it is a bench change, and without it every dial tuned on real data is tuned
-against a metric blind to one of three failure modes. **(4) is the largest single
-lever**, but it is a schema change and schema changes are paid for in re-ingest, so it
-should land *with* the source-model work rather than before it.
+! The ordering changed once (3) landed. **(2) is now first**, because §2.3 turned from an
+unknown into a known problem with a known fix that cannot be validated without it —
+every candidate response changes which documents come back, and `EVAL.md` §5 rejects any
+change that lowers recall@k. **(4) is the largest single lever on latency**, but it is a
+schema change paid for in re-ingest, so it lands *with* the source-model work.

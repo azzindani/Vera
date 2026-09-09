@@ -294,12 +294,31 @@ error both hid.
 
 ## 7. What to build, in order
 
-1. **Zipfian fixture vocabulary** — unblocks every BM25 and fusion measurement. (§5)
-2. **Recall-loss decomposition** — routing / cap / fusion. (`METRICS.md` §3.1)
-3. **Corpus profile at ingest** — vocabulary stats, doc lengths, identifier density.
-   Cheap, one pass, and it is what makes a second source configuration.
+1. ~~**Zipfian fixture vocabulary**~~ — **done.** 20K terms at exponent 1.0, with
+   `--vocab`/`--zipf` reaching the old closed fixture so the sensitivity is measurable.
+2. ~~**Recall-loss decomposition**~~ — **done.** routing / cap / fusion / by-design.
+   (`METRICS.md` §3.1)
+3. ~~**Corpus profile at ingest**~~ — **done.** Measured once and stored with the corpus,
+   so the caveat travels with the data. (§5b)
 4. **Query-type stratification** in the eval set — needs labels. (§6 step 5)
 5. **Lexical–semantic correlation** — needs the eval set; decides whether hybrid earns
    its cost on a given source.
 
-Items 1–3 need no real data and no labels.
+! **Items 1–3 raised a factor this document did not have.** Building them showed that
+the vocabulary factor is not one variable but two, pointing in opposite directions on the
+same corpus:
+
+| Factor | 20K Zipfian fixture | What it predicts |
+|---|---|---|
+| vocabulary size, Zipf slope | 16,388 terms, −0.79 | that the corpus *looks* like natural text |
+| **occurrence-weighted IDF** | reach of an 8-term query ≈ **100% of rows** | what BM25 actually costs |
+
+A corpus can be impeccably Zipfian and still have queries that touch every row, because
+the head is in nearly every document and a query drawn from a document is mostly head
+terms. Everything upstream of retrieval — chunk size, tokenizer, stopword policy —
+therefore matters through the **weighted** figure, and a factor sheet keyed on vocabulary
+size alone would have predicted the opposite of what happens. `METRICS.md` §2.3 carries
+the consequence.
+
+Items 4 and 5 both need the labelled set, which is now the top blocker
+(`METRICS.md` §8).

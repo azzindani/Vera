@@ -67,7 +67,10 @@ CREATE TABLE IF NOT EXISTS chunks (
     locator_page    INTEGER,
     locator_section TEXT,
     heading_path    TEXT,
-    identifier      TEXT
+    identifier      TEXT,
+    -- LOOPHOLES.md §8 · digest of the source as ingested, so a source that has
+    -- since moved or changed can be detected rather than silently re-cited.
+    source_hash     TEXT
 );
 -- The layer-3 access path: every leaf scan is a range over this index.
 CREATE INDEX IF NOT EXISTS chunks_cluster_idx ON chunks (cluster_id);
@@ -232,7 +235,8 @@ pub fn fts_match_expression(query: &str) -> Option<String> {
 
 /// Columns every `Chunk` read selects, in the order [`row_to_chunk`] expects.
 const CHUNK_COLUMNS: &str = "id, domain_id, cluster_id, body, source_title, source_url, \
-                             locator_page, locator_section, heading_path, identifier";
+                             locator_page, locator_section, heading_path, identifier, \
+                             source_hash";
 
 fn row_to_chunk(row: &rusqlite::Row<'_>) -> rusqlite::Result<Chunk> {
     Ok(Chunk {
@@ -246,6 +250,7 @@ fn row_to_chunk(row: &rusqlite::Row<'_>) -> rusqlite::Result<Chunk> {
         locator_section: row.get(7)?,
         heading_path: row.get(8)?,
         identifier: row.get(9)?,
+        source_hash: row.get(10)?,
     })
 }
 
@@ -677,6 +682,27 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].id, "c3");
         assert!(store.exact_identifier("UU 99/9999", 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_source_hash_round_trips_and_its_absence_reads_as_unknown() {
+        // ! LOOPHOLES.md §8. A link is a promise the source can break silently:
+        // revised, renumbered, moved. The hash is what makes the citation
+        // falsifiable. `None` must stay distinguishable from "verified intact",
+        // or a corpus ingested without hashes would look fully verified.
+        let (_d, store) = fixture();
+        store.with_connection(|conn| {
+            conn.execute(
+                "UPDATE chunks SET source_hash = 'sha256:abc' WHERE id = 'c1'",
+                [],
+            )
+            .unwrap();
+        });
+        let chunks = store.chunks_by_id(&["c1".to_owned(), "c2".to_owned()]).unwrap();
+        let c1 = chunks.iter().find(|c| c.id == "c1").unwrap();
+        let c2 = chunks.iter().find(|c| c.id == "c2").unwrap();
+        assert_eq!(c1.source_hash.as_deref(), Some("sha256:abc"));
+        assert_eq!(c2.source_hash, None, "unrecorded is unknown, not intact");
     }
 
     #[test]

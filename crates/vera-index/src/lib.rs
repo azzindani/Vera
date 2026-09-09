@@ -13,10 +13,14 @@
 pub mod build;
 pub mod kmeans;
 pub mod matrix;
+pub mod preflight;
+pub mod split;
 
 pub use build::{BuildError, BuildReport, IngestRow, build_corpus, measure_anchor};
 pub use kmeans::{KMeans, KMeansConfig, kmeans};
 pub use matrix::Matrix;
+pub use preflight::{PreflightError, SpaceCheck, estimated_bytes, require_free_space};
+pub use split::{SplitReport, split_oversized};
 
 /// Deterministic, seedable PRNG (PCG-XSH-RR 64/32).
 ///

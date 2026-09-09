@@ -45,6 +45,7 @@ fn corpus(dir: &std::path::Path) -> SqliteStore {
             locator_section: Some("Pasal 9".into()),
             heading_path: None,
             identifier: (i == 7).then(|| "UU 28/2007".to_owned()),
+            source_hash: None,
         });
     }
     let path = dir.join("corpus.db");

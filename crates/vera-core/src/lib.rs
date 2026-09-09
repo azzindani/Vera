@@ -50,6 +50,16 @@ pub struct Chunk {
     pub locator_section: Option<String>,
     pub heading_path: Option<String>,
     pub identifier: Option<String>,
+    /// Digest of the source document as it was at ingest · `LOOPHOLES.md` §8.
+    ///
+    /// ! Provenance is the product, and a link is only a promise: the document
+    /// behind it can be revised, renumbered or moved, and the citation keeps
+    /// rendering as though nothing happened. The hash is what turns "here is a
+    /// link" into a claim that can be **falsified** — re-fetch the source, hash
+    /// it, compare. `None` means ingest recorded none, which is reported as
+    /// unknown rather than treated as unchanged.
+    #[serde(default)]
+    pub source_hash: Option<String>,
 }
 
 impl Chunk {
@@ -113,6 +123,7 @@ mod tests {
             locator_section: Some("Pasal 9 ayat (3)".into()),
             heading_path: None,
             identifier: Some("UU 28/2007".into()),
+            source_hash: Some("sha256:0f3c…".into()),
         }
     }
 
