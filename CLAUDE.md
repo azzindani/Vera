@@ -381,6 +381,7 @@ Audited against every doc in the repo. These are specified and **not built**:
 | `CLUSTER_MAINTENANCE.md` §2 | Tier-1 incremental assign, Tier-2 **split-on-size** | only full rebuild exists |
 | `EVAL.md` §2 | `eval/` labeled query set | directory does not exist |
 | `EVAL.md` §3 | **exact-match recall**, nDCG | not measured (recall@k, routing recall, MRR, p50/p95/p99 are) |
+| `EVAL.md` §4, `LOOPHOLES.md` §7 | **candidate-cap loss** — is the true answer cut by `per_cluster_top_k` before fusion? | **not measurable** · both recall@k and route/D are blind to it by construction (`METRICS.md` §3.1). Fix before tuning any dial on real data |
 | `CLAUDE.md` §4 | layout: `docs/`, `engine/`, `pipelines/` | actual: docs at root, `crates/` workspace, no Python pipelines |
 
 Two docs are now **wrong** rather than merely unimplemented, and should be

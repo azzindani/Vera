@@ -132,6 +132,7 @@ replicate (stateless).
 | **top-1 agreement** | ≥ 95% | 100% | ✅ *synthetic* |
 | **MRR** | ≥ 0.90 | 1.000 | ✅ *synthetic* |
 | **nDCG@10** | ≥ 0.85 | not implemented | ❌ |
+| **Candidate-cap loss** | ≤ 1% | **not measurable** | ❌ see §3.1 |
 
 ! **Exact-match recall is the only one with no tolerance.** A named regulation that
 exists and is not returned is the failure this whole architecture is shaped around
@@ -141,6 +142,42 @@ exists and is not returned is the failure this whole architecture is shaped arou
 `success: true` with zero results, indistinguishable from an empty corpus. It is
 therefore capped tighter than recall, and measured separately (`L1-rej` in the sweep)
 rather than folded into a recall figure where it would hide.
+
+### 3.1 ⚠️ Candidate-cap loss is invisible to every metric we have
+
+`LOOPHOLES.md` §7: the leaf scan keeps only `per_cluster_top_k` (50) candidates per
+cluster. **If the correct chunk ranks 51st inside its own cluster, it is discarded
+before fusion ever sees it** — and raising `max_results` cannot recover it, because the
+loss happened two stages earlier.
+
+! **No current metric detects this**, which is worse than the bug itself:
+
+- `recall@10` compares against a **fused exhaustive** baseline that applies *the same*
+  `per_cluster_top_k`. Both sides drop the same row, so recall reads 100% while the true
+  answer was thrown away by both.
+- `route/D` asks only "was it in a **probed cluster**". A row that was in a probed
+  cluster and then cut by the cap scores as a routing *success*.
+
+So a cap set too low would show up as **nothing at all** in the sweep — the same class
+of silent failure as the layer-1 over-rejection (finding 7), and found the same way:
+by decomposing a number that was hiding two causes.
+
+**The fix — decompose recall loss into its three causes.** For each item of the
+dense-only truth that the routed search failed to return, attribute it:
+
+| Cause | Test | Dial |
+|---|---|---|
+| **routing** | not in any probed cluster | `clusters_probed` |
+| **cap** | in a probed cluster, but cut before fusion | `per_cluster_top_k`, `candidate_cap` |
+| **fusion** | reached fusion, ranked out of top-k | `rrf_k`, weights |
+
+Today only the first is measured. The three are dialled by different knobs, so an
+undecomposed recall figure cannot say which one to turn — and `EVAL.md` §4 lists
+"per-cluster top-k · recall@k vs candidate-cap misses" as a dial evidence must set,
+which is not possible until this exists.
+
+**Do this before tuning any retrieval dial on real data.** Tuning against a metric that
+cannot observe one of the three failure modes will drive the wrong knob.
 
 **The knee.** `clusters_probed` should be the smallest value holding recall@10 ≥ 95%.
 Currently **5**, which matches the documented default. Re-derive this on real data — it
@@ -223,12 +260,18 @@ Ordered by what unblocks the most.
    → unblocks exact-match recall, nDCG, and the real knee. Without it, recall is
    measured against an exhaustive scan of the same flawed retrieval, which cannot detect
    a systematic error. *Blocked on: domain expertise, not engineering.*
-3. **Contiguous per-cluster storage + halfvec** → the only path to the §2.2 target.
+3. **Recall-loss decomposition** (§3.1) → unblocks tuning `per_cluster_top_k` and
+   `candidate_cap` at all, and closes a silent failure mode no current metric can see.
+   *Blocked on: nothing — it is a bench change, ~an afternoon, and it needs no real
+   data to build (only to be useful).* **Do it before tuning any dial on real data.**
+4. **Contiguous per-cluster storage + halfvec** → the only path to the §2.2 target.
    *Blocked on: nothing. This is the next engineering task, and it is a schema change,
    so it belongs with the source/metadata work (`MULTI_DOMAIN.md` §12).*
-4. **A 2 vCPU / 8 GB box** → unblocks every T2 resource number. *Blocked on:
+5. **A 2 vCPU / 8 GB box** → unblocks every T2 resource number. *Blocked on:
    provisioning. Constrained-cgroup runs are a partial substitute.*
 
-! Note the ordering: **(3) is the only one not blocked on something external**, and it
-is also the largest single lever. But it is a schema change, and schema changes are paid
-for in re-ingest — so it should land *with* the source-model work, not before it.
+! Two of these are not blocked on anything external. **(3) is cheap and should be done
+first** — it is a bench change, and without it every dial tuned on real data is tuned
+against a metric blind to one of three failure modes. **(4) is the largest single
+lever**, but it is a schema change and schema changes are paid for in re-ingest, so it
+should land *with* the source-model work rather than before it.
