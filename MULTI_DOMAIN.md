@@ -131,7 +131,11 @@ changes how much work this is.
 **Genuinely new retrieval work, and only this:**
 
 - **Hierarchical** operators (§5) — needed by ontologies and by structured legal codes.
-- **Graph** operators (§5) — citations, "cited by", "supersedes", "overrules".
+- **Graph** operators (§5) — citations, "cited by", "supersedes", "overrules". This is
+  where a knowledge graph lands: ✗ a new layer, but the concrete form of this operator
+  plus the `traverse` edges. The exact-identifier path is already a degenerate case of
+  it — one entity type, string-matched, stored in a column. See `FACTORS.md` §5b for
+  what generalising it costs and how to decide whether it earns that cost.
 
 That is the honest scope: two new operator families, one schema model, and a
 configuration layer. Not N engines.

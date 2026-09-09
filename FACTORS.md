@@ -196,6 +196,82 @@ for any BM25 or fusion number meaning anything, including the recall-loss decomp
 
 ---
 
+## 5b. Statistics, metadata, and the graph — three kinds of per-source variable
+
+They are all "things that differ per source", which is why they feel like one topic.
+They behave differently enough that conflating them causes real mistakes.
+
+| | **Corpus statistics** (§1 group A) | **Row metadata** | **Graph / knowledge graph** |
+|---|---|---|---|
+| What it is | emergent properties of the whole corpus | declared fields on each row | typed relations between rows or entities |
+| Example | Zipf slope 1.2; anchor p1 0.71 | `court = "MA"`, `year = 2020` | `cites`, `supersedes`, `parent_of` |
+| Where it lives | corpus metadata, **one value per corpus** | a column/JSONB, **one value per row** | an edge table, **one row per relation** |
+| Cardinality | O(1) | O(rows) | O(relations) |
+| What it drives | **dial derivation** (§2) | **constraints** — filters that gate routing | **traversal**, and a fourth ranker |
+| How it is obtained | measured at ingest | supplied by the source | **extracted** — a pipeline of its own |
+| Failure mode | a mis-derived dial | a silently dropped filter | wrong or missing edges — invisible |
+
+! **Zipf slope is not metadata on a chunk.** It is a property of the corpus, computed
+once. Treating it as a per-row field would be a category error — and treating per-row
+metadata as a tuning statistic is the same error mirrored.
+
+### The connection that *is* real, and useful
+
+**Corpus statistics should be computed per metadata partition, not only globally.**
+
+Cluster tightness for `court = "Mahkamah Agung"` may differ sharply from `court =
+"Pengadilan Negeri"`. Vocabulary skew for 1998 documents differs from 2020. Anchor
+geometry for one document type differs from another.
+
+That matters because a **filtered query is a query against a different corpus** — one
+with its own tightness, its own selectivity, and therefore its own right answer for
+`clusters_probed`. It is the same fact that produces the cardinality rule
+(`MULTI_DOMAIN.md` §7) seen from the statistics side: filters and routing interact
+because the filter changes the distribution routing was tuned against.
+
+So the profile (§2) is not one row of numbers per source. It is **one row per source,
+plus one row per high-cardinality filter value worth splitting on** — which is also the
+signal for where to shard (`HARDWARE.md` §5) and where to align cluster boundaries.
+
+### Where a knowledge graph fits
+
+A KG is not a new architectural layer. It is the concrete realisation of **two things
+already in the design**:
+
+- the `graph` **ranker** (`MULTI_DOMAIN.md` §5) — "what cites this", "what supersedes
+  this" as a ranked retrieval signal;
+- `traverse` **edges** (`MCP_ENGINE.md` §2) — the tool primitive already exists, and its
+  `Edge` vocabulary is deliberately closed and small precisely so real edges can be
+  added without a new tool.
+
+! **The exact-identifier path is already a degenerate knowledge graph.** "This chunk
+mentions `UU 28/2007`" is an entity-mention edge with one entity type, extracted by a
+hand-written grammar, stored in a column. A real KG generalises exactly that: more
+entity types, resolved rather than string-matched, with typed relations between them.
+
+Three cautions, in order of how likely they are to bite:
+
+1. **Extraction is a pipeline, not a field.** Entities and relations must be extracted,
+   and for most sources that means a model. This is permitted — offline, in the
+   pipelines — and **forbidden on the query path** (`CLAUDE.md` §5 rule 1). The boundary
+   holds, but the cost lands in ingest, and the KG then needs its own maintenance
+   cadence alongside cluster maintenance.
+2. **Entity resolution is the hard part.** "Mahkamah Agung", "MA", and a typo are one
+   entity. Getting this wrong produces edges that are confidently wrong, and a wrong
+   edge is worse than a missing one because `traverse` presents it as fact.
+3. **Its value must be measured, not assumed.** The honest question is factor A10
+   extended: **does the graph half surface answers dense and BM25 both miss?** If the
+   eval set says no for a given source, the KG is cost without recall — and that answer
+   will differ per source. Citation graphs are load-bearing for case law and nearly
+   worthless for a drug label.
+
+**Ordering:** the graph ranker is the *last* of the retrieval work in
+`MULTI_DOMAIN.md` §12, and deliberately so. It depends on the metadata model (which
+does not exist yet), on an extraction pipeline (which does not exist), and on an eval
+set to justify it (which does not exist). Building it earlier means building it blind.
+
+---
+
 ## 6. Experiment design
 
 Given the taxonomy, the disciplined procedure:
