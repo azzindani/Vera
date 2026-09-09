@@ -98,6 +98,7 @@ vera/
 │   ├── STANDARDS_COMPLIANCE.md    ← mapping to local_mcp STANDARDS; documented divergences
 │   ├── MULTI_DOMAIN.md            ← scaling to many domains/sources; the foundation principles
 │   ├── METRICS.md                 ← the targets · what "working" means, as falsifiable numbers
+│   ├── FACTORS.md                 ← the ~36 variables behind those numbers; which differ per source
 │   └── EVAL.md                    ← the eval harness that gates retrieval quality
 │
 ├── engine/                        ← Rust MCP engine (stateless)

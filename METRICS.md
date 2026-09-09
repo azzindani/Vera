@@ -9,6 +9,11 @@ not the number.
 
 ---
 
+! **`FACTORS.md` is the companion**: this document is *what must be achieved*, that one
+is *what determines whether you achieve it* — the ~36 variables involved, which of them
+differ per data source, and why a number measured on one source does not transfer to
+another.
+
 ## 0. How to read this
 
 Three status marks:
