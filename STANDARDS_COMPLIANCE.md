@@ -19,8 +19,8 @@ drives every divergence below.
 |---|---|
 | §2 Core mental model (deterministic function, not assistant) | **Followed, strictly.** Vera never calls an LLM; it returns evidence, the agent decides. |
 | §3 Primitives (tools-first) | **Followed.** Everything is a tool; no prompts. |
-| §8 Tool-count discipline (≤8, sharp tools) | **Followed.** 5 read-only tools. |
-| §10 Surgical read protocol | **Followed.** `search_knowledge` returns snippets+addresses; `read_chunk` is the bounded read; never returns full documents or raw vectors. |
+| §8 Tool-count discipline (≤8, sharp tools) | **Followed, tightened.** 4 read-only primitives (`describe`/`search`/`fetch`/`traverse`). Capability extends via declared parameters, so the count does not grow with sources, edges or filters. See `MULTI_DOMAIN.md` §10b. |
+| §10 Surgical read protocol | **Followed.** `search` returns snippets+addresses; `fetch(depth)` is the bounded read; `traverse` returns addresses, ✗ bodies; never returns full documents or raw vectors. |
 | §11 Tool schema design (≤80-char docstrings, snake_case verb_noun, primitive types) | **Followed.** See `MCP_ENGINE.md`. |
 | §12 Tool annotations | **Followed**, with `openWorldHint=True` on tools that call OpenRouter. |
 | §16 Return value contract (dict, `success` first, `token_estimate`, `progress`, `hint`) | **Followed**, minus write-only fields (see divergence D). |

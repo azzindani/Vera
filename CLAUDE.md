@@ -139,29 +139,48 @@ Rust (tiny stateless footprint, tokio concurrency); the pipelines are Python
 
 ---
 
-## 6. Tool surface (agent-facing, read-only, ≤ 8 tools)
+## 6. Tool surface (agent-facing, read-only) — **four primitives**
 
-Full schemas in `docs/MCP_ENGINE.md`. Vera's read-only analog of the upstream
-LOCATE→INSPECT→PATCH→VERIFY loop is **ROUTE → SEARCH → READ → VERIFY**.
+Full schemas in `docs/MCP_ENGINE.md`; the design rationale is `MULTI_DOMAIN.md` §10b.
+Vera's read-only analog of the upstream LOCATE→INSPECT→PATCH→VERIFY loop is
+**DESCRIBE → SEARCH → TRAVERSE → FETCH**.
 
 | Tool | Role | Returns |
 |---|---|---|
-| `list_domains` | introspection (not a router input) | domain ids + descriptions, zero content |
-| `search_knowledge` | the workhorse: routed hybrid search (**query only**) | ranked results: id, snippet, score, provenance |
-| `read_chunk` | bounded surgical read of one chunk | full text of one chunk, size-capped |
-| `get_provenance` | verification bundle for result ids | source_url + locator (page/section) |
-| `explain_routing` | debug/transparency | detected domain + which clusters were probed + scores |
+| `describe` | what exists: sources, filterable fields, edges, limits | ids + schemas + capabilities, zero content |
+| `search` | the workhorse: routed hybrid search, one query or many | ranked results: id, snippet, score, provenance |
+| `fetch` | read by id at a chosen depth | `provenance` \| `snippet` \| `full` (size-capped) |
+| `traverse` | follow a declared edge from known ids | neighbour addresses, ✗ bodies |
 
-The agent never passes a `domain` — domain is detected inside the engine by anchor
-match on the query vector. If nothing matches above threshold, the engine returns empty
-results rather than guessing a wrong domain.
+! **Capability grows through declared parameters, ✗ new tools.** Adding a source, an
+edge type, a filterable field or a validity model must add **zero** tools. A fifth verb
+means the model was wrong, not that the feature was large. Guarded by a test.
 
-Every tool returns a dict with `success` first, plus `token_estimate`, `progress`,
-and (on failure) `error` + `hint`. Docstrings ≤ 80 chars. See
-`docs/STANDARDS_COMPLIANCE.md` for which upstream contract fields apply to a
-read-only server.
+! **The agent passes intent; the engine owns strategy.** Query text, constraints, `k`,
+edge name and fetch depth are intent. Which source is searched, which rankers run,
+their fusion weights and which clusters are probed are strategy and are never
+agent-supplied — an agent that could set fusion weights could silently disable the
+keyword half.
 
----
+Consequences of the collapse:
+
+- `list_domains` → `describe`, which now also publishes what can be *asked*, not only
+  what exists.
+- `read_chunk` + `get_provenance` → `fetch` at two depths. They were one operation.
+- `explain_routing` → `search(dry_run: true)`. A separate tool would have to duplicate
+  the whole constraint surface and the two would drift.
+- **Bulk is a parameter shape, ✗ a tool.** `search` takes one query or many; `fetch` and
+  `traverse` take one id or many. This amortises the embedding round-trip and lets one
+  admission slot cover a batch, without a `search_batch` verb.
+- **An unrecognised constraint fails loudly**, naming the valid fields. Silently
+  dropping a filter returns a confident answer to a question that was not asked.
+
+The agent never passes a `domain` or `source` — it is detected inside the engine by
+anchor match. If nothing matches above threshold the engine returns empty results
+rather than guessing, except for exact-identifier hits, which bypass routing entirely.
+
+Every tool returns a dict with `success` first, plus `token_estimate`, `progress`, and
+(on failure) `error` + `hint`. Docstrings ≤ 80 chars.
 
 ## 7. What you must NEVER do
 

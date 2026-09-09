@@ -9,7 +9,8 @@
 //! which SQLite implements natively. Neither choice leaks past [`ChunkStore`].
 
 use crate::{
-    Centroid, ChunkStore, DomainAnchor, KeywordHit, ScannedRow, StoreError, decode_vector_into,
+    Centroid, ChunkStore, DomainAnchor, Edge, KeywordHit, ScannedRow, StoreError,
+    decode_vector_into,
 };
 use rusqlite::{Connection, OpenFlags, params, params_from_iter};
 use std::sync::Mutex;
@@ -380,6 +381,41 @@ impl ChunkStore for SqliteStore {
         Ok(out)
     }
 
+    fn neighbors(
+        &self,
+        id: &str,
+        edge: Edge,
+        limit: usize,
+    ) -> Result<Vec<Chunk>, StoreError> {
+        let conn = self.conn.lock().expect("store lock poisoned");
+        // ! The `IS NOT NULL` guard on same_identifier matters: without it every
+        // chunk that ingest recorded no identifier for becomes a neighbour of
+        // every other such chunk, which is a corpus-sized join presented as a
+        // relationship.
+        let sql = match edge {
+            Edge::SameDocument => format!(
+                "SELECT {CHUNK_COLUMNS} FROM chunks \
+                 WHERE source_url = (SELECT source_url FROM chunks WHERE id = ?1) \
+                   AND id != ?1 \
+                 ORDER BY id LIMIT ?2"
+            ),
+            Edge::SameIdentifier => format!(
+                "SELECT {CHUNK_COLUMNS} FROM chunks \
+                 WHERE identifier IS NOT NULL \
+                   AND identifier = (SELECT identifier FROM chunks WHERE id = ?1) \
+                   AND id != ?1 \
+                 ORDER BY id LIMIT ?2"
+            ),
+        };
+        let mut stmt = conn.prepare_cached(&sql)?;
+        let mut rows = stmt.query(params![id, limit as i64])?;
+        let mut out = Vec::new();
+        while let Some(row) = rows.next()? {
+            out.push(row_to_chunk(row)?);
+        }
+        Ok(out)
+    }
+
     fn meta(&self, key: &str) -> Result<Option<String>, StoreError> {
         let conn = self.conn.lock().expect("store lock poisoned");
         let mut stmt = conn.prepare_cached("SELECT value FROM meta WHERE key = ?1")?;
@@ -611,6 +647,54 @@ mod tests {
     fn asking_for_no_ids_costs_no_query() {
         let (_d, store) = fixture();
         assert!(store.chunks_by_id(&[]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn traversing_same_document_returns_the_other_chunks_of_that_document() {
+        let (_d, store) = fixture();
+        let n = store.neighbors("c1", Edge::SameDocument, 10).unwrap();
+        // c1, c2, c3 all share the fixture's single source_url.
+        let ids: Vec<&str> = n.iter().map(|c| c.id.as_str()).collect();
+        assert_eq!(ids, ["c2", "c3"], "must exclude the chunk itself");
+    }
+
+    #[test]
+    fn traversing_same_identifier_matches_only_the_same_regulation() {
+        let (_d, store) = fixture();
+        // c1 is "UU 28/2007", c3 is "PP 74/2011", c2 has none.
+        assert!(store.neighbors("c1", Edge::SameIdentifier, 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn chunks_without_an_identifier_are_not_neighbours_of_each_other() {
+        // ! Without the NOT NULL guard this is a corpus-sized join dressed up
+        // as a relationship: every unlabelled chunk related to every other.
+        let (_d, store) = fixture();
+        assert!(store.neighbors("c2", Edge::SameIdentifier, 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn traversal_respects_its_limit() {
+        let (_d, store) = fixture();
+        assert_eq!(store.neighbors("c1", Edge::SameDocument, 1).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn traversing_from_an_unknown_id_yields_nothing_rather_than_erroring() {
+        let (_d, store) = fixture();
+        assert!(store.neighbors("nope", Edge::SameDocument, 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn edge_names_round_trip_and_the_vocabulary_is_closed() {
+        for e in Edge::all() {
+            assert_eq!(Edge::parse(e.name()), Some(*e));
+        }
+        // ! Edges the design anticipates but the schema cannot answer must not
+        // parse · describe publishes only what traverse can actually do.
+        for absent in ["parent", "children", "cites", "cited_by", "versions"] {
+            assert_eq!(Edge::parse(absent), None, "{absent} must not be accepted yet");
+        }
     }
 
     #[test]

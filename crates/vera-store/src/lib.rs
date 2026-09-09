@@ -70,6 +70,51 @@ pub struct ScannedRow<'a> {
     pub vector: &'a [f32],
 }
 
+/// A relation an agent can follow from a known chunk.
+///
+/// ! The variants here are the edges **this corpus schema can actually answer**,
+/// ✗ the edges the design anticipates. `MULTI_DOMAIN.md` §5 also calls for
+/// `parent`/`children` (hierarchy), `cites`/`cited_by` (graph) and
+/// `versions`/`supersedes` (time); none of those have columns yet, so they are
+/// deliberately absent rather than stubbed. An edge that exists but returns
+/// nothing is indistinguishable from a document with no neighbours — the same
+/// silent-emptiness failure the routing bypass exists to prevent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Edge {
+    /// Other chunks of the same source document.
+    SameDocument,
+    /// Other chunks carrying the same canonical identifier.
+    SameIdentifier,
+}
+
+impl Edge {
+    /// Wire name, as advertised by `describe` and accepted by `traverse`.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::SameDocument => "same_document",
+            Self::SameIdentifier => "same_identifier",
+        }
+    }
+
+    /// Parse a wire name.
+    #[must_use]
+    pub fn parse(name: &str) -> Option<Self> {
+        match name {
+            "same_document" => Some(Self::SameDocument),
+            "same_identifier" => Some(Self::SameIdentifier),
+            _ => None,
+        }
+    }
+
+    /// Every edge this build can answer · the closed vocabulary `describe`
+    /// publishes so an agent never has to guess one.
+    #[must_use]
+    pub const fn all() -> &'static [Self] {
+        &[Self::SameDocument, Self::SameIdentifier]
+    }
+}
+
 /// A keyword hit and its BM25 score (higher is better).
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeywordHit {
@@ -153,6 +198,22 @@ pub trait ChunkStore: Send + Sync {
             .map(|c| (c.id.clone(), c.source()))
             .collect())
     }
+
+    /// Chunks reachable from `id` along `edge`, excluding `id` itself.
+    ///
+    /// ! Returns neighbours, ✗ ranked results. Traversal is navigation from a
+    /// known point; ranking is `search`'s job, and mixing them would let a
+    /// traversal quietly reorder evidence the agent believes it addressed
+    /// directly.
+    ///
+    /// # Errors
+    /// Backend failure.
+    fn neighbors(
+        &self,
+        id: &str,
+        edge: Edge,
+        limit: usize,
+    ) -> Result<Vec<Chunk>, StoreError>;
 
     /// Rows in the largest cluster · the term in the RAM budget.
     ///

@@ -125,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Route one `tools/call` to its tool.
+/// Route one `tools/call` to one of the four primitives.
 async fn dispatch(server: &Arc<Server>, params: &Value) -> Value {
     let name = params.get("name").and_then(Value::as_str).unwrap_or("");
     let args = params.get("arguments").cloned().unwrap_or(json!({}));
@@ -138,54 +138,73 @@ async fn dispatch(server: &Arc<Server>, params: &Value) -> Value {
     };
 
     match name {
-        "list_domains" => tools::list_domains(&server.engine),
+        "describe" => tools::describe(&server.engine),
 
-        "read_chunk" => match args.get("chunk_id").and_then(Value::as_str) {
-            Some(id) => tools::read_chunk(&server.engine, id),
-            None => tools::failure("read_chunk", "missing 'chunk_id'", "pass a chunk id"),
-        },
-
-        "get_provenance" => match args.get("chunk_ids").and_then(Value::as_array) {
-            Some(ids) => {
-                let ids: Vec<String> = ids
-                    .iter()
-                    .filter_map(|v| v.as_str().map(ToOwned::to_owned))
-                    .collect();
-                tools::get_provenance(&server.engine, &ids)
-            }
-            None => tools::failure(
-                "get_provenance",
-                "missing 'chunk_ids'",
-                "pass an array of ids from search_knowledge",
-            ),
-        },
-
-        "search_knowledge" | "explain_routing" => {
-            let Some(query) = args.get("query").and_then(Value::as_str) else {
-                return tools::failure(name, "missing 'query'", "pass a query string");
+        "fetch" => {
+            let Some(ids) = tools::args::list(&args, "ids") else {
+                return tools::failure("fetch", "missing 'ids'", "pass one id or an array of ids");
             };
-            let vector = match server.provider.embed_query(query).await {
-                Ok(v) => v,
-                Err(e) => {
-                    return tools::failure(
-                        name,
-                        &e.to_string(),
-                        "the embedding provider is unavailable or has drifted · \
-                         the engine refuses to serve rather than rank in the wrong space",
-                    );
+            let Some(depth) = tools::args::depth(&args) else {
+                return tools::failure(
+                    "fetch",
+                    "unknown depth",
+                    "depth must be provenance, snippet or full",
+                );
+            };
+            tools::fetch(&server.engine, &ids, depth)
+        }
+
+        "traverse" => {
+            let Some(ids) = tools::args::list(&args, "ids") else {
+                return tools::failure("traverse", "missing 'ids'", "pass one id or an array of ids");
+            };
+            let Some(edge) = args.get("edge").and_then(Value::as_str) else {
+                return tools::failure(
+                    "traverse",
+                    "missing 'edge'",
+                    "call describe for the available edges",
+                );
+            };
+            let limit = tools::args::usize_field(&args, "limit").unwrap_or(20);
+            tools::traverse(&server.engine, &ids, edge, limit)
+        }
+
+        "search" => {
+            let Some(queries) = tools::args::list(&args, "query") else {
+                return tools::failure("search", "missing 'query'", "pass a query or an array");
+            };
+            if queries.is_empty() {
+                return tools::failure("search", "empty 'query'", "pass at least one query");
+            }
+            // ! Constraints are validated before embedding. Rejecting after the
+            // provider round-trip would spend a network call to say no, and —
+            // worse — invites a future edit that quietly searches unfiltered.
+            if let Err(e) = tools::validate_constraints(&server.engine, &args) {
+                return e;
+            }
+
+            let mut embedded = Vec::with_capacity(queries.len());
+            for text in queries {
+                match server.provider.embed_query(&text).await {
+                    Ok(vector) => embedded.push(tools::Embedded { text, vector }),
+                    Err(e) => {
+                        return tools::failure(
+                            "search",
+                            &e.to_string(),
+                            "the embedding provider is unavailable or has drifted · \
+                             the engine refuses to serve rather than rank in the wrong space",
+                        );
+                    }
                 }
-            };
-            if name == "explain_routing" {
-                tools::explain_routing(&server.engine, query, &vector)
-            } else {
-                tools::search_knowledge(
-                    &server.engine,
-                    query,
-                    &vector,
-                    args.get("max_results").and_then(Value::as_u64).map(|n| n as usize),
-                    args.get("clusters_probed").and_then(Value::as_u64).map(|n| n as usize),
-                )
             }
+
+            tools::search(
+                &server.engine,
+                &embedded,
+                tools::args::usize_field(&args, "k"),
+                tools::args::usize_field(&args, "clusters_probed"),
+                tools::args::flag(&args, "dry_run"),
+            )
         }
 
         other => tools::failure(
