@@ -41,7 +41,12 @@ PG = os.environ.get(
     "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
 )
 TEI = os.environ.get("EMBED_ENDPOINT", "http://localhost:8080")
-VOCAB = ROOT / ".test" / "runs" / "spike-01.bm25.json"
+# ! Must be the vocabulary THIS corpus was built with. Sparse vectors are
+# indexed by vocabulary position, so scoring a corpus with another run's vocab
+# silently compares unrelated dimensions rather than failing.
+VOCAB = Path(
+    os.environ.get("BM25_VOCAB", ROOT / ".test" / "runs" / "spike-01.bm25.json")
+)
 
 PER_ARM = 50
 RRF_K = 60

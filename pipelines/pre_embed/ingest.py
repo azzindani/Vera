@@ -30,6 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from batching import batched  # noqa: E402
+from chunking import is_indexable, split_article
 from sparse import Bm25Vectorizer  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -49,7 +50,8 @@ DENSE_DTYPE = "float16"
 # Stored and readable, but never indexed. 44K+ corpus rows are the boilerplate
 # "Cukup jelas." ("self-explanatory"); embedding them yields thousands of
 # near-identical vectors that distort ranking and answer no query.
-MIN_INDEXABLE_CHARS = 40
+# ! Indexability now lives in chunking.is_indexable, which asks whether a
+# chunk says anything rather than whether it is long enough.
 
 # The source extractor truncated at exactly 32767 chars. Those rows lost
 # content, so they are flagged -- a truncated article must never be cited as
@@ -123,10 +125,10 @@ def source_title(row: dict) -> str:
 
 def chunk_values(r: dict, corpus_id: str, dense, sparse_lit):
     return (
-        r["global_id"], corpus_id, r["regulation_type"], r["enacting_body"],
+        r["_id"], corpus_id, r["regulation_type"], r["enacting_body"],
         r["regulation_number"],
         int(r["year"]) if str(r["year"]).isdigit() else None,
-        r["about"], r["chapter"], r["article"], r["chunk_id"], r["_body"],
+        r["about"], r["chapter"], r["article"], r["_part"], r["_body"],
         None,  # ! no source_url in this corpus · never invented (invariant 8)
         source_title(r), r["_truncated"], r["_indexable"],
         lit(dense) if dense else None, sparse_lit,
@@ -167,16 +169,37 @@ def main() -> None:
     ]
     print(f"read {len(rows):,} rows from sqlite", flush=True)
 
+    # ! One source row is one ARTICLE, not one chunk. Expanding here is the
+    # whole point of chunking.py: an article of 32,000 characters was
+    # previously stored as a single chunk, which is neither a retrieval unit
+    # nor a locator a human can follow.
+    #
+    # An article that needs no splitting keeps its global_id, so the ~76% that
+    # were always the right size keep stable ids across this re-ingest.
+    expanded = []
     for r in rows:
         body = r["content"] or ""
-        r["_body"] = body
-        r["_truncated"] = len(body) == SOURCE_TRUNCATION_LEN
-        r["_indexable"] = len(body.strip()) >= MIN_INDEXABLE_CHARS
+        truncated = len(body) == SOURCE_TRUNCATION_LEN
+        parts = split_article(body)
+        for i, part in enumerate(parts):
+            c = dict(r)
+            c["_id"] = r["global_id"] if len(parts) == 1 else f"{r['global_id']}#{i}"
+            c["_part"] = i
+            c["_body"] = part
+            # ! Only the LAST part of a truncated article is truncated · the
+            # earlier parts are complete text and must not be flagged as cut.
+            c["_truncated"] = truncated and i == len(parts) - 1
+            c["_indexable"] = is_indexable(part)
+            expanded.append(c)
+
+    split_count = sum(1 for r in rows if len(split_article(r["content"] or "")) > 1)
+    rows = expanded
+    print(f"chunked {len(wanted):,} articles -> {len(rows):,} chunks "
+          f"({split_count:,} articles were split)", flush=True)
 
     indexable = [r for r in rows if r["_indexable"]]
     skipped = [r for r in rows if not r["_indexable"]]
-    print(f"indexable {len(indexable):,} · skipped {len(skipped):,} "
-          f"(below {MIN_INDEXABLE_CHARS} chars)", flush=True)
+    print(f"indexable {len(indexable):,} · skipped {len(skipped):,}", flush=True)
 
     # -- sparse -------------------------------------------------------------
     vec_path = manifest_path.with_name(f"{args.run_id}.bm25.json")
@@ -188,8 +211,15 @@ def main() -> None:
         t0 = time.time()
         if args.fit_on_full_corpus:
             print("fitting bm25 on the FULL corpus (text-only, no GPU)...", flush=True)
-            fit_docs = (c for (c,) in con.execute(
-                "SELECT content FROM regulations WHERE content IS NOT NULL"))
+            # ! Chunked, not raw. BM25 length-normalises against avgdl, so
+            # fitting on whole articles while scoring chunks would mis-weight
+            # every document in the corpus.
+            fit_docs = (
+                part
+                for (c,) in con.execute(
+                    "SELECT content FROM regulations WHERE content IS NOT NULL")
+                for part in split_article(c)
+            )
         else:
             fit_docs = (r["_body"] for r in indexable)
         vz = Bm25Vectorizer.fit(fit_docs, max_features=args.max_features)
@@ -253,7 +283,7 @@ def main() -> None:
                 )
                 cur.executemany(
                     INSERT_PROGRESS,
-                    [(r["global_id"], args.run_id, corpus_id) for r in block],
+                    [(r["_id"], args.run_id, corpus_id) for r in block],
                 )
                 pg.commit()
 
@@ -279,7 +309,7 @@ def main() -> None:
                     sp = vz.to_sparsevec(vz.document(r["_body"]))
                     pending_rows.append(chunk_values(r, corpus_id, v, sp))
                     pending_progress.append(
-                        (r["global_id"], args.run_id, corpus_id)
+                        (r["_id"], args.run_id, corpus_id)
                     )
                     if done % gate_every == 0 and len(gate) < ROUNDTRIP_SAMPLE:
                         gate.append((r, v))
