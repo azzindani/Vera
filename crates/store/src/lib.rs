@@ -16,7 +16,7 @@ pub mod search;
 
 use std::fmt::Write as _;
 
-pub use search::{ExactHit, Scored, SearchOps};
+pub use search::{ChunkRow, ExactHit, Scored, SearchOps};
 
 /// Connection pooling and the corpus contract.
 pub use deadpool_postgres::Pool;

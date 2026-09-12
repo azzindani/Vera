@@ -25,7 +25,12 @@ pub enum Confidence {
 pub struct Source {
     pub title: String,
     /// ! The **original** source a human clicks · ✗ an internal path.
-    pub url: String,
+    ///
+    /// `None` when ingestion recorded no URL. That is an honest admission,
+    /// ✗ a defect: this corpus genuinely has none, and an empty string would
+    /// render as a link that leads nowhere (invariant 8).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
     pub locator: Locator,
 }
 
@@ -172,15 +177,16 @@ pub fn citation_block(results: &[SearchResult]) -> Vec<Citation> {
             } else {
                 format!(", {locator}")
             };
+            // A citation with no URL still names the document precisely enough
+            // for a human to find it; it simply does not pretend to be a link.
+            let tail = r
+                .source
+                .url
+                .as_ref()
+                .map_or_else(String::new, |u| format!(" — {u}"));
             Citation {
                 index: i + 1,
-                text: format!(
-                    "[{}] {}{} — {}",
-                    i + 1,
-                    r.source.title,
-                    middle,
-                    r.source.url
-                ),
+                text: format!("[{}] {}{}{}", i + 1, r.source.title, middle, tail),
             }
         })
         .collect()
@@ -201,7 +207,7 @@ mod tests {
             },
             source: Source {
                 title: title.into(),
-                url: "https://peraturan.example/uu-28-2007.pdf".into(),
+                url: Some("https://peraturan.example/uu-28-2007.pdf".into()),
                 locator: Locator {
                     page,
                     section: section.map(Into::into),
@@ -256,6 +262,17 @@ mod tests {
             block[0].text,
             "[1] Untitled Source — https://peraturan.example/uu-28-2007.pdf"
         );
+    }
+
+    #[test]
+    fn a_citation_without_a_url_names_the_document_instead_of_faking_a_link() {
+        // ! The spike corpus has no source_url at all. The citation must still
+        // be usable, and must not end in a dangling em dash or an empty link.
+        let mut r = result("UU No. 28 Tahun 2007", Some(14), Some("Pasal 9"));
+        r.source.url = None;
+        let block = citation_block(&[r]);
+        assert_eq!(block[0].text, "[1] UU No. 28 Tahun 2007, Pasal 9, p.14");
+        assert!(!block[0].text.contains('—'), "no dangling separator");
     }
 
     #[test]

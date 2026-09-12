@@ -6,6 +6,16 @@ rust-version.workspace = true
 description = "MCP tool surface and transports. No domain logic."
 
 [dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "sync", "time"] }
+serde = { version = "1", features = ["derive"] }
+# ! preserve_order: without it serde_json sorts keys alphabetically and the
+# contract's "success first" ordering silently stops holding.
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+contract = { version = "0.0.1", path = "../contract" }
+embed = { version = "0.0.1", path = "../embed" }
+engine = { version = "0.0.1", path = "../engine" }
+store = { version = "0.0.1", path = "../store" }
 
 [lints]
 workspace = true

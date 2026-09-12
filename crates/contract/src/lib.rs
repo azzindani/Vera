@@ -13,7 +13,7 @@ pub mod contract;
 
 pub use contract::{
     Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
-    Source, SummaryPayload,
+    Source, SummaryPayload, citation_block,
 };
 
 /// Embedding width · Qwen3-Embedding-8B at full dimensionality.
@@ -30,7 +30,7 @@ pub struct Chunk {
     pub cluster_id: i32,
     pub body: String,
     pub source_title: String,
-    pub source_url: String,
+    pub source_url: Option<String>,
     pub locator_page: Option<i32>,
     pub locator_section: Option<String>,
     pub heading_path: Option<String>,
@@ -93,7 +93,7 @@ mod tests {
             cluster_id: 7,
             body: body.into(),
             source_title: "UU No. 28 Tahun 2007".into(),
-            source_url: "https://peraturan.example/uu-28-2007.pdf".into(),
+            source_url: Some("https://peraturan.example/uu-28-2007.pdf".into()),
             locator_page: Some(14),
             locator_section: Some("Pasal 9 ayat (3)".into()),
             heading_path: None,
@@ -128,7 +128,10 @@ mod tests {
     #[test]
     fn provenance_comes_from_stored_fields_and_is_never_invented() {
         let source = chunk("x").source();
-        assert_eq!(source.url, "https://peraturan.example/uu-28-2007.pdf");
+        assert_eq!(
+            source.url.as_deref(),
+            Some("https://peraturan.example/uu-28-2007.pdf")
+        );
         assert_eq!(source.locator.page, Some(14));
         assert_eq!(source.locator.section.as_deref(), Some("Pasal 9 ayat (3)"));
     }

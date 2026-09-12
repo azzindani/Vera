@@ -2,7 +2,22 @@
   "mcpServers": {
     "pipeline": {
       "command": "pipeline",
-      "args": ["mcp", "--transport", "stdio"]
+      "args": [
+        "mcp",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "vera": {
+      "command": "./target/release/mcp.exe",
+      "args": [],
+      "env": {
+        "DATABASE_URL": "host=localhost port=5432 dbname=vera user=vera password=vera",
+        "EMBED_ENDPOINT": "http://localhost:8080",
+        "BM25_VOCAB": ".test/runs/spike-01.bm25.json",
+        "CLUSTERS_PROBED": "5",
+        "MAX_CONCURRENCY": "4"
+      }
     }
   }
 }
