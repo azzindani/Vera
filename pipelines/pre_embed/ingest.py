@@ -59,6 +59,16 @@ SOURCE_TRUNCATION_LEN = 32767
 ROUNDTRIP_SAMPLE = 24
 ROUNDTRIP_MIN_COSINE = 0.999
 
+# ! Rows buffered before a flush. Measured on this schema: per-row execute
+# manages 22 rows/s, executemany in blocks of 500 manages 2,268 -- a 101x
+# difference that had the writer, not the GPU, setting the pace (the first
+# spike ran at 12/s against an embedding rate of 26/s).
+#
+# The cost of a crash is one unflushed window, about 20 seconds of GPU, and
+# ingest_progress is written in the same transaction as the rows it describes
+# so a resume can never think work is done that is not.
+FLUSH_ROWS = 500
+
 INSERT_CHUNK = """
 INSERT INTO chunks (
     id, corpus_id, regulation_type, enacting_body, regulation_number, year,
@@ -235,10 +245,29 @@ def main() -> None:
                 skipped = [r for r in skipped if r["global_id"] not in already]
 
             # Non-indexable rows: stored and readable, no vectors.
-            for r in skipped:
-                cur.execute(INSERT_CHUNK, chunk_values(r, corpus_id, None, None))
-                cur.execute(INSERT_PROGRESS, (r["global_id"], args.run_id, corpus_id))
-            pg.commit()
+            for i in range(0, len(skipped), FLUSH_ROWS):
+                block = skipped[i:i + FLUSH_ROWS]
+                cur.executemany(
+                    INSERT_CHUNK,
+                    [chunk_values(r, corpus_id, None, None) for r in block],
+                )
+                cur.executemany(
+                    INSERT_PROGRESS,
+                    [(r["global_id"], args.run_id, corpus_id) for r in block],
+                )
+                pg.commit()
+
+            pending_rows: list[tuple] = []
+            pending_progress: list[tuple] = []
+
+            def flush() -> None:
+                if not pending_rows:
+                    return
+                cur.executemany(INSERT_CHUNK, pending_rows)
+                cur.executemany(INSERT_PROGRESS, pending_progress)
+                pg.commit()
+                pending_rows.clear()
+                pending_progress.clear()
 
             for batch in batched(indexable, text_of=lambda r: r["_body"]):
                 vecs = embed([r["_body"] for r in batch])
@@ -248,18 +277,24 @@ def main() -> None:
                     if len(v) != DENSE_DIM:
                         sys.exit(f"dim {len(v)} != {DENSE_DIM} · refusing")
                     sp = vz.to_sparsevec(vz.document(r["_body"]))
-                    cur.execute(INSERT_CHUNK, chunk_values(r, corpus_id, v, sp))
-                    cur.execute(INSERT_PROGRESS,
-                                (r["global_id"], args.run_id, corpus_id))
+                    pending_rows.append(chunk_values(r, corpus_id, v, sp))
+                    pending_progress.append(
+                        (r["global_id"], args.run_id, corpus_id)
+                    )
                     if done % gate_every == 0 and len(gate) < ROUNDTRIP_SAMPLE:
                         gate.append((r, v))
                     done += 1
-                pg.commit()
+                if len(pending_rows) >= FLUSH_ROWS:
+                    flush()
                 el = time.time() - t0
                 rate = done / el if el else 0
                 eta = (len(indexable) - done) / rate / 60 if rate else 0
                 print(f"\r  {done:,}/{len(indexable):,}  {rate:.1f}/s  "
                       f"eta {eta:.0f}m   ", end="", flush=True)
+
+            # ! The tail. Without this the last partial window -- up to 499
+            # rows -- is embedded, paid for, and then silently dropped.
+            flush()
 
     el = time.time() - t0
     print(f"\n  loaded {done:,} chunks in {el / 60:.1f}m "
