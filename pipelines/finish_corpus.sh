@@ -41,6 +41,10 @@ echo
 echo "== eval · 50 labelled cases =="
 # Labels are article-level, so they resolve against whatever chunk ids this
 # corpus uses. Nothing here needs updating after a re-chunk.
+# ! The vocabulary THIS run built. Sparse vectors are indexed by vocabulary
+# POSITION, so another run's vocab compares unrelated dimensions and reports
+# plausible nonsense instead of failing.
+BM25_VOCAB="$VOCAB" \
 EMBED_ENDPOINT="${EMBED_ENDPOINT:-http://localhost:8080}" \
   python eval/run.py --by-type
 
