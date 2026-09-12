@@ -1,0 +1,37 @@
+# VPS emulation overlay · the 2 vCPU / 8 GB target from HARDWARE.md §1.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+#
+# ! Testing on 14 cores and 48 GB proves nothing about the target box. Every
+# number in HARDWARE.md §2 and the OOM guarantee in MCP_ENGINE.md §5 is a claim
+# about 2 vCPU / 8 GB, so the claims are only under test with this overlay on.
+#
+# cpuset pins db and engine to the SAME two host cores. That is the part a
+# per-container `cpus:` limit cannot express: on the real VPS, Postgres and the
+# engine contend for two cores, and that contention is what sets p95 under
+# concurrency. Give each its own 2 cores and the numbers come out optimistic.
+#
+# Memory splits the 8 GB the way HARDWARE.md §2 budgets it, leaving ~0.8 GB for
+# the OS and ~1.0 GB margin:
+#
+#   db      2.5 GB   (shared_buffers 1.5 GB + connections + work_mem)
+#   engine  1.7 GB   (0.2 GB resident + 4 concurrent × ~120 MB in-flight)
+#
+# The embedding container is NOT constrained: it stands in for OpenRouter, which
+# is a remote service and never shares the VPS's budget.
+
+services:
+  db:
+    cpuset: "0,1"
+    deploy:
+      resources:
+        limits:
+          memory: 2560M
+
+  # Uncomment once vera-mcp is a real service (M3).
+  # engine:
+  #   cpuset: "0,1"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1740M

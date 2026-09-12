@@ -1,0 +1,94 @@
+# The M0 dev stack: Postgres/pgvector plus a local embedding server.
+#
+# The embedding container stands in for OpenRouter. It runs the SAME model that
+# produced the corpus vectors in .test/ — same weights, same pooling, same
+# normalization — which is the whole of invariant 2 (CLAUDE.md §7.2). It is not
+# an LLM and there is no completion endpoint here; TEI serves /embed only.
+#
+#   docker compose up -d
+#
+# Resource limits are deliberately NOT set here — bulk-loading 748K rows and
+# building a GIN index wants the whole laptop. Overlay the VPS profile when you
+# want to test the guarantees in HARDWARE.md §2:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+
+name: vera
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: vera-db
+    environment:
+      POSTGRES_USER: vera
+      POSTGRES_PASSWORD: vera
+      POSTGRES_DB: vera
+      # ! locale=C. Collation changes ORDER BY on text and BM25 tie-breaks;
+      # pinning it keeps ranking reproducible across machines.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    command:
+      - postgres
+      # Budget mirrors HARDWARE.md §2 (~2.0 GB for Postgres) even when the
+      # container is unconstrained, so query plans resemble the VPS's.
+      - -c
+      - shared_buffers=1500MB
+      - -c
+      - effective_cache_size=4GB
+      - -c
+      - maintenance_work_mem=512MB
+      - -c
+      - work_mem=32MB
+      # ! NVMe. The default 4.0 tells the planner random reads are expensive and
+      # pushes it to seq-scan a partition the cluster index should have pruned.
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - max_connections=32
+      - -c
+      - log_min_duration_statement=1000
+    ports:
+      - "5432:5432"
+    volumes:
+      # ! Named volume. Without it the 748K-row load dies on `compose down`.
+      - pgdata:/var/lib/postgresql/data
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vera -d vera"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  embed:
+    # Tag 86 = CUDA compute capability 8.6 = RTX 3070 Ti (GA104).
+    image: ghcr.io/huggingface/text-embeddings-inference:86-1.7.2
+    container_name: vera-embed
+    command:
+      - --model-id=/data/model
+      # ! Must match .test/Qwen3-Embedding-0.6B/1_Pooling/config.json, which sets
+      # pooling_mode_lasttoken. Mean-pooling the same weights yields a different
+      # vector space and silently plausible, wrong rankings.
+      - --pooling=last-token
+      - --dtype=float16
+      - --max-client-batch-size=64
+      # ! 32768 = the model's context. The default 16384 silently truncated
+      # ~5,240 corpus chunks (longest is 19,281 tokens), embedding a vector
+      # that did not represent its text. auto-truncate is deliberately OFF so
+      # an over-length chunk fails loudly instead.
+      - --max-batch-tokens=32768
+    volumes:
+      - ./.test/Qwen3-Embedding-0.6B:/data/model:ro
+    ports:
+      - "8080:80"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
