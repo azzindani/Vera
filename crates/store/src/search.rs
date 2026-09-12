@@ -147,15 +147,31 @@ impl SearchOps {
 
     /// Stemmed lexical top-k via the Indonesian text search configuration.
     ///
+    /// ! OR semantics, ✗ `plainto_tsquery`. plainto ANDs every term, so a
+    /// natural question — "siapa yang berwenang menetapkan kelas jalan
+    /// provinsi" — demands one chunk containing all seven lexemes and matched
+    /// **nothing** on the whole eval set. OR restores recall.
+    ///
+    /// ! This arm is a recall net, ✗ a precision instrument. `ts_rank` is
+    /// term-frequency only with no IDF, so "yang" weighs as much as
+    /// "provinsi" — which is why `CLAUDE.md` §3's "Postgres full-text BM25" is
+    /// really the `sparse` arm, where IDF is computed properly. Measured at
+    /// 0.0% Recall@5 on its own; weight accordingly.
+    ///
     /// # Errors
     /// Database failure.
     pub async fn text(&self, query: &str, k: i64) -> Result<Vec<Scored>, StoreError> {
         let c = self.client().await?;
         let rows = c
             .query(
-                "SELECT id, ts_rank(tsv, plainto_tsquery('indonesian', $1)) AS score
-                 FROM chunks
-                 WHERE indexable AND tsv @@ plainto_tsquery('indonesian', $1)
+                "WITH q AS (
+                     SELECT array_to_string(
+                         tsvector_to_array(to_tsvector('indonesian', $1)), ' | '
+                     )::tsquery AS tq
+                 )
+                 SELECT id, ts_rank(tsv, q.tq) AS score
+                 FROM chunks, q
+                 WHERE indexable AND tsv @@ q.tq
                  ORDER BY score DESC
                  LIMIT $2",
                 &[&query, &k],

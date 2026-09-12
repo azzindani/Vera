@@ -41,13 +41,22 @@ impl Default for Config {
             per_arm_k: 20,
             top_k: 10,
             snippet_chars: 280,
-            // Neutral. The spike measured dense far below the lexical arms, but
-            // on a subject-line query set that flatters lexical retrieval — so
-            // these stay 1.0 until a paraphrase eval says otherwise
-            // (`EVAL.md` §2).
-            dense_weight: 1.0,
+            // ! Measured, ✗ chosen. On the labeled query set in `eval/`, with
+            // this corpus and this model:
+            //
+            //   sparse      40.0% Recall@5   MRR 0.301
+            //   RRF(all)    30.0%            MRR 0.188
+            //   dense        0.0%            MRR 0.000
+            //   text         0.0%            MRR 0.007
+            //
+            // Equal weights let two arms that find nothing outvote the one that
+            // works, demoting correct answers (q003 rank 4 → 11, q007 11 → 32).
+            // So they are off until they earn their place: re-embedding with
+            // contextual headers is the open candidate for dense
+            // (`EVAL.md` §4). Override with DENSE_WEIGHT / TEXT_WEIGHT.
+            dense_weight: 0.0,
             sparse_weight: 1.0,
-            text_weight: 1.0,
+            text_weight: 0.0,
         }
     }
 }

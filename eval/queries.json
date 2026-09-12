@@ -1,0 +1,135 @@
+{
+  "_README": [
+    "Labeled queries for EVAL.md. DRAFT -- written by reading the target clause",
+    "and phrasing the question as a person would ask it, deliberately avoiding",
+    "the clause's distinctive wording so nothing leaks into a contextual header.",
+    "",
+    "! NEEDS DOMAIN REVIEW. Whether a retrieved clause genuinely ANSWERS a",
+    "question is a judgement this draft cannot make for itself. Correct the",
+    "`query` text, fix wrong `answer_chunks`, and delete any entry where the",
+    "target does not actually answer it. A wrong label is worse than no label:",
+    "it silently moves every dial that EVAL.md gates.",
+    "",
+    "type: conceptual    -- natural question, no reference given",
+    "      exact_ref     -- user names the regulation; exercises the routing bypass",
+    "      hard_negative -- a plausible near-miss that must NOT rank first",
+    "corpus: spike-01 (181,807 chunks, 6,504 regulations)",
+    "",
+    "! KNOWN LIMITATION: answer_chunks holds ONE chunk per query, but Indonesian",
+    "regulation is layered -- a question about road classes is answered by both",
+    "UU 22/2009 (the parent law) and PP 79/2013 (the implementing rule). Scoring",
+    "q003 as a miss when UU 22/2009 ranked first is a labelling failure, not a",
+    "retrieval failure. Add every chunk that genuinely answers, or Recall@5",
+    "understates the engine and every dial tuned against it is tuned wrong."
+  ],
+  "queries": [
+    {
+      "id": "q001",
+      "type": "conceptual",
+      "query": "Apakah pengelola energi diwajibkan memakai teknologi yang tidak merusak lingkungan?",
+      "answer_chunks": [
+        "628711"
+      ],
+      "source": "UNDANG-UNDANG 30/2007 Pasal 8 — ENERGI"
+    },
+    {
+      "id": "q002",
+      "type": "conceptual",
+      "query": "Apakah penghasilan anggota Komisi Yudisial disamakan dengan hakim Mahkamah Agung?",
+      "answer_chunks": [
+        "4612"
+      ],
+      "source": "PERATURAN PEMERINTAH 62/2009 Pasal 1 — HAK KEUANGAN/ADMINISTRATIF"
+    },
+    {
+      "id": "q003",
+      "type": "conceptual",
+      "query": "Siapa yang berwenang menetapkan kelas jalan provinsi?",
+      "answer_chunks": [
+        "275429"
+      ],
+      "source": "PERATURAN PEMERINTAH 79/2013 Pasal 18 — JARINGAN LALU LINTAS",
+      "note": "retrieval returned UU 22/2009 'Penetapan kelas jalan pada setiap ruas jalan dilakukan oleh...' at rank 1 -- likely also correct; confirm and add its chunk id"
+    },
+    {
+      "id": "q004",
+      "type": "conceptual",
+      "query": "Berapa lama sebelumnya undangan rapat pleno KPU harus disampaikan?",
+      "answer_chunks": [
+        "615315"
+      ],
+      "source": "UNDANG-UNDANG 15/2011 Pasal 35 — PENYELENGGARA PEMILIHAN UMUM"
+    },
+    {
+      "id": "q005",
+      "type": "conceptual",
+      "query": "Bolehkah pemerintah membatasi ekspor batubara demi kebutuhan dalam negeri?",
+      "answer_chunks": [
+        "683640"
+      ],
+      "source": "UNDANG-UNDANG 4/2009 Pasal 5 — PERTAMBANGAN MINERAL DAN BATUBARA"
+    },
+    {
+      "id": "q006",
+      "type": "conceptual",
+      "query": "Bagaimana nasib izin kawasan hutan yang sudah terbit sebelum aturan baru berlaku?",
+      "answer_chunks": [
+        "282096"
+      ],
+      "source": "PERATURAN PEMERINTAH 24/2010 Pasal 25 — PENGGUNAAN KAWASAN HUTAN"
+    },
+    {
+      "id": "q007",
+      "type": "conceptual",
+      "query": "Kementerian apa saja yang dilibatkan untuk kedatangan kapal pesiar asing?",
+      "answer_chunks": [
+        "734530"
+      ],
+      "source": "PERATURAN PRESIDEN 79/2011 Pasal 14 — KUNJUNGAN KAPAL WISATA (YACHT) ASING"
+    },
+    {
+      "id": "q008",
+      "type": "conceptual",
+      "query": "Apa saja syarat administrasi untuk mendirikan gedung milik negara?",
+      "answer_chunks": [
+        "748156"
+      ],
+      "source": "PERATURAN PRESIDEN 73/2011 Pasal 3 — PEMBANGUNAN BANGUNAN GEDUNG NEGARA"
+    },
+    {
+      "id": "q009",
+      "type": "conceptual",
+      "query": "Bagaimana cara memverifikasi identitas pengguna tanda tangan elektronik sebelum dipakai?",
+      "answer_chunks": [
+        "281179"
+      ],
+      "source": "PERATURAN PEMERINTAH 82/2012 Pasal 58 — SISTEM DAN TRANSAKSI ELEKTRONIK"
+    },
+    {
+      "id": "q010",
+      "type": "conceptual",
+      "query": "Denda apa yang dikenakan kalau melanggar aturan cukai untuk pertama kalinya?",
+      "answer_chunks": [],
+      "source": "PERATURAN PEMERINTAH 26/2009 — SANKSI ADMINISTRASI DENDA CUKAI",
+      "note": "known-answer case used throughout development; fill answer_chunks from the Pasal 37 clause"
+    },
+    {
+      "id": "q011",
+      "type": "exact_ref",
+      "query": "PP 26 tahun 2009",
+      "answer_chunks": [],
+      "source": "PERATURAN PEMERINTAH 26/2009",
+      "note": "must return exact_matches regardless of which clusters are probed"
+    },
+    {
+      "id": "q012",
+      "type": "exact_ref",
+      "query": "Undang-Undang Nomor 4 Tahun 2009 tentang pertambangan",
+      "answer_chunks": [
+        "683640"
+      ],
+      "source": "UNDANG-UNDANG 4/2009",
+      "note": "reference plus topic; both paths should agree"
+    }
+  ]
+}

@@ -11,6 +11,9 @@
 //! EMBED_ENDPOINT   embedding server base URL      (default http://localhost:8080)
 //! BM25_VOCAB       path to the corpus's vocabulary artifact
 //! CLUSTERS_PROBED  layer-2 probe width            (default 5)
+//! DENSE_WEIGHT     RRF weight for the dense arm   (default 0.0, measured)
+//! SPARSE_WEIGHT    RRF weight for BM25            (default 1.0)
+//! TEXT_WEIGHT      RRF weight for tsvector        (default 0.0, measured)
 //! MAX_CONCURRENCY  in-flight request ceiling      (default 4)
 //! ```
 
