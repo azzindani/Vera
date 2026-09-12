@@ -1,24 +1,36 @@
 """Score the retrieval arms against the labeled query set · EVAL.md §3.
 
-Reports Recall@k and MRR per arm and for the RRF fusion, so a dial change that
+Reports Recall@k and MRR per arm and for RRF fusion, so a dial change that
 helps one arm and hurts the whole is visible rather than averaged away.
 
-! Unlike the throwaway experiments that preceded it, these queries do not
-reuse corpus wording, so a contextual-header column can be compared fairly:
-the query is not hiding inside the document.
+! Different question shapes need different scoring, and averaging them into a
+single number hides the thing you need to see:
+
+  exact_ref       any chunk of the named regulation counts · mechanical label
+  multi_tier      any of several genuinely-correct clauses counts
+  underspecified  likewise · the question really does have many right answers
+  hard_negative   the right clause must OUTRANK its near-identical siblings
+  out_of_domain   there is no right answer · the engine should return nothing.
+                  That is an engine-level decision (CLAUDE.md invariant 13),
+                  not an arm-level one, so it is measured separately, against
+                  the routing score rather than against retrieved rows.
 
 Usage:
     python eval/run.py
     python eval/run.py --dense-column dense_ctx    # compare a candidate column
+    python eval/run.py --k 10
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
+import re
 import sys
 import urllib.request
+from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,8 +43,31 @@ PG = os.environ.get(
 TEI = os.environ.get("EMBED_ENDPOINT", "http://localhost:8080")
 VOCAB = ROOT / ".test" / "runs" / "spike-01.bm25.json"
 
-PER_ARM = 20
+PER_ARM = 50
 RRF_K = 60
+ARMS = ["dense", "sparse", "tsv", "ident", "RRF(all)", "RRF(s+t)", "RRF(s+d)"]
+
+# Mirrors crates/mcp/src/identifier.rs. An exact_ref query is served by the
+# global identifier path (invariant 4), NOT by the vector arms — scoring it
+# against dense/sparse/tsv alone reports 0% for a path that works.
+IDENT_RE = [
+    re.compile(r"\b(\d{1,4})\s*/\s*(\d{4})\b"),
+    re.compile(r"(?i)\bnomor\s+(\d{1,4})\s+tahun\s+(\d{4})\b"),
+    re.compile(r"(?i)\bno\.?\s*(\d{1,4})\s+tahun\s+(\d{4})\b"),
+    re.compile(r"(?i)\b(\d{1,4})\s+tahun\s+(\d{4})\b"),
+]
+
+
+def parse_identifier(q):
+    for rx in IDENT_RE:
+        m = rx.search(q)
+        if m:
+            return m.group(1), int(m.group(2))
+    return None
+
+# OR, not plainto_tsquery. plainto ANDs every term, so a natural question needs
+# one chunk holding all its lexemes and matches nothing. See store/search.rs.
+ORQ = "array_to_string(tsvector_to_array(to_tsvector('indonesian', %s)), ' | ')::tsquery"
 
 
 def embed(text):
@@ -51,30 +86,68 @@ def rank_of(ranked, targets):
     return None
 
 
+def fuse(*lists):
+    f: dict[str, float] = defaultdict(float)
+    for ids in lists:
+        for i, cid in enumerate(ids, 1):
+            f[cid] += 1.0 / (RRF_K + i)
+    return [c for c, _ in sorted(f.items(), key=lambda kv: (-kv[1], kv[0]))]
+
+
+def resolve_targets(cur, q):
+    """The set of chunk ids that count as correct for this query."""
+    ids = set(q.get("answer_chunks", []))
+    reg = q.get("answer_regulation")
+    if reg:
+        cur.execute(
+            "SELECT id FROM chunks WHERE regulation_type=%s"
+            " AND regulation_number=%s AND year=%s",
+            (reg["regulation_type"], reg["regulation_number"], reg["year"]),
+        )
+        ids |= {r[0] for r in cur.fetchall()}
+    return ids
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dense-column", default="dense")
     ap.add_argument("--k", type=int, default=5)
+    ap.add_argument("--by-type", action="store_true", help="break results down by type")
     args = ap.parse_args()
     import psycopg
 
     spec = json.loads((Path(__file__).parent / "queries.json").read_text(encoding="utf-8"))
-    queries = [q for q in spec["queries"] if q.get("answer_chunks")]
-    skipped = len(spec["queries"]) - len(queries)
+    allq = spec["queries"]
     vz = Bm25Vectorizer.load(VOCAB)
-
     pg = psycopg.connect(PG)
     cur = pg.cursor()
 
-    arms = ["dense", "sparse", "tsv", "RRF(all)", "RRF(s+t)", "RRF(s+d)"]
-    hits = {a: 0 for a in arms}
-    mrr = {a: 0.0 for a in arms}
-    per_query = []
+    # Cluster centroids, for the domain gate that invariant 13 needs.
+    cur.execute("SELECT centroid::text FROM clusters")
+    cents = []
+    for (c,) in cur.fetchall():
+        v = [float(x) for x in c.strip("[]").split(",")]
+        n = math.sqrt(sum(a * a for a in v)) or 1.0
+        cents.append([a / n for a in v])
 
-    for q in queries:
-        targets = set(q["answer_chunks"])
-        qv = "[" + ",".join(f"{x:.6g}" for x in embed(q["query"])) + "]"
+    scored, ood, hard = [], [], []
 
+    for q in allq:
+        qv_raw = embed(q["query"])
+        n = math.sqrt(sum(a * a for a in qv_raw)) or 1.0
+        qn = [a / n for a in qv_raw]
+        domain_score = max(sum(a * b for a, b in zip(qn, c)) for c in cents)
+
+        if q["type"] == "out_of_domain":
+            ood.append((q["id"], domain_score, q["query"]))
+            continue
+
+        targets = resolve_targets(cur, q)
+        if not targets:
+            print(f"! {q['id']} has no resolvable target — skipped", file=sys.stderr)
+            continue
+
+        qv = "[" + ",".join(f"{x:.6g}" for x in qv_raw) + "]"
         cur.execute(
             f"SELECT id FROM chunks WHERE indexable AND {args.dense_column} IS NOT NULL"
             f" ORDER BY {args.dense_column} <=> %s::text::halfvec LIMIT %s",
@@ -89,58 +162,100 @@ def main():
         )
         sparse = [r[0] for r in cur.fetchall()]
 
-        # ! OR, not plainto_tsquery. plainto ANDs every term, so a natural
-        # question ("siapa yang berwenang menetapkan kelas jalan provinsi")
-        # requires one chunk to contain all seven lexemes and matches nothing.
-        # OR restores recall; ts_rank still has no IDF, so this arm is a net,
-        # not a precision instrument -- see the fusion comparison below.
-        orq = ("array_to_string(tsvector_to_array("
-               "to_tsvector('indonesian', %s)), ' | ')::tsquery")
         cur.execute(
-            f"SELECT id FROM chunks WHERE indexable AND tsv @@ {orq}"
-            f" ORDER BY ts_rank(tsv, {orq}) DESC LIMIT %s",
+            f"SELECT id FROM chunks WHERE indexable AND tsv @@ {ORQ}"
+            f" ORDER BY ts_rank(tsv, {ORQ}) DESC LIMIT %s",
             (q["query"], q["query"], PER_ARM),
         )
         tsv = [r[0] for r in cur.fetchall()]
 
-        def fuse(*lists):
-            f: dict[str, float] = {}
-            for ids in lists:
-                for i, cid in enumerate(ids, 1):
-                    f[cid] = f.get(cid, 0.0) + 1.0 / (RRF_K + i)
-            return [c for c, _ in sorted(f.items(), key=lambda kv: -kv[1])]
+        ident = []
+        got = parse_identifier(q["query"])
+        if got:
+            cur.execute(
+                "SELECT id FROM chunks WHERE regulation_number=%s AND year=%s"
+                " ORDER BY chunk_no LIMIT %s", (got[0], got[1], PER_ARM))
+            ident = [r[0] for r in cur.fetchall()]
 
-        combos = {
+        ranked = {
+            "dense": dense, "sparse": sparse, "tsv": tsv, "ident": ident,
             "RRF(all)": fuse(dense, sparse, tsv),
             "RRF(s+t)": fuse(sparse, tsv),
             "RRF(s+d)": fuse(sparse, dense),
         }
+        ranks = {a: rank_of(ids, targets) for a, ids in ranked.items()}
+        scored.append((q, ranks, domain_score))
 
-        ranks = {}
-        for name, ids in [("dense", dense), ("sparse", sparse), ("tsv", tsv),
-                          *combos.items()]:
-            r = rank_of(ids, targets)
-            ranks[name] = r
-            if r and r <= args.k:
-                hits[name] += 1
-            if r:
-                mrr[name] += 1.0 / r
-        per_query.append((q["id"], q["type"], ranks))
+        if q["type"] == "hard_negative":
+            bad = set(q["must_not_rank_first"])
+            row = {}
+            for a, ids in ranked.items():
+                good_r, bad_r = rank_of(ids, targets), rank_of(ids, bad)
+                row[a] = (good_r, bad_r)
+            hard.append((q["id"], row))
 
-    n = len(queries)
-    print(f"queries scored: {n}   (skipped {skipped} without answer_chunks)")
-    print(f"dense column  : {args.dense_column}\n")
-    print(f"{'arm':<8} {'Recall@' + str(args.k):>9} {'MRR':>7}")
-    print("-" * 26)
-    for a in arms:
-        print(f"{a:<8} {hits[a] / n:>8.1%} {mrr[a] / n:>7.3f}")
+    # -- headline ----------------------------------------------------------
+    n = len(scored)
+    print(f"scored {n} retrievable queries · {len(ood)} out-of-domain measured separately")
+    print(f"dense column: {args.dense_column}\n")
+    print(f"{'arm':<9} {'Recall@' + str(args.k):>9} {'MRR':>7}")
+    print("-" * 27)
+    for a in ARMS:
+        hits = sum(1 for _, r, _ in scored if r[a] and r[a] <= args.k)
+        mrr = sum(1.0 / r[a] for _, r, _ in scored if r[a])
+        print(f"{a:<9} {hits / n:>8.1%} {mrr / n:>7.3f}")
 
+    # -- by question shape -------------------------------------------------
+    if args.by_type:
+        by = defaultdict(list)
+        for q, r, _ in scored:
+            by[q["type"]].append(r)
+        print(f"\n{'type':<15} {'n':>3}  " + "  ".join(f"{a:>9}" for a in ARMS))
+        print("-" * (20 + 11 * len(ARMS)))
+        for t, rs in sorted(by.items()):
+            cells = []
+            for a in ARMS:
+                h = sum(1 for r in rs if r[a] and r[a] <= args.k)
+                cells.append(f"{h / len(rs):>8.0%} ")
+            print(f"{t:<15} {len(rs):>3}  " + " ".join(cells))
+
+    # -- hard negatives ----------------------------------------------------
+    if hard:
+        print(f"\nhard negatives (rank of right answer / rank of a look-alike):")
+        for qid, row in hard:
+            cells = " ".join(
+                f"{a}={'-' if g is None else g}/{'-' if b is None else b}"
+                for a, (g, b) in row.items() if a in ("sparse", "dense", "tsv")
+            )
+            # ! Per arm. Requiring every arm to win would let the dead dense
+            # arm mark the whole case FAIL and hide that sparse got it right.
+            ok = [a for a, (g, b) in row.items()
+                  if g is not None and (b is None or g < b)]
+            print(f"  {qid} {('OK:' + ','.join(ok)) if ok else 'FAIL (no arm)':<28} {cells}")
+
+    # -- the domain gate ---------------------------------------------------
+    # ! Not a retrieval measurement. This asks whether invariant 13 COULD be
+    # enforced: is there a threshold on nearest-centroid similarity that keeps
+    # every real question and rejects every out-of-domain one?
+    ind = [d for _, _, d in scored]
+    print("\ndomain gate · max cos(query, cluster centroid)")
+    print(f"  in-domain      n={len(ind):<3} min={min(ind):.4f} mean={sum(ind)/len(ind):.4f}")
+    if ood:
+        od = [d for _, d, _ in ood]
+        print(f"  out-of-domain  n={len(od):<3} max={max(od):.4f} mean={sum(od)/len(od):.4f}")
+        gap = min(ind) - max(od)
+        print(f"  separation     {gap:+.4f}" + ("  (separable)" if gap > 0 else "  (OVERLAP)"))
+        print("  worst out-of-domain cases:")
+        for qid, d, text in sorted(ood, key=lambda x: -x[1])[:3]:
+            print(f"    {d:.4f}  {qid}  {text[:58]}")
+
+    # -- per query ---------------------------------------------------------
     print(f"\nper-query rank (- = not in top {PER_ARM}):")
-    print(f"{'id':<6} {'dense':>6} {'sparse':>7} {'tsv':>5} {'all':>5} {'s+t':>5} {'s+d':>5}")
-    for qid, _qtype, r in per_query:
+    print(f"{'id':<6} {'type':<15} {'dense':>6} {'sparse':>7} {'tsv':>5} {'all':>5} {'s+d':>5}")
+    for q, r, _ in scored:
         f = lambda v: str(v) if v else "-"  # noqa: E731
-        print(f"{qid:<6} {f(r['dense']):>6} {f(r['sparse']):>7} {f(r['tsv']):>5} "
-              f"{f(r['RRF(all)']):>5} {f(r['RRF(s+t)']):>5} {f(r['RRF(s+d)']):>5}")
+        print(f"{q['id']:<6} {q['type']:<15} {f(r['dense']):>6} {f(r['sparse']):>7} "
+              f"{f(r['tsv']):>5} {f(r['RRF(all)']):>5} {f(r['RRF(s+d)']):>5}")
     pg.close()
 
 
