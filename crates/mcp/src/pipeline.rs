@@ -46,6 +46,11 @@ pub struct Config {
     /// because the measurement behind it does not separate cleanly enough to
     /// justify returning nothing — see `domain_confidence` in `assemble`.
     pub domain_floor: f32,
+    /// Minimum IDF-mass of the query that the retrieved evidence must account
+    /// for. The lexical half of the domain gate.
+    pub domain_lexical_floor: f32,
+    /// How many sparse hits the lexical evidence is pooled over.
+    pub gate_sample: usize,
 }
 
 impl Default for Config {
@@ -73,7 +78,22 @@ impl Default for Config {
             sparse_weight: 1.0,
             text_weight: 0.0,
             canary_min_cosine: 0.98,
-            domain_floor: 0.55,
+            // ! Measured on the 50-case set in eval/, not chosen. With
+            // identifier queries exempt (invariant 4), this pair rejects 6 of
+            // 6 out-of-domain queries and 0 of 39 real ones:
+            //
+            //   lexical   in-domain min 0.469 · worst junk caught 0.333
+            //   centroid  in-domain min 0.570 · worst junk caught 0.437
+            //
+            // Both halves are load bearing. Centroid similarity alone cannot
+            // reject "cara memperbaiki keran air yang bocor di dapur" (0.717,
+            // above the in-domain mean) because it tracks language, not
+            // subject. Lexical evidence alone cannot reject "what is the
+            // capital of France" (0.789), because English function words do
+            // occur in this corpus. Each covers the other's blind spot.
+            domain_floor: 0.45,
+            domain_lexical_floor: 0.40,
+            gate_sample: 5,
         }
     }
 }
@@ -227,6 +247,48 @@ impl Pipeline {
 
         let exact_matches = self.exact_arm(query, &mut progress).await?;
 
+        // -- the domain gate (invariant 13) ------------------------------
+        //
+        // ! Gated on the evidence actually retrieved, ✗ on a judgement about
+        // the query. The corpus is asked whether it holds anything that
+        // accounts for the question, which is the only question that matters.
+        //
+        // ! Identifier queries are NEVER gated. Invariant 4 says a named
+        // regulation must not be lost, and it outranks this check: a bare
+        // "PP 26 tahun 2009" carries almost no semantic or lexical signal and
+        // would be rejected here on both halves.
+        let top_cluster = probed.first().map_or(0.0, |(_, s)| *s);
+        if exact_matches.is_empty() {
+            let sample: Vec<String> = sparse
+                .iter()
+                .take(self.cfg.gate_sample)
+                .map(|s| s.id.clone())
+                .collect();
+            let bodies: Vec<String> = self
+                .ops
+                .chunks_by_id(&sample)
+                .await?
+                .into_iter()
+                .map(|r| r.body)
+                .collect();
+            let lexical = self.vectorizer.evidence(query, &bodies);
+            progress.push(format!(
+                "domain gate: lexical {lexical:.3} (floor {:.2}), centroid {top_cluster:.3} (floor {:.2})",
+                self.cfg.domain_lexical_floor, self.cfg.domain_floor
+            ));
+            if lexical < self.cfg.domain_lexical_floor || top_cluster < self.cfg.domain_floor {
+                let mut empty = SearchResponse::no_matching_domain(query, progress);
+                // One literal · a `\` + newline only folds cleanly with LF
+                // endings, and this message is read by a person.
+                empty.hint = Some(format!(
+                    "this corpus does not appear to cover the question · the best matching documents account for only {pct:.0}% of its distinctive terms · check list_domains for what this engine covers",
+                    pct = lexical * 100.0
+                ));
+                empty.token_estimate = empty.estimate_tokens();
+                return Ok(empty);
+            }
+        }
+
         let dense_ids: Vec<String> = dense.iter().map(|s| s.id.clone()).collect();
         let sparse_ids: Vec<String> = sparse.iter().map(|s| s.id.clone()).collect();
         let text_ids: Vec<String> = text.iter().map(|s| s.id.clone()).collect();
@@ -264,7 +326,6 @@ impl Pipeline {
         let rows = self.ops.chunks_by_id(&ids).await?;
         let results = self.to_results(&top, &rows, &dense, &sparse);
 
-        let top_cluster = probed.first().map_or(0.0, |(_, s)| *s);
         Ok(self.assemble(
             query,
             probed.len(),

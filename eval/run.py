@@ -35,7 +35,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "pipelines" / "pre_embed"))
-from sparse import Bm25Vectorizer  # noqa: E402
+from sparse import Bm25Vectorizer, tokenize  # noqa: E402
 
 PG = os.environ.get(
     "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
@@ -45,6 +45,20 @@ VOCAB = ROOT / ".test" / "runs" / "spike-01.bm25.json"
 
 PER_ARM = 50
 RRF_K = 60
+
+# The domain gate's floors, mirroring crates/mcp/src/pipeline.rs. Kept here so
+# a threshold change is re-scored against the labelled set before it ships,
+# rather than after someone notices real questions coming back empty.
+DOMAIN_FLOOR = 0.45          # nearest-centroid similarity
+DOMAIN_LEXICAL_FLOOR = 0.40  # IDF mass of the query the evidence accounts for
+GATE_SAMPLE = 5
+
+# The domain gate's two floors, mirroring crates/mcp/src/pipeline.rs. Kept here
+# so a threshold change can be re-scored against the labelled set before it
+# ships, rather than after someone notices real questions coming back empty.
+DOMAIN_FLOOR = 0.45          # nearest-centroid similarity
+DOMAIN_LEXICAL_FLOOR = 0.40  # IDF mass of the query the evidence accounts for
+GATE_SAMPLE = 5
 ARMS = ["dense", "sparse", "tsv", "ident", "RRF(all)", "RRF(s+t)", "RRF(s+d)"]
 
 # Mirrors crates/mcp/src/identifier.rs. An exact_ref query is served by the
@@ -77,6 +91,53 @@ def embed(text):
     )
     with urllib.request.urlopen(req, timeout=120) as r:
         return json.load(r)[0]
+
+
+def evidence(vz, cur, query, sparse_ids):
+    """Share of the query's IDF mass the retrieved evidence accounts for.
+
+    Mirrors QueryVectorizer::evidence. Unknown terms are charged the maximum:
+    a word this corpus has never seen is the strongest signal it cannot answer.
+    """
+    terms = set(tokenize(query))
+    if not terms:
+        return 0.0
+    mx = max(vz.idf.values())
+    want = {t: vz.idf.get(t, mx) for t in terms}
+    total = sum(want.values())
+    if total <= 0:
+        return 0.0
+    ids = sparse_ids[:GATE_SAMPLE]
+    if not ids:
+        return 0.0
+    cur.execute("SELECT body FROM chunks WHERE id = ANY(%s)", (ids,))
+    pooled = set()
+    for (body,) in cur.fetchall():
+        pooled |= set(tokenize(body))
+    return sum(w for t, w in want.items() if t in pooled) / total
+
+
+def evidence(vz, cur, query, sparse_ids):
+    """Share of the query's IDF mass the retrieved evidence accounts for.
+
+    Mirrors QueryVectorizer::evidence. Unknown terms are charged the maximum:
+    a word this corpus has never seen is the strongest possible evidence that
+    it cannot answer the question.
+    """
+    terms = set(tokenize(query))
+    if not terms:
+        return 0.0
+    mx = max(vz.idf.values())
+    want = {t: vz.idf.get(t, mx) for t in terms}
+    total = sum(want.values())
+    ids = sparse_ids[:GATE_SAMPLE]
+    if total <= 0 or not ids:
+        return 0.0
+    cur.execute("SELECT body FROM chunks WHERE id = ANY(%s)", (ids,))
+    pooled = set()
+    for (body,) in cur.fetchall():
+        pooled |= set(tokenize(body))
+    return sum(w for t, w in want.items() if t in pooled) / total
 
 
 def rank_of(ranked, targets):
@@ -138,8 +199,20 @@ def main():
         qn = [a / n for a in qv_raw]
         domain_score = max(sum(a * b for a, b in zip(qn, c)) for c in cents)
 
+        cur.execute(
+            "SELECT id FROM chunks WHERE indexable AND sparse IS NOT NULL"
+            " ORDER BY sparse <#> %s::text::sparsevec LIMIT %s",
+            (vz.to_sparsevec(vz.query(q["query"])), PER_ARM),
+        )
+        sparse = [r[0] for r in cur.fetchall()]
+        lex = evidence(vz, cur, q["query"], sparse)
+        exempt = q["type"] == "exact_ref"   # invariant 4
+        refused = not exempt and (
+            lex < DOMAIN_LEXICAL_FLOOR or domain_score < DOMAIN_FLOOR
+        )
+
         if q["type"] == "out_of_domain":
-            ood.append((q["id"], domain_score, q["query"]))
+            ood.append((q["id"], domain_score, lex, refused, q["query"]))
             continue
 
         targets = resolve_targets(cur, q)
@@ -154,13 +227,6 @@ def main():
             (qv, PER_ARM),
         )
         dense = [r[0] for r in cur.fetchall()]
-
-        cur.execute(
-            "SELECT id FROM chunks WHERE indexable AND sparse IS NOT NULL"
-            " ORDER BY sparse <#> %s::text::sparsevec LIMIT %s",
-            (vz.to_sparsevec(vz.query(q["query"])), PER_ARM),
-        )
-        sparse = [r[0] for r in cur.fetchall()]
 
         cur.execute(
             f"SELECT id FROM chunks WHERE indexable AND tsv @@ {ORQ}"
@@ -184,7 +250,7 @@ def main():
             "RRF(s+d)": fuse(sparse, dense),
         }
         ranks = {a: rank_of(ids, targets) for a, ids in ranked.items()}
-        scored.append((q, ranks, domain_score))
+        scored.append((q, ranks, domain_score, lex, refused))
 
         if q["type"] == "hard_negative":
             bad = set(q["must_not_rank_first"])
@@ -201,14 +267,14 @@ def main():
     print(f"{'arm':<9} {'Recall@' + str(args.k):>9} {'MRR':>7}")
     print("-" * 27)
     for a in ARMS:
-        hits = sum(1 for _, r, _ in scored if r[a] and r[a] <= args.k)
-        mrr = sum(1.0 / r[a] for _, r, _ in scored if r[a])
+        hits = sum(1 for _, r, *_ in scored if r[a] and r[a] <= args.k)
+        mrr = sum(1.0 / r[a] for _, r, *_ in scored if r[a])
         print(f"{a:<9} {hits / n:>8.1%} {mrr / n:>7.3f}")
 
     # -- by question shape -------------------------------------------------
     if args.by_type:
         by = defaultdict(list)
-        for q, r, _ in scored:
+        for q, r, *_ in scored:
             by[q["type"]].append(r)
         print(f"\n{'type':<15} {'n':>3}  " + "  ".join(f"{a:>9}" for a in ARMS))
         print("-" * (20 + 11 * len(ARMS)))
@@ -234,25 +300,37 @@ def main():
             print(f"  {qid} {('OK:' + ','.join(ok)) if ok else 'FAIL (no arm)':<28} {cells}")
 
     # -- the domain gate ---------------------------------------------------
-    # ! Not a retrieval measurement. This asks whether invariant 13 COULD be
-    # enforced: is there a threshold on nearest-centroid similarity that keeps
-    # every real question and rejects every out-of-domain one?
-    ind = [d for _, _, d in scored]
-    print("\ndomain gate · max cos(query, cluster centroid)")
-    print(f"  in-domain      n={len(ind):<3} min={min(ind):.4f} mean={sum(ind)/len(ind):.4f}")
-    if ood:
-        od = [d for _, d, _ in ood]
-        print(f"  out-of-domain  n={len(od):<3} max={max(od):.4f} mean={sum(od)/len(od):.4f}")
-        gap = min(ind) - max(od)
-        print(f"  separation     {gap:+.4f}" + ("  (separable)" if gap > 0 else "  (OVERLAP)"))
-        print("  worst out-of-domain cases:")
-        for qid, d, text in sorted(ood, key=lambda x: -x[1])[:3]:
-            print(f"    {d:.4f}  {qid}  {text[:58]}")
+    # ! Two signals, because neither works alone. Centroid similarity tracks
+    # LANGUAGE, not subject: it cannot reject an everyday Indonesian question
+    # such as "cara memperbaiki keran air yang bocor di dapur" (0.717, above
+    # the in-domain mean). Lexical evidence cannot reject English, whose
+    # function words do occur in this corpus ("what is the capital of France"
+    # scores 0.789). Each covers the other's blind spot.
+    print("")
+    print("domain gate · refuse when lexical < "
+          f"{DOMAIN_LEXICAL_FLOOR} or centroid < {DOMAIN_FLOOR}"
+          "  (identifier queries exempt · invariant 4)")
+    gated = [t for t in scored if t[0]["type"] != "exact_ref"]
+    false_rejects = [t[0]["id"] for t in gated if t[4]]
+    caught = [o for o in ood if o[3]]
+    ok = len(caught) == len(ood) and not false_rejects
+    print(f"  real questions refused : {len(false_rejects)}/{len(gated)}  {false_rejects}")
+    print(f"  out-of-domain refused  : {len(caught)}/{len(ood)}")
+    print(f"  verdict                : {'PASS' if ok else 'FAIL'}")
+    if gated:
+        print(f"  margin · lexical  in-domain min {min(t[3] for t in gated):.3f}"
+              f"  floor {DOMAIN_LEXICAL_FLOOR}")
+        print(f"  margin · centroid in-domain min {min(t[2] for t in gated):.3f}"
+              f"  floor {DOMAIN_FLOOR}")
+    for qid, cs, lex, ref, text in sorted(ood, key=lambda x: -x[2]):
+        print(f"    {'refused' if ref else 'LEAKED!':<8} lex={lex:.3f} cs={cs:.3f}"
+              f"  {qid}  {text[:44]}")
+
 
     # -- per query ---------------------------------------------------------
     print(f"\nper-query rank (- = not in top {PER_ARM}):")
     print(f"{'id':<6} {'type':<15} {'dense':>6} {'sparse':>7} {'tsv':>5} {'all':>5} {'s+d':>5}")
-    for q, r, _ in scored:
+    for q, r, *_ in scored:
         f = lambda v: str(v) if v else "-"  # noqa: E731
         print(f"{q['id']:<6} {q['type']:<15} {f(r['dense']):>6} {f(r['sparse']):>7} "
               f"{f(r['tsv']):>5} {f(r['RRF(all)']):>5} {f(r['RRF(s+d)']):>5}")

@@ -16,6 +16,8 @@
 //! TEXT_WEIGHT      RRF weight for tsvector        (default 0.0, measured)
 //! MAX_CONCURRENCY  in-flight request ceiling      (default 4)
 //! CANARY_MIN_COSINE startup round-trip threshold   (default 0.98)
+//! DOMAIN_FLOOR     domain gate · centroid similarity (default 0.45)
+//! DOMAIN_LEXICAL_FLOOR domain gate · lexical evidence (default 0.40)
 //! ```
 
 mod bm25;
@@ -37,6 +39,27 @@ const DEFAULT_READ_CHUNK_CHARS: usize = 4000;
 /// Log to stderr. ! Never stdout.
 macro_rules! log {
     ($($arg:tt)*) => { eprintln!($($arg)*) };
+}
+
+/// Tunables from the environment · invariant 12, so bigger hardware and a
+/// different corpus move these without a rebuild.
+fn config_from_env(clusters_probed: usize) -> Config {
+    fn f32_from(key: &str, fallback: f32) -> f32 {
+        std::env::var(key)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(fallback)
+    }
+    let d = Config::default();
+    Config {
+        clusters_probed,
+        // ! Loosening the canary is a deliberate, visible act — there is no
+        // code path that quietly skips it.
+        canary_min_cosine: f32_from("CANARY_MIN_COSINE", d.canary_min_cosine),
+        domain_floor: f32_from("DOMAIN_FLOOR", d.domain_floor),
+        domain_lexical_floor: f32_from("DOMAIN_LEXICAL_FLOOR", d.domain_lexical_floor),
+        ..d
+    }
 }
 
 #[tokio::main]
@@ -85,18 +108,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let provider = Arc::new(embed::HttpProvider::new(&endpoint, &meta.dense_model, dim)?);
     let vectorizer = bm25::QueryVectorizer::load(std::path::Path::new(&vocab))?;
 
-    // ! Config, not a constant (invariant 12). Loosening the canary is a
-    // deliberate, visible act — there is no code path that quietly skips it.
-    let canary_min: f32 = std::env::var("CANARY_MIN_COSINE")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(Config::default().canary_min_cosine);
-
-    let cfg = Config {
-        clusters_probed: probed,
-        canary_min_cosine: canary_min,
-        ..Config::default()
-    };
+    let cfg = config_from_env(probed);
     let pipe =
         Arc::new(Pipeline::new(ops, provider, vectorizer, &meta.dense_model.clone(), cfg).await?);
     log!(
