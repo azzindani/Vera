@@ -37,12 +37,42 @@ pub struct ExactHit {
 /// Read-only operations over an ingested corpus.
 pub struct SearchOps {
     pool: Pool,
+    /// Whether this corpus has the RUM index. Probed once, on first text
+    /// search, then cached for the life of the process.
+    rum: std::sync::OnceLock<bool>,
 }
 
 impl SearchOps {
     #[must_use]
     pub fn new(pool: Pool) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            rum: std::sync::OnceLock::new(),
+        }
+    }
+
+    /// Whether `ORDER BY tsv <=> tq` can be served from an index here.
+    ///
+    /// ! Probed, ✗ assumed. RUM is an accelerator, not a requirement: it is
+    /// built from source rather than shipped in `pgvector/pgvector:pg16`, so
+    /// CI and a fresh clone run without it. Both paths return the same rows —
+    /// measured 98.9% top-20 overlap and the same rank-1 on 44/44 eval
+    /// queries — so falling back costs latency, ✗ answers.
+    async fn has_rum(&self) -> Result<bool, StoreError> {
+        if let Some(v) = self.rum.get() {
+            return Ok(*v);
+        }
+        let c = self.client().await?;
+        let row = c
+            .query_one(
+                "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'rum')
+                    AND EXISTS (SELECT 1 FROM pg_class WHERE relname = 'chunks_tsv_rum')",
+                &[],
+            )
+            .await?;
+        let found: bool = row.get(0);
+        let _ = self.rum.set(found);
+        Ok(found)
     }
 
     async fn client(&self) -> Result<deadpool_postgres::Object, StoreError> {
@@ -156,27 +186,42 @@ impl SearchOps {
     /// term-frequency only with no IDF, so "yang" weighs as much as
     /// "provinsi" — which is why `CLAUDE.md` §3's "Postgres full-text BM25" is
     /// really the `sparse` arm, where IDF is computed properly. Measured at
-    /// 0.0% Recall@5 on its own; weight accordingly.
+    /// 40.9% Recall@5 on spike-02; it was 4.5% before the corpus was chunked.
     ///
     /// # Errors
     /// Database failure.
     pub async fn text(&self, query: &str, k: i64) -> Result<Vec<Scored>, StoreError> {
+        // ! `ts_rank` cannot be served from a GIN index: the index finds the
+        // matches, then every one of them is scored and sorted. An OR query
+        // over this corpus matches a median of 220K rows (62%), so that sort
+        // is the single most expensive thing a search does. RUM stores the
+        // ranking data in the index, turning the whole arm into one ordered
+        // index scan — measured 750ms -> 404ms at p50, same Recall@5.
+        let sql = if self.has_rum().await? {
+            "WITH q AS (
+                 SELECT array_to_string(
+                     tsvector_to_array(to_tsvector('indonesian', $1)), ' | '
+                 )::tsquery AS tq
+             )
+             SELECT id, (1.0 / (1.0 + (tsv <=> q.tq)))::real AS score
+             FROM chunks, q
+             WHERE indexable AND tsv @@ q.tq
+             ORDER BY tsv <=> q.tq
+             LIMIT $2"
+        } else {
+            "WITH q AS (
+                 SELECT array_to_string(
+                     tsvector_to_array(to_tsvector('indonesian', $1)), ' | '
+                 )::tsquery AS tq
+             )
+             SELECT id, ts_rank(tsv, q.tq) AS score
+             FROM chunks, q
+             WHERE indexable AND tsv @@ q.tq
+             ORDER BY score DESC
+             LIMIT $2"
+        };
         let c = self.client().await?;
-        let rows = c
-            .query(
-                "WITH q AS (
-                     SELECT array_to_string(
-                         tsvector_to_array(to_tsvector('indonesian', $1)), ' | '
-                     )::tsquery AS tq
-                 )
-                 SELECT id, ts_rank(tsv, q.tq) AS score
-                 FROM chunks, q
-                 WHERE indexable AND tsv @@ q.tq
-                 ORDER BY score DESC
-                 LIMIT $2",
-                &[&query, &k],
-            )
-            .await?;
+        let rows = c.query(sql, &[&query, &k]).await?;
         Ok(rows.iter().map(scored_f32).collect())
     }
 
