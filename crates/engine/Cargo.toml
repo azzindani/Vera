@@ -1,9 +1,9 @@
 [package]
-name = "vera-mcp"
+name = "engine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-description = "MCP tool surface and transports. No domain logic."
+description = "Routing layers and fusion. Pure domain logic with zero MCP imports."
 
 [dependencies]
 

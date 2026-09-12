@@ -36,9 +36,9 @@ ROOT = Path(__file__).resolve().parents[2]
 DB = ROOT / ".test" / "ID_REG_DB_2511" / "id_regulations.db"
 MODEL_DIR = ROOT / ".test" / "Qwen3-Embedding-0.6B"
 
-TEI = os.environ.get("VERA_TEI", "http://localhost:8080")
+TEI = os.environ.get("EMBED_ENDPOINT", "http://localhost:8080")
 PG = os.environ.get(
-    "VERA_PG", "host=localhost port=5432 dbname=vera user=vera password=vera"
+    "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
 )
 
 DENSE_MODEL = "qwen/qwen3-embedding-0.6b"

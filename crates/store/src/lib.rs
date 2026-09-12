@@ -1,4 +1,4 @@
-//! `vera-store`
+//! `store`
 //!
 //! Postgres and pgvector access · the only crate that talks to the database.
 //!

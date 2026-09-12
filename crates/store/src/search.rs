@@ -23,7 +23,7 @@ use crate::{CorpusMeta, StoreError, dense_literal};
 pub struct Scored {
     pub id: String,
     /// Arm-native score. Comparable within an arm, ✗ across arms — which is
-    /// why fusion works on ranks (`vera_engine::fusion`).
+    /// why fusion works on ranks (`engine::fusion`).
     pub score: f32,
 }
 

@@ -29,7 +29,7 @@ from batching import batched  # noqa: E402
 from sparse import Bm25Vectorizer  # noqa: E402
 
 PG = os.environ.get(
-    "VERA_PG", "host=localhost port=5432 dbname=vera user=vera password=vera"
+    "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
 )
 TEI_LAST = "http://localhost:8080"
 TEI_MEAN = "http://localhost:8081"

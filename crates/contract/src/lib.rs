@@ -1,4 +1,4 @@
-//! `vera-core`
+//! `contract`
 //!
 //! Domain types and the agent-facing output contract.
 //!

@@ -24,9 +24,9 @@ import time
 import urllib.request
 
 PG = os.environ.get(
-    "VERA_PG", "host=localhost port=5432 dbname=vera user=vera password=vera"
+    "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
 )
-TEI = os.environ.get("VERA_TEI", "http://localhost:8080")
+TEI = os.environ.get("EMBED_ENDPOINT", "http://localhost:8080")
 N_QUERIES = 40
 TOP_K = 10
 

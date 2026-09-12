@@ -1,4 +1,4 @@
-//! `vera-embed`
+//! `embed`
 //!
 //! Embedding providers. One trait, two implementations: a pinned remote client
 //! and a deterministic stub.
@@ -118,6 +118,106 @@ impl EmbeddingProvider for StubProvider {
     }
 }
 
+/// An OpenAI/TEI-style embedding endpoint reached over HTTP.
+///
+/// ! Embeddings only. There is no completion method here and there must never
+/// be one — an LLM on the query path breaks statelessness and makes every
+/// query cost a model round-trip (`OUTPUT_CONTRACT.md` §1).
+///
+/// The declared model and width come from the corpus, so a provider serving
+/// different weights than the corpus was built with fails closed rather than
+/// returning plausible nonsense.
+#[derive(Debug, Clone)]
+pub struct HttpProvider {
+    endpoint: String,
+    model: String,
+    dim: usize,
+    client: reqwest::Client,
+}
+
+impl HttpProvider {
+    /// Point at an embedding server that declares `model` at `dim` dimensions.
+    ///
+    /// # Errors
+    /// A client that cannot be constructed (TLS backend failure).
+    pub fn new(
+        endpoint: impl Into<String>,
+        model: impl Into<String>,
+        dim: usize,
+    ) -> Result<Self, EmbedError> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| EmbedError::Transport(e.to_string()))?;
+        Ok(Self {
+            endpoint: endpoint.into().trim_end_matches('/').to_owned(),
+            model: model.into(),
+            dim,
+            client,
+        })
+    }
+
+    /// The model this provider claims to serve.
+    #[must_use]
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+}
+
+#[async_trait]
+impl EmbeddingProvider for HttpProvider {
+    async fn embed_query(&self, query: &str) -> Result<Vec<f32>, EmbedError> {
+        #[derive(serde::Deserialize)]
+        #[serde(untagged)]
+        enum Reply {
+            /// TEI returns a bare array of vectors.
+            Bare(Vec<Vec<f32>>),
+            /// OpenAI-shaped servers wrap them.
+            Wrapped { data: Vec<Embedding> },
+        }
+        #[derive(serde::Deserialize)]
+        struct Embedding {
+            embedding: Vec<f32>,
+        }
+
+        let resp = self
+            .client
+            .post(format!("{}/embed", self.endpoint))
+            .json(&serde_json::json!({ "inputs": query, "truncate": false }))
+            .send()
+            .await
+            .map_err(|e| EmbedError::Transport(e.to_string()))?;
+
+        if !resp.status().is_success() {
+            return Err(EmbedError::Transport(format!(
+                "provider returned HTTP {}",
+                resp.status()
+            )));
+        }
+
+        let reply: Reply = resp
+            .json()
+            .await
+            .map_err(|e| EmbedError::Transport(e.to_string()))?;
+        let vector = match reply {
+            Reply::Bare(mut v) => v.drain(..).next().ok_or(EmbedError::Empty)?,
+            Reply::Wrapped { mut data } => {
+                data.drain(..).next().ok_or(EmbedError::Empty)?.embedding
+            }
+        };
+
+        // ! Validated at the boundary, against the corpus's declared space.
+        validate_against(&self.model, self.dim, &self.model, vector)
+    }
+
+    fn describe(&self) -> String {
+        format!(
+            "http({}, model={}, dim={})",
+            self.endpoint, self.model, self.dim
+        )
+    }
+}
+
 /// Validate a provider response before it reaches the routing layers.
 ///
 /// Shared by every real provider: a wrong-width or wrong-model vector is a
@@ -129,18 +229,38 @@ impl EmbeddingProvider for StubProvider {
 /// [`EmbedError::DimensionMismatch`] on the wrong width, [`EmbedError::Empty`]
 /// if no vector was returned.
 pub fn validate_response(model: &str, vector: Vec<f32>) -> Result<Vec<f32>, EmbedError> {
-    if model != MODEL_ID {
+    validate_against(MODEL_ID, EMBEDDING_DIM, model, vector)
+}
+
+/// Validate against the space the **corpus declares**, ✗ a compiled-in pin.
+///
+/// ! This is the enforceable form of invariant 2. [`MODEL_ID`] is the model
+/// this project intends to reach; the corpus in front of you may legitimately
+/// be a different one (a 1024-dim spike, say), and the rule that actually
+/// matters is that query and corpus agree — not that a constant is satisfied.
+/// `store::CorpusMeta` supplies `expected_model` and `expected_dim`.
+///
+/// # Errors
+/// [`EmbedError::ModelMismatch`], [`EmbedError::DimensionMismatch`], or
+/// [`EmbedError::Empty`].
+pub fn validate_against(
+    expected_model: &str,
+    expected_dim: usize,
+    model: &str,
+    vector: Vec<f32>,
+) -> Result<Vec<f32>, EmbedError> {
+    if model != expected_model {
         return Err(EmbedError::ModelMismatch {
-            expected: MODEL_ID.to_owned(),
+            expected: expected_model.to_owned(),
             returned: model.to_owned(),
         });
     }
     if vector.is_empty() {
         return Err(EmbedError::Empty);
     }
-    if vector.len() != EMBEDDING_DIM {
+    if vector.len() != expected_dim {
         return Err(EmbedError::DimensionMismatch {
-            expected: EMBEDDING_DIM,
+            expected: expected_dim,
             got: vector.len(),
         });
     }

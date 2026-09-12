@@ -4,7 +4,7 @@
 //! Each test began #[ignore]d. Deleting that attribute is the act of claiming
 //! the criterion — from here the gate enforces it.
 
-use vera_embed::{EMBEDDING_DIM, EmbedError, EmbeddingProvider, MODEL_ID, StubProvider};
+use embed::{EMBEDDING_DIM, EmbedError, EmbeddingProvider, MODEL_ID, StubProvider};
 
 /// trait exposes embed_query returning 4096 dimensions
 #[tokio::test]
@@ -43,17 +43,17 @@ fn ac_03_real_client_pins_the_model_id_and_fails_closed_on_mismatch() {
     assert_eq!(MODEL_ID, "qwen/qwen3-embedding-8b");
 
     // Right model, right width → accepted.
-    assert!(vera_embed::validate_response(MODEL_ID, vec![0.1; EMBEDDING_DIM]).is_ok());
+    assert!(embed::validate_response(MODEL_ID, vec![0.1; EMBEDDING_DIM]).is_ok());
 
     // ! Wrong model → refuse. A different model produces vectors in a different
     // space, so ranking against this corpus would be meaningless but plausible.
     let mismatch =
-        vera_embed::validate_response("openai/text-embedding-3-large", vec![0.1; EMBEDDING_DIM])
+        embed::validate_response("openai/text-embedding-3-large", vec![0.1; EMBEDDING_DIM])
             .unwrap_err();
     assert!(matches!(mismatch, EmbedError::ModelMismatch { .. }));
 
     // Right model, truncated vector → also refuse.
-    let truncated = vera_embed::validate_response(MODEL_ID, vec![0.1; 1024]).unwrap_err();
+    let truncated = embed::validate_response(MODEL_ID, vec![0.1; 1024]).unwrap_err();
     assert!(matches!(
         truncated,
         EmbedError::DimensionMismatch {
@@ -70,10 +70,10 @@ fn ac_04_no_llm_completion_call_exists_anywhere_on_the_query_path() {
     // calls an LLM" (OUTPUT_CONTRACT.md §1) — a unit test cannot observe the
     // absence of a call, so assert against the source of the query-path crates.
     let roots = [
-        "crates/vera-embed/src",
-        "crates/vera-engine/src",
-        "crates/vera-store/src",
-        "crates/vera-core/src",
+        "crates/embed/src",
+        "crates/engine/src",
+        "crates/store/src",
+        "crates/contract/src",
     ];
     // Completion-shaped API surfaces. Substrings, so `/v1/chat/completions`,
     // `messages.create`, and `generate_content` are all caught.

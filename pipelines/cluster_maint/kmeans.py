@@ -27,7 +27,7 @@ import time
 import numpy as np
 
 PG = os.environ.get(
-    "VERA_PG", "host=localhost port=5432 dbname=vera user=vera password=vera"
+    "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
 )
 FETCH = 20_000
 

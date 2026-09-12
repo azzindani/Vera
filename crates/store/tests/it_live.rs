@@ -5,17 +5,17 @@
 //! `cargo test` hermetic on every machine while these stay runnable on demand:
 //!
 //!     docker compose up -d
-//!     cargo test -p vera-store -- --ignored --nocapture
+//!     cargo test -p store -- --ignored --nocapture
 //!
 //! ! `#[ignore]` here means "needs a database", ✗ "known flaky". A test that
 //! fails intermittently gets fixed or deleted the same day.
 
-use vera_store::{SearchOps, connect, sparse_literal};
+use store::{SearchOps, connect, sparse_literal};
 
 const DEFAULT_PG: &str = "host=localhost port=5432 dbname=vera user=vera password=vera";
 
 fn ops() -> SearchOps {
-    let url = std::env::var("VERA_PG").unwrap_or_else(|_| DEFAULT_PG.to_owned());
+    let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| DEFAULT_PG.to_owned());
     SearchOps::new(connect(&url, 4).expect("pool"))
 }
 

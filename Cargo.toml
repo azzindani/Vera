@@ -1,11 +1,11 @@
 [package]
-name = "Vera"
+name = "vera"
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.85"
 
 [[bin]]
-name = "Vera"
+name = "vera"
 path = "src/main.rs"
 
 [dependencies]
@@ -13,16 +13,16 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
-vera-embed = { version = "0.0.1", path = "crates/vera-embed" }
+embed = { version = "0.0.1", path = "crates/embed" }
 
 [workspace]
 resolver = "3"
 members = [
-    "crates/vera-core",
-    "crates/vera-embed",
-    "crates/vera-store",
-    "crates/vera-engine",
-    "crates/vera-mcp",
+    "crates/contract",
+    "crates/embed",
+    "crates/store",
+    "crates/engine",
+    "crates/mcp",
 ]
 
 [workspace.package]

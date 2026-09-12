@@ -92,7 +92,7 @@ jobs:
           set -euo pipefail
           name="vera-${{ matrix.target }}"
           mkdir -p "dist/$name"
-          cp target/${{ matrix.target }}/release/Vera "dist/$name/vera"
+          cp target/${{ matrix.target }}/release/vera "dist/$name/vera"
           cp README.md LICENSE "dist/$name/" 2>/dev/null || true
           tar -C dist -czf "$name.tar.gz" "$name"
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
@@ -104,7 +104,7 @@ jobs:
           set -euo pipefail
           name="vera-${{ matrix.target }}"
           mkdir -p "dist/$name"
-          cp target/${{ matrix.target }}/release/Vera.exe "dist/$name/vera.exe"
+          cp target/${{ matrix.target }}/release/vera.exe "dist/$name/vera.exe"
           cp README.md "dist/$name/" 2>/dev/null || true
           powershell -Command "Compress-Archive -Path dist/$name -DestinationPath $name.zip"
           certutil -hashfile "$name.zip" SHA256 | sed -n '2p' > "$name.zip.sha256"

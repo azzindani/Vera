@@ -25,9 +25,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sparse import Bm25Vectorizer  # noqa: E402
 
-TEI = os.environ.get("VERA_TEI", "http://localhost:8080")
+TEI = os.environ.get("EMBED_ENDPOINT", "http://localhost:8080")
 PG = os.environ.get(
-    "VERA_PG", "host=localhost port=5432 dbname=vera user=vera password=vera"
+    "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
 )
 VECTORIZER = (
     Path(__file__).resolve().parents[2] / ".test" / "runs" / "fixture-01.bm25.json"

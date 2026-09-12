@@ -1,4 +1,4 @@
-//! `vera-engine`
+//! `engine`
 //!
 //! Routing layers and fusion · the pure domain logic of retrieval.
 //!
@@ -15,7 +15,7 @@ pub mod routing;
 pub use fusion::{Arm, DEFAULT_K, Fused, reciprocal_rank_fusion};
 pub use routing::{Centroid, DomainAnchor, Route, cosine, detect_domain, route, select_clusters};
 
-/// How much the engine trusts a result set · mirrors `vera_core::Confidence`.
+/// How much the engine trusts a result set · mirrors `contract::Confidence`.
 ///
 /// Kept as a separate mapping rather than a constructor on the contract type so
 /// the thresholds live with the routing logic that produces them, ✗ with the
