@@ -1,0 +1,86 @@
+name: CI
+
+# Mirrors pipeline.yaml's `fast` stage: static + unit.
+# The `full` stage (container + integration) lands once vera-store has tests
+# that need a database — adding a Postgres service before anything queries it
+# would be ceremony, not coverage.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# One run per ref. A new push supersedes the old one instead of queueing
+# behind it, so a busy branch does not sit waiting on stale jobs.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Fail fast on a network hiccup rather than hanging the job for minutes.
+  CARGO_NET_RETRY: 3
+  RUSTUP_MAX_RETRIES: 3
+  # Smaller cache, faster restore. CI never opens a debugger.
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+permissions:
+  contents: read
+
+jobs:
+  # Formatting is platform-independent, so checking it once is enough.
+  # Running it on all three would only add ways for line endings to bite.
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - run: cargo fmt --all --check
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # ! Never cancel siblings. A Windows-only failure is exactly the thing
+      # this matrix exists to find, and fail-fast would hide whether Linux and
+      # macOS were fine.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          # Lockfile in the key: dependencies change, cache changes. The OS is
+          # in it too because target/ artifacts are not portable.
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: ${{ matrix.os }}-cargo-
+
+      - name: Clippy
+        # --all-targets covers tests and benches, not just the libraries;
+        # -D warnings makes the workspace's pedantic lints actually binding.
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Test
+        # --locked so CI fails on an out-of-date Cargo.lock rather than
+        # silently resolving different versions than the developer had.
+        run: cargo test --workspace --locked
+
+      - name: Build
+        run: cargo build --workspace --locked
