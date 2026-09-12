@@ -12,7 +12,8 @@ use contract::{
 };
 use embed::EmbeddingProvider;
 use engine::{
-    Arm, Centroid, DEFAULT_K, Trust, reciprocal_rank_fusion, select_clusters, trust_from,
+    Arm, Centroid, DEFAULT_K, Trust, reciprocal_rank_fusion, routing::cosine, select_clusters,
+    trust_from,
 };
 use store::{CorpusMeta, SearchOps, sparse_literal};
 
@@ -31,6 +32,20 @@ pub struct Config {
     pub dense_weight: f32,
     pub sparse_weight: f32,
     pub text_weight: f32,
+    /// Minimum cosine for the startup canary round-trip.
+    ///
+    /// Vectors are stored as `halfvec`, so an exact round-trip through the
+    /// same model lands around 0.999 rather than 1.0 — the gap is fp16
+    /// rounding, not drift. A genuinely different model scores far below this,
+    /// so the threshold separates "same space" from "different space" with
+    /// room to spare.
+    pub canary_min_cosine: f32,
+    /// Below this nearest-centroid similarity, results carry a weak-match hint.
+    ///
+    /// ! A warning, ✗ the invariant-13 gate. It does not suppress results,
+    /// because the measurement behind it does not separate cleanly enough to
+    /// justify returning nothing — see `domain_confidence` in `assemble`.
+    pub domain_floor: f32,
 }
 
 impl Default for Config {
@@ -57,6 +72,8 @@ impl Default for Config {
             dense_weight: 0.0,
             sparse_weight: 1.0,
             text_weight: 0.0,
+            canary_min_cosine: 0.98,
+            domain_floor: 0.55,
         }
     }
 }
@@ -69,6 +86,11 @@ pub struct Pipeline {
     centroids: Vec<Centroid>,
     meta: CorpusMeta,
     cfg: Config,
+}
+
+fn log_canary(chunk_id: &str, got: f32) {
+    // stderr only · stdout is the MCP channel (invariant 10).
+    eprintln!("[vera] canary ok · chunk {chunk_id} round-trip cosine {got:.5}");
 }
 
 impl Pipeline {
@@ -95,6 +117,33 @@ impl Pipeline {
                 engine_model: model.to_owned(),
                 engine_dim: usize::try_from(meta.dense_dim).unwrap_or(0),
             });
+        }
+
+        // ! The real canary. `ensure_compatible` above compares two strings;
+        // this compares two vector spaces. Re-embed a chunk's own text through
+        // the configured provider and check it lands where ingestion put it.
+        // An endpoint quietly serving different weights under the same model
+        // name gets caught here and nowhere else.
+        let (chunk_id, body, stored) = ops.canary_sample().await?;
+        match provider.embed_query(&body).await {
+            Ok(fresh) => {
+                let got = cosine(&fresh, &stored);
+                if got < cfg.canary_min_cosine {
+                    return Err(store::StoreError::CanaryFailed {
+                        chunk_id,
+                        got,
+                        want: cfg.canary_min_cosine,
+                    });
+                }
+                log_canary(&chunk_id, got);
+            }
+            Err(e) => {
+                // Refuse rather than degrade: serving without having verified
+                // the space is the failure mode invariant 2 exists to prevent.
+                return Err(store::StoreError::Pool(format!(
+                    "canary embed failed · cannot verify the vector space: {e}"
+                )));
+            }
         }
 
         let centroids = ops
@@ -215,7 +264,15 @@ impl Pipeline {
         let rows = self.ops.chunks_by_id(&ids).await?;
         let results = self.to_results(&top, &rows, &dense, &sparse);
 
-        Ok(self.assemble(query, probed.len(), results, exact_matches, progress))
+        let top_cluster = probed.first().map_or(0.0, |(_, s)| *s);
+        Ok(self.assemble(
+            query,
+            probed.len(),
+            top_cluster,
+            results,
+            exact_matches,
+            progress,
+        ))
     }
 
     /// Scan the probed clusters **one at a time**.
@@ -253,7 +310,10 @@ impl Pipeline {
     ) -> Result<Vec<ExactMatch>, PipelineError> {
         let mut out = Vec::new();
         for id in identifier::extract(query) {
-            let hits = self.ops.exact_identifier(&id.number, id.year, 5).await?;
+            let hits = self
+                .ops
+                .exact_identifier(&id.number, id.year, id.reg_type, 5)
+                .await?;
             if !hits.is_empty() {
                 progress.push(format!(
                     "exact identifier {}/{}: {} hits (routing bypassed)",
@@ -307,6 +367,7 @@ impl Pipeline {
         &self,
         query: &str,
         probed: usize,
+        top_cluster: f32,
         results: Vec<SearchResult>,
         exact_matches: Vec<ExactMatch>,
         progress: Vec<String>,
@@ -329,21 +390,45 @@ impl Pipeline {
             Trust::Low => Confidence::Low,
             Trust::None => Confidence::None,
         };
-        let hint = (incomplete > 0).then(|| {
-            format!(
+        let weak = top_cluster < self.cfg.domain_floor;
+        let mut notes: Vec<String> = Vec::new();
+        if weak {
+            notes.push(format!(
+                "weak domain match ({top_cluster:.3}) · the corpus may not cover \
+                 this question · check the citations before relying on these results"
+            ));
+        }
+        if incomplete > 0 {
+            notes.push(format!(
                 "{incomplete} of {} results have no source_url · this corpus was \
-                 ingested without one · cite by title and locator, and treat the \
-                 link as unavailable",
+                     ingested without one · cite by title and locator, and treat the \
+                     link as unavailable",
                 results.len()
-            )
-        });
+            ));
+        }
+        let hint = (!notes.is_empty()).then(|| notes.join(" · "));
 
         let mut resp = SearchResponse {
             success: true,
             op: "search_knowledge",
             query: query.to_owned(),
             detected_domain: Some(self.meta.id.clone()),
-            domain_confidence: 1.0,
+            // ! Measured, not asserted. This used to be a hardcoded 1.0, which
+            // meant the engine reported total confidence in its domain for
+            // "chocolate chip cookie recipe" as readily as for a real legal
+            // question. It is now the similarity to the nearest probed
+            // centroid — a number that is actually about this query.
+            //
+            // ! It is NOT yet the gate invariant 13 asks for, and pretending
+            // otherwise would be worse than the honest gap. Measured over the
+            // 50-case set in eval/, nearest-centroid similarity does not
+            // separate in-domain from out-of-domain: "cara memperbaiki keran
+            // air yang bocor di dapur" scores 0.7163, above the in-domain mean
+            // of 0.6993, while the exact_ref query "PP 60/2014" sits at 0.4178.
+            // The signal separates LANGUAGE, not domain. Until a gate exists
+            // that actually discriminates, the engine reports what it knows
+            // and flags a weak match rather than silently guessing.
+            domain_confidence: top_cluster,
             clusters_probed: probed,
             results,
             citation_block: citations,

@@ -43,6 +43,21 @@ pub enum StoreError {
         engine_model: String,
         engine_dim: usize,
     },
+
+    // ! One literal, no line continuations. A `\` + newline inside a Rust
+    // string only folds cleanly with LF endings; on a CRLF working copy the
+    // indentation survives into the message an operator reads.
+    #[error(
+        "canary round-trip failed on chunk {chunk_id}: re-embedding its own text through the configured provider returned cosine {got:.4} against the stored vector, below the required {want:.4} · the provider is not the model that produced this corpus · refusing to serve"
+    )]
+    CanaryFailed {
+        chunk_id: String,
+        got: f32,
+        want: f32,
+    },
+
+    #[error("corpus has no chunk usable as a canary sample")]
+    NoCanary,
 }
 
 /// The recipe that produced the corpus · `corpus_meta`.

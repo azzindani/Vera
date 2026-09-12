@@ -15,6 +15,7 @@
 //! SPARSE_WEIGHT    RRF weight for BM25            (default 1.0)
 //! TEXT_WEIGHT      RRF weight for tsvector        (default 0.0, measured)
 //! MAX_CONCURRENCY  in-flight request ceiling      (default 4)
+//! CANARY_MIN_COSINE startup round-trip threshold   (default 0.98)
 //! ```
 
 mod bm25;
@@ -39,7 +40,17 @@ macro_rules! log {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
+    // ! Display, not Debug. A refusal to serve has to tell the operator what
+    // went wrong and why; `CanaryFailed { got: 0.61, want: 0.98 }` makes them
+    // go read the source, and the message already explains itself.
+    if let Err(e) = run().await {
+        log!("refusing to serve · {e}");
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let db = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "host=localhost port=5432 dbname=vera user=vera password=vera".into());
     let endpoint =
@@ -74,8 +85,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let provider = Arc::new(embed::HttpProvider::new(&endpoint, &meta.dense_model, dim)?);
     let vectorizer = bm25::QueryVectorizer::load(std::path::Path::new(&vocab))?;
 
+    // ! Config, not a constant (invariant 12). Loosening the canary is a
+    // deliberate, visible act — there is no code path that quietly skips it.
+    let canary_min: f32 = std::env::var("CANARY_MIN_COSINE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(Config::default().canary_min_cosine);
+
     let cfg = Config {
         clusters_probed: probed,
+        canary_min_cosine: canary_min,
         ..Config::default()
     };
     let pipe =

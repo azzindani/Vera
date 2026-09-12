@@ -194,17 +194,26 @@ impl SearchOps {
         &self,
         regulation_number: &str,
         year: Option<i32>,
+        reg_type: Option<&str>,
         k: i64,
     ) -> Result<Vec<ExactHit>, StoreError> {
         let c = self.client().await?;
+        // ! `regulation_type` filters when the query named a tier. Number and
+        // year are NOT a unique reference in this corpus — 60/2014 alone
+        // matches 12 regulations, nine of them PERATURAN BUPATI — so dropping
+        // the tier the user typed answers a different question. Filtering
+        // strictly is right: returning nothing here still leaves the semantic
+        // arms, while returning the wrong tier looks authoritative.
         let rows = c
             .query(
                 "SELECT id, regulation_type, regulation_number, year
                  FROM chunks
-                 WHERE regulation_number = $1 AND ($2::int IS NULL OR year = $2)
+                 WHERE regulation_number = $1
+                   AND ($2::int IS NULL OR year = $2)
+                   AND ($3::text IS NULL OR regulation_type = $3)
                  ORDER BY year DESC NULLS LAST, chunk_no
-                 LIMIT $3",
-                &[&regulation_number, &year, &k],
+                 LIMIT $4",
+                &[&regulation_number, &year, &reg_type, &k],
             )
             .await?;
         Ok(rows
@@ -226,6 +235,41 @@ impl SearchOps {
                 }
             })
             .collect())
+    }
+
+    /// One deterministic chunk with its stored vector, for the startup canary.
+    ///
+    /// ! This is what makes invariant 2 enforceable rather than declarative.
+    /// Comparing the configured model NAME against `corpus_meta` only proves
+    /// two strings match; it cannot notice an endpoint serving different
+    /// weights under the same name. Re-embedding a chunk's own text and
+    /// comparing against the vector ingestion stored for it tests the actual
+    /// vector space, using data the corpus already contains.
+    ///
+    /// Picks a mid-length body: long enough to be distinctive, short enough
+    /// that no provider truncates it differently than ingestion did.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn canary_sample(&self) -> Result<(String, String, Vec<f32>), StoreError> {
+        let c = self.client().await?;
+        let row = c
+            .query_opt(
+                "SELECT id, body, dense::text FROM chunks
+                 WHERE dense IS NOT NULL AND indexable
+                   AND length(body) BETWEEN 200 AND 500
+                 ORDER BY id LIMIT 1",
+                &[],
+            )
+            .await?
+            .ok_or(StoreError::NoCanary)?;
+        let raw: String = row.get(2);
+        let v = raw
+            .trim_matches(['[', ']'])
+            .split(',')
+            .filter_map(|x| x.trim().parse::<f32>().ok())
+            .collect();
+        Ok((row.get(0), row.get(1), v))
     }
 
     /// Fetch chunks by id, for snippets, `read_chunk` and `get_provenance`.

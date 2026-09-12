@@ -232,6 +232,22 @@ DOCS = [
         ],
     },
     {
+        # ! Same number and year as the PERATURAN PEMERINTAH above, different
+        # tier. This is what makes the identifier tier filter testable: number
+        # and year alone are not a unique reference, and an engine that drops
+        # the tier the user typed lands here instead.
+        "type": "PERATURAN BUPATI", "number": "79", "year": 2013,
+        "about": "PENATAAN PARKIR TEPI JALAN UMUM KABUPATEN SLEMAN",
+        "theme": "transportasi",
+        "clauses": [
+            ("BAB II", "Pasal 4",
+             "Penyelenggaraan parkir di tepi jalan umum dalam daerah dilaksanakan "
+             "oleh perangkat daerah yang membidangi perhubungan setelah mendapat "
+             "persetujuan Bupati, dengan memperhatikan kelancaran lalu lintas dan "
+             "keselamatan pengguna jalan di ruas jalan yang bersangkutan."),
+        ],
+    },
+    {
         "type": "PERATURAN BUPATI", "number": "27", "year": 2013,
         "about": "RETRIBUSI PELAYANAN PASAR KABUPATEN SLEMAN",
         "theme": "administrasi",
@@ -256,6 +272,10 @@ DOCS = [
 # ! One deliberately unindexable row and one truncated row. Honest flags are
 # set at ingest and must survive into every filter; a corpus of only clean rows
 # cannot prove that `WHERE indexable` is doing anything.
+# ! The startup canary picks the first indexable chunk whose body is 200-500
+# characters (store::canary_sample). Several clauses above sit in that band by
+# construction; if every body drifted shorter the canary would have nothing to
+# sample and the engine would refuse to start.
 UNINDEXABLE = {
     "type": "PERATURAN PEMERINTAH", "number": "26", "year": 2009,
     "about": "SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",

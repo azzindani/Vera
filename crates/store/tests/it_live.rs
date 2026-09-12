@@ -182,7 +182,7 @@ async fn exact_identifier_search_bypasses_routing_entirely() {
     // was never probed. This path must find it anyway.
     let store = ops();
     let hits = store
-        .exact_identifier("26", Some(2009), 10)
+        .exact_identifier("26", Some(2009), None, 10)
         .await
         .expect("exact");
     assert!(
@@ -209,7 +209,7 @@ async fn exact_identifier_search_bypasses_routing_entirely() {
 #[ignore = "needs a live corpus"]
 async fn a_nonexistent_identifier_returns_empty_rather_than_erroring() {
     let hits = ops()
-        .exact_identifier("99999", Some(1800), 10)
+        .exact_identifier("99999", Some(1800), None, 10)
         .await
         .expect("must succeed with no results");
     assert!(hits.is_empty());
@@ -233,4 +233,73 @@ async fn this_corpus_reports_incomplete_provenance_rather_than_faking_it() {
             );
         }
     }
+}
+
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn the_identifier_path_honours_the_tier_the_user_named() {
+    // ! Regression, invariant 4. Number and year are NOT a unique reference:
+    // in the spike corpus 12 regulations share 60/2014, nine of them
+    // PERATURAN BUPATI. The engine used to discard the tier, so "PP 60/2014"
+    // answered with a regency rule — confidently, and about a different law.
+    let store = ops();
+
+    let unfiltered = store
+        .exact_identifier("79", Some(2013), None, 50)
+        .await
+        .expect("exact");
+    let filtered = store
+        .exact_identifier("79", Some(2013), Some("PERATURAN PEMERINTAH"), 50)
+        .await
+        .expect("exact");
+
+    assert!(!filtered.is_empty(), "PP 79/2013 must still be findable");
+    for h in &filtered {
+        assert!(
+            h.matched_on.starts_with("PERATURAN PEMERINTAH"),
+            "tier filter leaked: {h:?}"
+        );
+    }
+    assert!(
+        unfiltered.len() >= filtered.len(),
+        "filtering cannot widen the result set"
+    );
+
+    // And a tier that exists for no such number returns nothing rather than
+    // falling back to whatever else shares the number.
+    let absent = store
+        .exact_identifier("79", Some(2013), Some("INSTRUKSI PRESIDEN"), 50)
+        .await
+        .expect("exact");
+    assert!(absent.is_empty(), "fell back to the wrong tier: {absent:?}");
+}
+
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn a_canary_sample_is_available_at_the_declared_width() {
+    // The startup canary re-embeds this chunk's own text and compares against
+    // the stored vector — the only check that can catch a provider serving
+    // different weights under the same model name (invariant 2). If the corpus
+    // cannot supply a sample, the engine refuses to start, so this is load
+    // bearing rather than incidental.
+    let store = ops();
+    let meta = store.corpus_meta().await.expect("corpus_meta");
+    let (id, body, vector) = store.canary_sample().await.expect("canary sample");
+
+    assert!(!body.is_empty(), "a canary needs text to re-embed");
+    assert_eq!(
+        vector.len(),
+        usize::try_from(meta.dense_dim).unwrap(),
+        "canary vector is not the corpus's width"
+    );
+    assert!(
+        vector.iter().any(|v| v.abs() > f32::EPSILON),
+        "canary vector is all zeros · nothing to compare against"
+    );
+
+    // Deterministic: the same corpus must yield the same canary every start,
+    // or a passing check says nothing about the next one.
+    let (again, _, _) = store.canary_sample().await.expect("canary sample");
+    assert_eq!(id, again);
+    println!("canary chunk {id} · {} dims", vector.len());
 }
