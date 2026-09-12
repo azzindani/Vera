@@ -1,9 +1,12 @@
 name: CI
 
-# Mirrors pipeline.yaml's `fast` stage: static + unit.
-# The `full` stage (container + integration) lands once vera-store has tests
-# that need a database — adding a Postgres service before anything queries it
-# would be ceremony, not coverage.
+# Two stages, mirroring pipeline.yaml:
+#   fast — static + unit, on all three platforms
+#   full — integration against a real Postgres, seeded from fixtures/seed.py
+#
+# The `full` stage runs on Linux only. It is testing SQL semantics against a
+# Postgres server, and that server behaves the same whichever OS drove the
+# client; paying three times for one answer buys nothing.
 
 on:
   push:
@@ -84,3 +87,66 @@ jobs:
 
       - name: Build
         run: cargo build --workspace --locked
+
+  # The stage that would have caught the plainto_tsquery bug. `store`'s tests
+  # are `#[ignore]`d because they need a loaded corpus; fixtures/seed.py builds
+  # a ~30-row one in seconds, so "needs a database" stops meaning "never runs".
+  integration:
+    name: integration (postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: vera
+          POSTGRES_PASSWORD: vera
+          POSTGRES_DB: vera
+          # Same locale pin as docker-compose.yml: collation changes ORDER BY
+          # on text, and a ranking that differs between CI and the laptop is
+          # worse than no ranking test at all.
+          POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vera"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: host=localhost port=5432 dbname=vera user=vera password=vera
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install psycopg
+        run: pip install --quiet "psycopg[binary]"
+
+      - name: Seed the fixture corpus
+        run: python fixtures/seed.py
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ubuntu-latest-cargo-${{ hashFiles('**/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: ubuntu-latest-cargo-
+
+      # ! --ignored, not --include-ignored. These tests are the point of this
+      # job; running the hermetic suite again here would only hide them in the
+      # noise of the ones the matrix already ran on three platforms.
+      - name: Integration tests
+        run: cargo test -p store --locked -- --ignored --nocapture

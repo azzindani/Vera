@@ -1,11 +1,15 @@
 //! Integration tests against a live, ingested corpus.
 //!
-//! ! All `#[ignore]`d. They need Postgres with a loaded corpus, which CI does
-//! not have — `pipeline.yaml`'s `full` stage will provide one. Ignoring keeps
-//! `cargo test` hermetic on every machine while these stay runnable on demand:
+//! ! All `#[ignore]`d, so `cargo test` stays hermetic on a machine with no
+//! database. They run two ways, and every assertion here must hold for BOTH:
 //!
-//!     docker compose up -d
-//!     cargo test -p store -- --ignored --nocapture
+//!     docker compose up -d && cargo test -p store -- --ignored   # real corpus
+//!     python fixtures/seed.py && cargo test -p store -- --ignored # ~30 rows
+//!
+//! The fixture is what CI runs. It carries the same regulations these tests
+//! name, so a test that passes locally against 181K rows passes there too —
+//! and a test that needs a specific row must be given one in the fixture
+//! rather than assuming the spike corpus.
 //!
 //! ! `#[ignore]` here means "needs a database", ✗ "known flaky". A test that
 //! fails intermittently gets fixed or deleted the same day.
@@ -114,6 +118,38 @@ async fn the_text_arm_finds_indonesian_legal_phrasing() {
     for w in hits.windows(2) {
         assert!(w[0].score >= w[1].score);
     }
+}
+
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn a_natural_question_is_not_anded_into_zero_results() {
+    // ! Regression. The text arm used `plainto_tsquery`, which ANDs every
+    // term: this question demands one chunk containing all six lexemes and
+    // matched NOTHING, in a corpus that answers it plainly. The bug survived
+    // because the only lexical test used a four-word phrase lifted from the
+    // corpus, where co-occurrence is guaranteed. A question a person would
+    // actually ask is the shape that catches it.
+    let hits = ops()
+        .text("siapa yang berwenang menetapkan kelas jalan provinsi", 10)
+        .await
+        .expect("text search");
+    assert!(
+        !hits.is_empty(),
+        "a natural question returned nothing · the text arm is ANDing terms"
+    );
+}
+
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn a_question_about_nothing_in_the_corpus_returns_empty_not_everything() {
+    // The other side of OR semantics: loosening the query must not turn the
+    // arm into "return whatever you have". Nonsense has no lexemes in common
+    // with the corpus, so it must match nothing at all.
+    let hits = ops()
+        .text("zxqwmb plkjhgf vbnmqwe", 10)
+        .await
+        .expect("text search");
+    assert!(hits.is_empty(), "nonsense matched {} chunks", hits.len());
 }
 
 #[tokio::test]
