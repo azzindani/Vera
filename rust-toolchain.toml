@@ -1,0 +1,10 @@
+# Pinned so CI and every developer compile with the same compiler.
+#
+# ! An exact version, ✗ "stable". The workspace denies warnings, and clippy
+# gains lints in every release — so floating on stable means an unrelated
+# toolchain bump can turn a green branch red with no code change. Bump this
+# deliberately, in its own commit, where the new lints can be read and fixed.
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

@@ -1,0 +1,15 @@
+# Normalise line endings so the same bytes reach every runner.
+#
+# ! Without this, a Windows checkout converts source to CRLF and
+# `cargo fmt --check` fails on Windows only — the classic cross-OS CI flake,
+# where the code is fine and the checkout is not.
+* text=auto eol=lf
+
+# Binary-ish things git must not touch.
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+*.db    binary
+*.safetensors binary
+*.npy   binary
+*.parquet binary

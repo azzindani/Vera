@@ -1,5 +1,7 @@
 # Build artifacts
 target/
+__pycache__/
+*.pyc
 node_modules/
 dist/
 build/
@@ -18,3 +20,7 @@ build/
 .env.local
 *.pem
 *.key
+
+# Local test data · embedding model + 750K-row SQLite corpus (~12 GB).
+# Never committable: size, and regulation-text licensing is unsettled.
+.test/
