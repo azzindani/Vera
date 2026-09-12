@@ -131,6 +131,12 @@ jobs:
       - name: Install psycopg
         run: pip install --quiet "psycopg[binary]"
 
+      # Pure-Python, no database needed, but this job is where Python already
+      # is. The chunker decides what a retrieval unit IS, so a regression here
+      # silently changes every number the eval harness reports.
+      - name: Chunker tests
+        run: python pipelines/pre_embed/test_chunking.py
+
       - name: Seed the fixture corpus
         run: python fixtures/seed.py
 

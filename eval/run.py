@@ -156,8 +156,23 @@ def fuse(*lists):
 
 
 def resolve_targets(cur, q):
-    """The set of chunk ids that count as correct for this query."""
+    """The set of chunk ids that count as correct for this query.
+
+    ! Labels name ARTICLES, not chunk ids. A chunk id is an artefact of how the
+    corpus was split — re-chunking changes every one of them — while an article
+    is a property of the law. Any chunk of a labelled article counts, which is
+    also the honest reading: if an article is split across three chunks, all
+    three are the answer.
+    """
     ids = set(q.get("answer_chunks", []))
+    for ref in q.get("answer_articles", []):
+        cur.execute(
+            "SELECT id FROM chunks WHERE regulation_type=%s AND regulation_number=%s"
+            " AND year=%s AND about=%s AND article=%s",
+            (ref["regulation_type"], ref["regulation_number"], ref["year"],
+             ref["about"], ref["article"]),
+        )
+        ids |= {r[0] for r in cur.fetchall()}
     reg = q.get("answer_regulation")
     if reg:
         cur.execute(

@@ -39,7 +39,15 @@
     "                 cases: they separate 'detects the domain' from 'detects",
     "                 the language', which a language check would conflate.",
     "",
-    "corpus: spike-01 (181,807 chunks, 10,881 regulations, 1945-2018)"
+    "corpus: spike-01 (181,807 chunks, 10,881 regulations, 1945-2018)",
+    "",
+    "! LABELS ARE ARTICLE-LEVEL, NOT CHUNK-LEVEL. Chunk ids are an artefact of",
+    "how the corpus was split, and re-chunking changes every one of them. An",
+    "article — (type, number, year, about, article) — is a property of the law",
+    "itself and survives. `answer_articles` is the label; run.py resolves it to",
+    "whatever chunk ids the current corpus uses, and ANY chunk of a labelled",
+    "article counts as a hit. `answer_chunks_spike01` records the ids these were",
+    "originally labelled against, for archaeology only."
   ],
   "queries": [
     {
@@ -47,82 +55,264 @@
       "type": "obligation",
       "difficulty": "easy",
       "query": "Apakah pengelola energi diwajibkan memakai teknologi yang tidak merusak lingkungan?",
-      "answer_chunks": ["628711"],
-      "source": "UNDANG-UNDANG 30/2007 Pasal 8 — ENERGI"
+      "source": "UNDANG-UNDANG 30/2007 Pasal 8 — ENERGI",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "30",
+          "year": 2007,
+          "about": "E N E R G I DENGAN RIIHMA'T TUHAN YAI\\JG MAHA ESA PKESIDEN REPUBLIK INDONESIA Menimba~lg : a. bahwa sumber daya energi merupakan kekayaan alam sebagaimana diarnanatkan dalam",
+          "article": "Pasal 8"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "628711"
+      ]
     },
     {
       "id": "q002",
       "type": "conceptual",
       "difficulty": "easy",
       "query": "Apakah penghasilan anggota Komisi Yudisial disamakan dengan hakim Mahkamah Agung?",
-      "answer_chunks": ["4612"],
-      "source": "PERATURAN PEMERINTAH 62/2009 Pasal 1 — HAK KEUANGAN/ADMINISTRATIF"
+      "source": "PERATURAN PEMERINTAH 62/2009 Pasal 1 — HAK KEUANGAN/ADMINISTRATIF",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "62",
+          "year": 2009,
+          "about": "HAK KEUANGAN/ADMINISTRATIF BAGI KETUA,",
+          "article": "Pasal 1"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "4612"
+      ]
     },
     {
       "id": "q003",
       "type": "multi_tier",
       "difficulty": "medium",
       "query": "Siapa yang berwenang menetapkan kelas jalan provinsi?",
-      "answer_chunks": ["275429", "668166"],
       "source": "PERATURAN PEMERINTAH 79/2013 Pasal 18 + UNDANG-UNDANG 22/2009 Pasal 20",
-      "note": "Both read and both answer: PP 79/2013 says the class is set by keputusan gubernur after the road ministry's advice; UU 22/2009 says 'pemerintah provinsi, untuk jalan provinsi'. The original label named only the implementing rule, so retrieval putting the parent law first scored as a miss. That was the label failing, not the engine."
+      "note": "Both read and both answer: PP 79/2013 says the class is set by keputusan gubernur after the road ministry's advice; UU 22/2009 says 'pemerintah provinsi, untuk jalan provinsi'. The original label named only the implementing rule, so retrieval putting the parent law first scored as a miss. That was the label failing, not the engine.",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "79",
+          "year": 2013,
+          "about": "JARINGAN LALU LINTAS DAN ANGKUTAN JALAN",
+          "article": "Pasal 18"
+        },
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "22",
+          "year": 2009,
+          "about": "LALU LINTAS DAN ANGKUTAN JALAN",
+          "article": "Pasal 20"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "275429",
+        "668166"
+      ]
     },
     {
       "id": "q004",
       "type": "numeric",
       "difficulty": "easy",
       "query": "Berapa lama sebelumnya undangan rapat pleno KPU harus disampaikan?",
-      "answer_chunks": ["615315"],
-      "source": "UNDANG-UNDANG 15/2011 Pasal 35 — PENYELENGGARA PEMILIHAN UMUM"
+      "source": "UNDANG-UNDANG 15/2011 Pasal 35 — PENYELENGGARA PEMILIHAN UMUM",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "15",
+          "year": 2011,
+          "about": "PENYELENGGARA PEMILIHAN UMUM",
+          "article": "Pasal 35"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "615315"
+      ]
     },
     {
       "id": "q005",
       "type": "conceptual",
       "difficulty": "medium",
       "query": "Bolehkah pemerintah membatasi ekspor batubara demi kebutuhan dalam negeri?",
-      "answer_chunks": ["683640"],
-      "source": "UNDANG-UNDANG 4/2009 Pasal 5 — PERTAMBANGAN MINERAL DAN BATUBARA"
+      "source": "UNDANG-UNDANG 4/2009 Pasal 5 — PERTAMBANGAN MINERAL DAN BATUBARA",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "4",
+          "year": 2009,
+          "about": "PERTAMBANGAN MINERAL DAN BATUBARA",
+          "article": "Pasal 5"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "683640"
+      ]
     },
     {
       "id": "q006",
       "type": "procedural",
       "difficulty": "medium",
       "query": "Bagaimana nasib izin kawasan hutan yang sudah terbit sebelum aturan baru berlaku?",
-      "answer_chunks": ["282096"],
-      "source": "PERATURAN PEMERINTAH 24/2010 Pasal 25 — PENGGUNAAN KAWASAN HUTAN"
+      "source": "PERATURAN PEMERINTAH 24/2010 Pasal 25 — PENGGUNAAN KAWASAN HUTAN",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "24",
+          "year": 2010,
+          "about": "PENGGUNAAN KAWASAN HUTAN",
+          "article": "Pasal 25"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "282096"
+      ]
     },
     {
       "id": "q007",
       "type": "conceptual",
       "difficulty": "medium",
       "query": "Kementerian apa saja yang dilibatkan untuk kedatangan kapal pesiar asing?",
-      "answer_chunks": ["734530"],
-      "source": "PERATURAN PRESIDEN 79/2011 Pasal 14 — KUNJUNGAN KAPAL WISATA (YACHT) ASING"
+      "source": "PERATURAN PRESIDEN 79/2011 Pasal 14 — KUNJUNGAN KAPAL WISATA (YACHT) ASING",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PRESIDEN",
+          "regulation_number": "79",
+          "year": 2011,
+          "about": "KUNJUNGAN KAPAL WISATA (YACHT) ASING KE INDONESIA",
+          "article": "Pasal 14"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "734530"
+      ]
     },
     {
       "id": "q008",
       "type": "conceptual",
       "difficulty": "medium",
       "query": "Apa saja syarat administrasi untuk mendirikan gedung milik negara?",
-      "answer_chunks": ["748156"],
-      "source": "PERATURAN PRESIDEN 73/2011 Pasal 3 — PEMBANGUNAN BANGUNAN GEDUNG NEGARA"
+      "source": "PERATURAN PRESIDEN 73/2011 Pasal 3 — PEMBANGUNAN BANGUNAN GEDUNG NEGARA",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PRESIDEN",
+          "regulation_number": "73",
+          "year": 2011,
+          "about": "PEMBANGUNAN BANGUNAN GEDUNG NEGARA",
+          "article": "Pasal 3"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "748156"
+      ]
     },
     {
       "id": "q009",
       "type": "procedural",
       "difficulty": "medium",
       "query": "Bagaimana cara memverifikasi identitas pengguna tanda tangan elektronik sebelum dipakai?",
-      "answer_chunks": ["281179"],
-      "source": "PERATURAN PEMERINTAH 82/2012 Pasal 58 — SISTEM DAN TRANSAKSI ELEKTRONIK"
+      "source": "PERATURAN PEMERINTAH 82/2012 Pasal 58 — SISTEM DAN TRANSAKSI ELEKTRONIK",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "82",
+          "year": 2012,
+          "about": "PENYELENGGARAAN SISTEM DAN TRANSAKSI ELEKTRONIK",
+          "article": "Pasal 58"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "281179"
+      ]
     },
     {
       "id": "q010",
       "type": "underspecified",
       "difficulty": "hard",
       "query": "Denda apa yang dikenakan kalau melanggar aturan cukai untuk pertama kalinya?",
-      "answer_chunks": ["13", "20", "21", "22", "23", "25", "27", "28", "29"],
       "source": "PERATURAN PEMERINTAH 26/2009 Pasal 14, 23, 25, 26, 27, 31, 35, 36, 37",
-      "note": "! The question has NINE correct answers. PP 26/2009 sets a different first-offence fine for each kind of breach — Rp1jt, Rp2,5jt, Rp5jt, Rp10jt, Rp20jt, Rp25jt, and two expressed as multiples of the excise value. Any one of them is a correct retrieval. Kept as-is because users really do ask questions this shape; scoring it against a single chunk would have been a fabricated failure."
+      "note": "! The question has NINE correct answers. PP 26/2009 sets a different first-offence fine for each kind of breach — Rp1jt, Rp2,5jt, Rp5jt, Rp10jt, Rp20jt, Rp25jt, and two expressed as multiples of the excise value. Any one of them is a correct retrieval. Kept as-is because users really do ask questions this shape; scoring it against a single chunk would have been a fabricated failure.",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 14"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 26"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 27"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 31"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 35"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 36"
+        },
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "26",
+          "year": 2009,
+          "about": "TATA CARA PENGENAAN SANKSI ADMINISTRASI BERUPA DENDA DI BIDANG CUKAI",
+          "article": "Pasal 37"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "13",
+        "20",
+        "21",
+        "22",
+        "23",
+        "25",
+        "27",
+        "28",
+        "29"
+      ]
     },
     {
       "id": "q011",
@@ -143,263 +333,609 @@
       "type": "exact_ref",
       "difficulty": "easy",
       "query": "Undang-Undang Nomor 4 Tahun 2009 tentang pertambangan",
-      "answer_chunks": ["683640"],
       "answer_regulation": {
         "regulation_type": "UNDANG-UNDANG",
         "regulation_number": "4",
         "year": 2009
       },
       "source": "UNDANG-UNDANG 4/2009",
-      "note": "reference plus topic; both paths should agree"
+      "note": "reference plus topic; both paths should agree",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "4",
+          "year": 2009,
+          "about": "PERTAMBANGAN MINERAL DAN BATUBARA",
+          "article": "Pasal 5"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "683640"
+      ]
     },
-
     {
       "id": "q013",
       "type": "authority",
       "difficulty": "medium",
       "query": "Untuk unit transfusi darah tingkat provinsi, siapa yang mengeluarkan izinnya?",
-      "answer_chunks": ["269950"],
       "source": "PERATURAN PEMERINTAH 7/2011 Pasal 38 — PELAYANAN DARAH",
-      "note": "three tiers in one clause (Menteri / provinsi / kabupaten-kota); a hit must be the clause, not merely the topic"
+      "note": "three tiers in one clause (Menteri / provinsi / kabupaten-kota); a hit must be the clause, not merely the topic",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "7",
+          "year": 2011,
+          "about": "PELAYANAN DARAH",
+          "article": "Pasal 38"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "269950"
+      ]
     },
     {
       "id": "q014",
       "type": "authority",
       "difficulty": "hard",
       "query": "Siapa yang menetapkan syarat pengangkatan guru agama yang bukan lulusan sekolah keguruan?",
-      "answer_chunks": ["182934"],
-      "source": "PERATURAN PEMERINTAH 38/1992 Pasal 14 — TENAGA PENDIDIKAN"
+      "source": "PERATURAN PEMERINTAH 38/1992 Pasal 14 — TENAGA PENDIDIKAN",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "38",
+          "year": 1992,
+          "about": "TENAGA PENDIDIKAN",
+          "article": "Pasal 14"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "182934"
+      ]
     },
     {
       "id": "q015",
       "type": "authority",
       "difficulty": "hard",
       "query": "Siapa yang menetapkan status penggunaan aset rumah sakit umum daerah?",
-      "answer_chunks": ["625165"],
       "source": "PERATURAN WALIKOTA 22/2015 Pasal 5 — PENGELOLAAN ASET RSUD WANGAYA",
-      "note": "local tier · national-tier regulations dominate the corpus, so this checks routing does not simply prefer UU and PP"
+      "note": "local tier · national-tier regulations dominate the corpus, so this checks routing does not simply prefer UU and PP",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "22",
+          "year": 2015,
+          "about": "PENGELOLAAN ASET PADA RUMAH SAKIT UMUM DAERAH WANGAYA WALIKOTA DENPASAR, - a. bahwa untuk melaksanakan ketentuan",
+          "article": "Pasal 5"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "625165"
+      ]
     },
     {
       "id": "q016",
       "type": "numeric",
       "difficulty": "medium",
       "query": "Berapa hari batas waktu mencatatkan peristiwa penting setelah salinan penetapan pengadilan diterima?",
-      "answer_chunks": ["724144"],
-      "source": "UNDANG-UNDANG 23/2006 Pasal 56 — ADMINISTRASI KEPENDUDUKAN"
+      "source": "UNDANG-UNDANG 23/2006 Pasal 56 — ADMINISTRASI KEPENDUDUKAN",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "23",
+          "year": 2006,
+          "about": "ADMINISTRASI KEPENDUDUKAN",
+          "article": "Pasal 56"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "724144"
+      ]
     },
     {
       "id": "q017",
       "type": "numeric",
       "difficulty": "hard",
       "query": "Berapa lama surat penagihan kerugian negara harus diterbitkan setelah surat pernyataan tanggung jawab ditetapkan?",
-      "answer_chunks": ["266318"],
-      "source": "PERATURAN PEMERINTAH 38/2016 Pasal 40 — TUNTUTAN GANTI KERUGIAN NEGARA"
+      "source": "PERATURAN PEMERINTAH 38/2016 Pasal 40 — TUNTUTAN GANTI KERUGIAN NEGARA",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "38",
+          "year": 2016,
+          "about": "TATA CARA TUNTUTAN GANTI KERUGIAN NEGARA/DAERAH TERHADAP PEGAWAI NEGERI BUKAN BENDAHARA ATAU PEJABAT LAIN",
+          "article": "Pasal 40"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "266318"
+      ]
     },
     {
       "id": "q018",
       "type": "numeric",
       "difficulty": "medium",
       "query": "Berapa persen dana desa yang dicairkan pada tahap pertama dan pada bulan apa?",
-      "answer_chunks": ["280334"],
-      "source": "PERATURAN PEMERINTAH 60/2014 Pasal 16 — DANA DESA"
+      "source": "PERATURAN PEMERINTAH 60/2014 Pasal 16 — DANA DESA",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "60",
+          "year": 2014,
+          "about": "DANA DESA YANG BERSUMBER DARI ANGGARAN PENDAPATAN DAN BELANJA NEGARA",
+          "article": "Pasal 16"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "280334"
+      ]
     },
     {
       "id": "q019",
       "type": "numeric",
       "difficulty": "medium",
       "query": "Berapa lama rekaman siaran wajib disimpan oleh lembaga penyiaran publik?",
-      "answer_chunks": ["57691"],
-      "source": "PERATURAN PEMERINTAH 11/2005 Pasal 43 — PENYIARAN LEMBAGA PENYIARAN PUBLIK"
+      "source": "PERATURAN PEMERINTAH 11/2005 Pasal 43 — PENYIARAN LEMBAGA PENYIARAN PUBLIK",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "11",
+          "year": 2005,
+          "about": "PENYELENGGARAAN PENYIARAN LEMBAGA PENYIARAN PUBLIK",
+          "article": "Pasal 43"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "57691"
+      ]
     },
     {
       "id": "q020",
       "type": "numeric",
       "difficulty": "medium",
       "query": "Berapa lama izin usaha industri dapat dibekukan?",
-      "answer_chunks": ["277361"],
-      "source": "PERATURAN PEMERINTAH 2/2017 Pasal 78 — SARANA DAN PRASARANA INDUSTRI"
+      "source": "PERATURAN PEMERINTAH 2/2017 Pasal 78 — SARANA DAN PRASARANA INDUSTRI",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "2",
+          "year": 2017,
+          "about": "PEMBANGUNAN SARANA DAN PRASARANA INDUSTRI",
+          "article": "Pasal 78"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "277361"
+      ]
     },
     {
       "id": "q021",
       "type": "numeric",
       "difficulty": "hard",
       "query": "Berapa lama komisaris yang mewakili Menteri harus menyampaikan penilaian atas laporan direksi?",
-      "answer_chunks": ["216703"],
-      "source": "PERATURAN PEMERINTAH 55/1990 Pasal 11 — PERSERO YANG MENJUAL SAHAM KEPADA MASYARAKAT"
+      "source": "PERATURAN PEMERINTAH 55/1990 Pasal 11 — PERSERO YANG MENJUAL SAHAM KEPADA MASYARAKAT",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "55",
+          "year": 1990,
+          "about": "PERUSAHAAN PERSEROAN (PERSERO) YANG MENJUAL SAHAMNYA KEPADA MASYARAKAT MELALUI PASAR MODAL",
+          "article": "Pasal 11"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "216703"
+      ]
     },
     {
       "id": "q022",
       "type": "numeric",
       "difficulty": "hard",
       "query": "Kapan surat pemberitahuan pajak mineral bukan logam harus disampaikan kepada Bupati?",
-      "answer_chunks": ["286222"],
       "source": "PERATURAN DAERAH KABUPATEN 1/2010 Pasal 10 — PAJAK MINERAL BUKAN LOGAM",
-      "note": "local tier, and the clause says 'selambat-lambatnya' where most of the corpus says 'paling lambat' — a stemmer-level near-miss"
+      "note": "local tier, and the clause says 'selambat-lambatnya' where most of the corpus says 'paling lambat' — a stemmer-level near-miss",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2010,
+          "about": "Pajak Pengambilan dan Pengolahan Mineral Bukan Logam dan Batuan ; - b. bahwa untuk memungut pajak sebagaimana dimaksud pada huruf a peri u ditetapkan perlu ditetapkan dengan · \" \" aturan Daerah. : 1 Undang-Undang No~nor 13 Tenun 1964 tentang Penetapan Perataan Perennt:.h Pengganti Undang-Undang Nomor 2 1&gt;run 1964 tentang Pembentukan Daerah Tingkcl I Sulawesi Tengah dan Daerah Tingkat ! Sulawee; Tenggara dengan mengubah Undang-undang Nomor 47 Prp. Tahun 1960 tentang Pembentukan Daerah Tingkat I Sulawesi Utara-Tengah dan Daerah Tingkat I Sulawesi Selatan-Yenggara (Lembaran Negara Republik Indonesia Tahun 1964 Nomor 94, Tambahan Lembaran Negara Republik Indonesia Nomor 2687); 2. Undang-Undang Nomor 11 Tahun 1967 tentang Ketentuan Pokok-Pokok Pertambangan (Lembaran Negara Republik Indonesia Tahun 1967 Nomor 22, Tambahan Lembaran Negara Republik Indonesia Nomor 2831); 3. Undang-undang Nomor 8 Tahun 1981 tentang Hukum Acara Pidana (Lembaran Negara Republik Indonesia Tahun 1981 Nomor .76, Tambahan Lembaran Negara Republik Indonesia Nomor 3209); 4. Undang-undang Nomor 17 Tahun 1997 tentang Badan Penyelesaian Sengketa Pajak (Lembaran Negara Republik Indonesia Tahun 1997 Nomor 40, Tambahan Lembaran Negara Republik Indonesia Nomor 3684); 5. Undang-undang Nomor 18 Tahun 1997 tentang Pajak Daerah dan Retribusi Daerah (Lembaran Negara Republik Indonesia Tahun 1997 Nomor 41, Tambahan Lembaran Negara Republik Indonesia Nomor 3685), sebagaimana telah diubah dengan Undang-undang Nomor 34 Tahun 2000 tentang Pajak Daerah dan Retribusi Daerah (Lembaran Negara Republik Indonesia Tahun 2000 Nomor 246, Tambahan Lembaran Negara Republik Indonesia Nomor 4048); 6. Undang-undang Nomor 23 Tahun 1997 tentang Pengelolaan Lingkungan Hidup (Lembaran Negara Republimk Indonesia Tahun 1997 Nomor 68, Tambahan Lembaran Negara Republik Indonesia Nomor 3699); 7. Undang-undang Nomor 19 Tahun 2000 tentang Penagihan Pajak Dengan Surat Paksa (Lembaran Negara Republik Indonesia Tahun 2000 Nomor 129 Tambahan Lembaran Negara Republik Indonesia Nomor 3987); 8. Undang-undang Nomor 28 Tahun 1999 tentang Penyelenggaraan Negara yang Bersih dan Bebas dari Korupsi, Kolusi, dan Nepotisme (Lembaran Negara Republik Indonesia Tahun 1999 Nomor 75, Tambahan Lembaran Negara Republik Indonesia Nomor 3815); 9. Undang-undang Nomor 19 Tahun 2000 tentang Penagihan Pajak dengan Surat Paksa (Lembaran Negara Republik Indonesia Tahun 2000 Nomor 129, Tambahan Lembaran Negara Republik Indonesia Nomor 3987); Bagian Organisasi dan Hukum Setda Kabupaten Buton Utara Tahun 2009 10. Undang-undang Nomor 30 Tahun 2000 tentang Komisi Pemberantasan Tindak Pidana Korupsi (Lembaran Negara Republik Indonesia Tahun 2000 Nomor 137, Tambahan Lembaran Negara Republik Indonesia Nomor 4250); 11. Undang-undang Nomor 10 Tahun 2004 tentang Pembentukan Peraturan Perundang-undangan (Lembaran Negara Republik Indonesia Tahun 2004 Nomor 53, Tambahan Lembaran Negara Republik Indonesia Nomor 4389); 12. Undang-undang Nomor 32 Tahun 2004 tentang Pemerintah Daerah (Lembaran Negara Republik Indonesia 2004 Nomor 125, Tambahan Lembaran Negara Republik Idonesia Nomor 4437), sebagaimana telah diubah beberapa kali terakhir dengan Undang-undang Nomor 12 Tahun 2008 tentang Perubahan kedua Atas Undang-undang Nomor 32 Tahun 2004 tentang Pemerintah Daerah (Lembaran Negara Republik Indonesia Tahun 2008 Nomor 59, Tambahan Lembaran Negara Republik Indonesia Nomor 4844); 13. Undang-undang Nomor 33 Tahun 2004 tentang Perimbangan Keuangan antara Pemerintah Pusat dan Daerah (Lembaran Negara Republik Indonesia Tahun 2004 Nomor 126, (Tambahan Lembaran Negara Republik Indonesia Nomor 4438); 14. Undang-undang Nomor 14 Tahun 2007 tentang Pembentukan Kabupaten Buton Utara di Provinsi Sulawesi Tenggara (Lembaran Negara Republik Indonesia Tahun 2007 Nomor 16, Tambahan Lembaran Negara Republik Indonesia Nomor 4548); 15. Undang-Undr-'g Nomor 26 Tahun 2007 tentang Penataan Ruang (Lembaran Negara Republik Indonesia Tahun 2007 Nomor 68, Tambahan Lembaran Negara republik Indonesia Nomor 4725); 16. Undang-Undang Nomor 4 Tahun 2009 tentang Pertambangan Mineral Dan Batubara (Lembaran Negara Republik Indonesia Tahun 2009 Nomor 4, Tambahan Lembaran Negara; Republik Indonesia Nomor 4959); 8. M7/ Undang-undang Nomor 28 Tahun 2009 tentang Pajak Daerah dan Retribusi Daerah (Lembaran Negara Republik Indonesia Tahun 2000, Nomor 130, Tambahan Lembaran Negara Republik Indonesia Nomor 5049); 18. Peraturan Pemerintah Nomor 27 Tahun 1983 tentang Pelaksanaan Kitab Undang-undang Hukum Acara Pidana (Lembaran Negara Republik Indonesia Tahun 1983 Nomor 36, Tambahan Lembaran Negara Indonesia Nomor 3258); 19. Peraturan Pemerintah Nomor 6 Tahun 1988 tentang Koordinasi ' Kegiatan Instansi Vertikal di Daerah (Lembaran Negara Republik Indonesia Tahun 1988 Nomor 10, Tambahan Lembaran Negara Republik Indonesia Nomor 3373); 20. Peraturan Pemerintah Nomor 79 Tahun 1992 tentang Perubahan Peraturan Pemerintah Nomor 31 Tahun 1969 tentang Pelaksanaan Undang-undang Nomor 11 Tahun 1967 tentang Ketentuanketentuan Pokok Pertambangan (Lembaran Negara Republik Indonesia Tahun 1992 Nomor 130, Tambahan Lembaran Negara Republik Indonesia Nomor 3510); 21. Peraturan Pemerintah Nomor 27 Tahun 1999 tentang Analisis Mengenai Dampak Lingkungan Hidup (Lembaran Negara Republik Indonesia Tahun 1999 Nomor 59, Tambahan Lembaran Negara Republik Indonesia Nomor 3838); 22. Peraturan Pemerintah Nomor 65 Tahun 2001 tentang Pajak Daerah (Lembaran Negara Republik Indonesia Tahun 2001 Nomor 118, Tambahan Lembaran Negara Republik Indonesia'Nomor 4138); 23. Peraturan Pemerintah Nomor 79 Tahun 2005 tentang Pedoman &gt; Pembinaan dan Pengawasan Penyelenggaraan Pemerintahan Daerah (Lembaran Negara Republik Indonesia Tahun 2005 Nomor 165, Lembaran Negara Republik Indonesia Nomor 4593); 24. Peraturan Pemerintah Nomor 38 Tahun 2007 tentang Pembagian Urusan Pemerintahan Antara Pemerintah, Pemerintah Daerah Provinsi, dan Pemerintah Daerah Kabupaten/Kota (Lembaran Negara Republik Indonesia Tahun 2007 Nomor 82, Tambahan Lembaran Negara Republik Indonesia Nomor 4737); 25. Peraturan Menteri Dalam Negeri Nomor 15 Tahun 2006 tentang Jenis dan Bentuk Hukum Daerah; Bagian Organisasi dan Hukum Setda Kabupaten Buton Utara",
+          "article": "Pasal 10"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "286222"
+      ]
     },
     {
       "id": "q023",
       "type": "numeric",
       "difficulty": "hard",
       "query": "Bisakah tenggat putusan pembubaran ormas diperpanjang, dan siapa yang harus menyetujui?",
-      "answer_chunks": ["650368"],
       "source": "UNDANG-UNDANG 17/2013 Pasal 71 — ORGANISASI KEMASYARAKATAN",
-      "note": "two-part question answered by one clause (60 days, +20 days with the Chief Justice's approval)"
+      "note": "two-part question answered by one clause (60 days, +20 days with the Chief Justice's approval)",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "17",
+          "year": 2013,
+          "about": "ORGANISASI KEMASYARAKATAN",
+          "article": "Pasal 71"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "650368"
+      ]
     },
     {
       "id": "q024",
       "type": "sanction",
       "difficulty": "medium",
       "query": "Apa hukuman bagi orang yang sengaja merusak peralatan pencarian dan pertolongan?",
-      "answer_chunks": ["633200"],
-      "source": "UNDANG-UNDANG 29/2014 Pasal 82 — PENCARIAN DAN PERTOLONGAN"
+      "source": "UNDANG-UNDANG 29/2014 Pasal 82 — PENCARIAN DAN PERTOLONGAN",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "29",
+          "year": 2014,
+          "about": "PENCARIAN DAN PERTOLONGAN",
+          "article": "Pasal 82"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "633200"
+      ]
     },
     {
       "id": "q025",
       "type": "sanction",
       "difficulty": "medium",
       "query": "Sanksi apa yang bisa dijatuhkan kepada pengelola stasiun pengamatan cuaca yang melanggar aturan?",
-      "answer_chunks": ["671012"],
-      "source": "UNDANG-UNDANG 31/2009 Pasal 59 — METEOROLOGI, KLIMATOLOGI, DAN GEOFISIKA"
+      "source": "UNDANG-UNDANG 31/2009 Pasal 59 — METEOROLOGI, KLIMATOLOGI, DAN GEOFISIKA",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "31",
+          "year": 2009,
+          "about": "METEOROLOGI, KLIMATOLOGI, DAN GEOFISIKA",
+          "article": "Pasal 59"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "671012"
+      ]
     },
     {
       "id": "q026",
       "type": "sanction",
       "difficulty": "hard",
       "query": "Apa yang terjadi kalau lembaga penyiaran publik sudah tiga kali mendapat teguran tertulis?",
-      "answer_chunks": ["57687"],
       "source": "PERATURAN PEMERINTAH 11/2005 Pasal 39 — PENYIARAN LEMBAGA PENYIARAN PUBLIK",
-      "note": "escalation question · Pasal 43 of the same regulation is a plausible near-miss"
+      "note": "escalation question · Pasal 43 of the same regulation is a plausible near-miss",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "11",
+          "year": 2005,
+          "about": "PENYELENGGARAAN PENYIARAN LEMBAGA PENYIARAN PUBLIK",
+          "article": "Pasal 39"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "57687"
+      ]
     },
     {
       "id": "q027",
       "type": "sanction",
       "difficulty": "hard",
       "query": "Apa akibatnya kalau penyedia teknologi tidak melakukan alih teknologi dalam proyek putar kunci?",
-      "answer_chunks": ["677462"],
-      "source": "UNDANG-UNDANG 3/2014 Pasal 39 — PERINDUSTRIAN"
+      "source": "UNDANG-UNDANG 3/2014 Pasal 39 — PERINDUSTRIAN",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "3",
+          "year": 2014,
+          "about": "PERINDUSTRIAN",
+          "article": "Pasal 39"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "677462"
+      ]
     },
     {
       "id": "q028",
       "type": "sanction",
       "difficulty": "hard",
       "query": "Kapan status terdaftar kantor akuntan publik asing bisa dibekukan?",
-      "answer_chunks": ["661432"],
-      "source": "UNDANG-UNDANG 5/2011 Pasal 39 — AKUNTAN PUBLIK"
+      "source": "UNDANG-UNDANG 5/2011 Pasal 39 — AKUNTAN PUBLIK",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "5",
+          "year": 2011,
+          "about": "AKUNTAN PUBLIK",
+          "article": "Pasal 39"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "661432"
+      ]
     },
     {
       "id": "q029",
       "type": "exception",
       "difficulty": "medium",
       "query": "Apakah makanan olahan buatan industri rumah tangga tetap wajib punya izin edar?",
-      "answer_chunks": ["666348"],
       "source": "UNDANG-UNDANG 18/2012 Pasal 91 — PANGAN",
-      "note": "the answer is the carve-out in ayat (2); returning only the general obligation would be wrong"
+      "note": "the answer is the carve-out in ayat (2); returning only the general obligation would be wrong",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "18",
+          "year": 2012,
+          "about": "PANGAN",
+          "article": "Pasal 91"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "666348"
+      ]
     },
     {
       "id": "q030",
       "type": "exception",
       "difficulty": "hard",
       "query": "Apakah semua penyembelihan hewan harus dilakukan di rumah potong hewan?",
-      "answer_chunks": ["641944"],
       "source": "UNDANG-UNDANG 18/2009 Pasal 61 — PETERNAKAN DAN KESEHATAN HEWAN",
-      "note": "answer is 'no' — religious-holiday slaughter is excepted; a yes-shaped retrieval is a real failure"
+      "note": "answer is 'no' — religious-holiday slaughter is excepted; a yes-shaped retrieval is a real failure",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "18",
+          "year": 2009,
+          "about": "PETERNAKAN DAN KESEHATAN HEWAN",
+          "article": "Pasal 61"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "641944"
+      ]
     },
     {
       "id": "q031",
       "type": "exception",
       "difficulty": "hard",
       "query": "Dalam perkara korupsi, siapa yang boleh menolak bersaksi karena wajib menyimpan rahasia?",
-      "answer_chunks": ["53639"],
-      "source": "UNDANG-UNDANG 31/1999 Pasal 36 — PEMBERANTASAN TINDAK PIDANA KORUPSI"
+      "source": "UNDANG-UNDANG 31/1999 Pasal 36 — PEMBERANTASAN TINDAK PIDANA KORUPSI",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "31",
+          "year": 1999,
+          "about": "PEMBERANTASAN TINDAK PIDANA KORUPSI",
+          "article": "Pasal 36"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "53639"
+      ]
     },
     {
       "id": "q032",
       "type": "obligation",
       "difficulty": "medium",
       "query": "Apa kewajiban pengelola tempat kerja terhadap kesehatan pekerjanya?",
-      "answer_chunks": ["622576"],
-      "source": "UNDANG-UNDANG 36/2009 Pasal 165 — KESEHATAN"
+      "source": "UNDANG-UNDANG 36/2009 Pasal 165 — KESEHATAN",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "36",
+          "year": 2009,
+          "about": "KESEHATAN",
+          "article": "Pasal 165"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "622576"
+      ]
     },
     {
       "id": "q033",
       "type": "obligation",
       "difficulty": "medium",
       "query": "Apakah pelabuhan wajib menyediakan peralatan penanggulangan pencemaran?",
-      "answer_chunks": ["638975"],
-      "source": "UNDANG-UNDANG 17/2008 Pasal 235 — PELAYARAN"
+      "source": "UNDANG-UNDANG 17/2008 Pasal 235 — PELAYARAN",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "17",
+          "year": 2008,
+          "about": "P E L A Y A R A N",
+          "article": "Pasal 235"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "638975"
+      ]
     },
     {
       "id": "q034",
       "type": "obligation",
       "difficulty": "hard",
       "query": "Apakah perusahaan asuransi diwajibkan memiliki perjanjian reasuransi otomatis?",
-      "answer_chunks": ["117939"],
       "source": "PERATURAN PEMERINTAH 63/1999 Pasal 15A — PERUBAHAN ATAS PP 73/1992 (ASURANSI)",
-      "note": "an amending regulation · the operative text sits inside quotation marks as a replacement article, which is a genuinely awkward shape to retrieve"
+      "note": "an amending regulation · the operative text sits inside quotation marks as a replacement article, which is a genuinely awkward shape to retrieve",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "63",
+          "year": 1999,
+          "about": "PERUBAHAN ATAS PERATURAN PEMERINTAH NOMOR 73 TAHUN 1992 TENTANG PENYELENGGARAAN USAHA PERASURANSIAN",
+          "article": "Pasal 15"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "117939"
+      ]
     },
     {
       "id": "q035",
       "type": "procedural",
       "difficulty": "hard",
       "query": "Bolehkah memakai air untuk kebutuhan sehari-hari selama izin penggunaannya masih diproses?",
-      "answer_chunks": ["276096"],
-      "source": "PERATURAN PEMERINTAH 69/2014 Pasal 19 — HAK GUNA AIR"
+      "source": "PERATURAN PEMERINTAH 69/2014 Pasal 19 — HAK GUNA AIR",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "69",
+          "year": 2014,
+          "about": "HAK GUNA AIR",
+          "article": "Pasal 19"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "276096"
+      ]
     },
     {
       "id": "q036",
       "type": "procedural",
       "difficulty": "hard",
       "query": "Apa akibatnya kalau pemerintah kabupaten tidak memperbaiki rancangan perda sesuai rekomendasi fasilitasi?",
-      "answer_chunks": ["19295"],
       "source": "PERATURAN GUBERNUR 35/2017 Pasal 14 — FASILITASI RANCANGAN PERATURAN DAERAH",
-      "note": "local tier"
+      "note": "local tier",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "35",
+          "year": 2017,
+          "about": "MEKANISME PELAKSANAAN FASILITASI TERHADAP RANCANGAN PERATURAN DAERAH KABUPATEN/KOTA DI JAWA TIMUR",
+          "article": "Pasal 14"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "19295"
+      ]
     },
     {
       "id": "q037",
       "type": "procedural",
       "difficulty": "medium",
       "query": "Bisakah pembayaran retribusi pasar dicicil atau ditunda?",
-      "answer_chunks": ["357726"],
       "source": "PERATURAN DAERAH KOTA 17/2011 Pasal 18 — RETRIBUSI PELAYANAN PASAR",
-      "note": "local tier · many regencies have near-identical retribution rules, so precision here is genuinely hard"
+      "note": "local tier · many regencies have near-identical retribution rules, so precision here is genuinely hard",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "17",
+          "year": 2011,
+          "about": "RETRIBUSI PELAYANAN PASAR",
+          "article": "Pasal 18"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "357726"
+      ]
     },
     {
       "id": "q038",
       "type": "procedural",
       "difficulty": "hard",
       "query": "Berapa lama wawancara seleksi berlangsung dan kapan hasilnya diumumkan panitia?",
-      "answer_chunks": ["735329"],
       "source": "PERATURAN PRESIDEN 76/2016 Pasal 26 — PEMILIHAN ANGGOTA BADAN PELAKSANA",
-      "note": "the source text has OCR damage ('(l)', '(21') — a real-corpus condition, not a reason to exclude it"
+      "note": "the source text has OCR damage ('(l)', '(21') — a real-corpus condition, not a reason to exclude it",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PRESIDEN",
+          "regulation_number": "76",
+          "year": 2016,
+          "about": "TATA CARA PEMILIHAN, PENGUSULAN, DAN PENETAPAN ANGGOTA BADAN PELAKSANA DAN ANGGOTA DEWAN PENGAWAS SERTA CALON ANGGOTA PENGGANTI ANTARWAKTU ANGGOTA BADAN PELAKSANA DAN ANGGOTA DEWAN PENGAWAS BADAN PENGELOLA KEUANGAN HAJI",
+          "article": "Pasal 26"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "735329"
+      ]
     },
     {
       "id": "q039",
       "type": "hard_negative",
       "difficulty": "hard",
       "query": "Apa batas wilayah sebelah utara Kabupaten Pidie Jaya?",
-      "answer_chunks": ["615010"],
-      "must_not_rank_first": ["730920", "19733", "620959", "648368"],
+      "must_not_rank_first": [
+        "730920",
+        "19733",
+        "620959",
+        "648368"
+      ],
       "source": "UNDANG-UNDANG 7/2007 Pasal 5 — PEMBENTUKAN KABUPATEN PIDIE JAYA",
-      "note": "! The strongest discrimination test in the set. Dozens of 'pembentukan kabupaten' laws carry a near-identical Pasal 5 differing only in place names, so lexical overlap is nearly total and only the specific regency separates right from wrong."
+      "note": "! The strongest discrimination test in the set. Dozens of 'pembentukan kabupaten' laws carry a near-identical Pasal 5 differing only in place names, so lexical overlap is nearly total and only the specific regency separates right from wrong.",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "7",
+          "year": 2007,
+          "about": "PEMBENTUKAN KABUPATEN PIDIE JAYA DI PROVINSI NANGGROE ACEH DARUSSALAM",
+          "article": "Pasal 5"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "615010"
+      ]
     },
     {
       "id": "q040",
       "type": "hard_negative",
       "difficulty": "hard",
       "query": "Provinsi Banten berbatasan dengan apa di sebelah timur?",
-      "answer_chunks": ["694093"],
-      "must_not_rank_first": ["730920", "615010", "19733"],
+      "must_not_rank_first": [
+        "730920",
+        "615010",
+        "19733"
+      ],
       "source": "UNDANG-UNDANG 23/2000 Pasal 5 — PEMBENTUKAN PROPINSI BANTEN",
-      "note": "same family as q039, province tier, and spelled 'Propinsi' in the source against 'Provinsi' in the question"
+      "note": "same family as q039, province tier, and spelled 'Propinsi' in the source against 'Provinsi' in the question",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "23",
+          "year": 2000,
+          "about": "PEMBENTUKAN PROPINSI BANTEN",
+          "article": "Pasal 5"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "694093"
+      ]
     },
     {
       "id": "q041",
       "type": "multi_tier",
       "difficulty": "hard",
       "query": "Kelas jalan kabupaten ditetapkan dengan keputusan siapa?",
-      "answer_chunks": ["275429", "668166"],
       "source": "PERATURAN PEMERINTAH 79/2013 Pasal 18 + UNDANG-UNDANG 22/2009 Pasal 20",
-      "note": "same clause pair as q003 but asking about a different tier of road · both clauses enumerate all four tiers"
+      "note": "same clause pair as q003 but asking about a different tier of road · both clauses enumerate all four tiers",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "79",
+          "year": 2013,
+          "about": "JARINGAN LALU LINTAS DAN ANGKUTAN JALAN",
+          "article": "Pasal 18"
+        },
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "22",
+          "year": 2009,
+          "about": "LALU LINTAS DAN ANGKUTAN JALAN",
+          "article": "Pasal 20"
+        }
+      ],
+      "answer_chunks_spike01": [
+        "275429",
+        "668166"
+      ]
     },
     {
       "id": "q042",
