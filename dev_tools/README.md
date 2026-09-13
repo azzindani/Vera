@@ -109,6 +109,37 @@ Results in [../docs/EVAL.md](../docs/EVAL.md) §4.
 python fixtures/seed.py
 ```
 
-Builds a ~30-row corpus in seconds so `store`'s `#[ignore]`d integration tests can run
-in CI. "Needs a database" stops meaning "never runs". This is what CI executes before
-`cargo test -p store -- --ignored`.
+Builds a ~33-row corpus in seconds so the `#[ignore]`d integration tests can run in CI.
+"Needs a database" stops meaning "never runs".
+
+```bash
+export DSN="host=localhost port=5432 dbname=vera_fx user=vera password=vera"
+
+DATABASE_URL="$DSN" python fixtures/seed.py          # seed (writes seed.dense.json)
+DATABASE_URL="$DSN" cargo test -p store -- --ignored     # the SQL layer   · 14 tests
+VERA_FX_DSN="$DSN" cargo test -p vera-mcp -- --ignored   # the pipeline    · 16 tests
+```
+
+! **The whole pipeline is testable without a GPU, and the startup canary still runs
+for real.** The fixture's dense vectors used to come from `random.Random(SEED)` in
+sequence, which no other language can reproduce — so the canary, which re-embeds a
+stored chunk and checks it lands where ingestion put it, could only be satisfied by a
+real embedding server. Everything above the SQL layer was therefore untestable in CI:
+routing, the domain gate, fusion, factor scoring, the option surface, the response
+contract.
+
+They are now a pure function of `(theme, body)`:
+
+```
+dense = normalize(0.95 · unit(theme) + 0.05 · unit(body))
+unit(s) = normalize(fnv_vector(s))       # mirrors embed::StubProvider::vector_for
+```
+
+`seed.dense.json` records the body → theme map, which is the only thing a provider
+cannot derive from the text it is handed. `FixtureProvider` in `crates/mcp/src/pipeline.rs`
+reproduces the formula, so `Pipeline::new` passes its canary at cosine 1.000 — **not
+bypassed**. A test constructor that skipped the canary would be a hole in invariant 3,
+and these tests exist partly to prove the canary works.
+
+! These test **mechanics, ✗ retrieval quality.** The vectors are derived from hashes
+and say nothing about meaning. `eval/e2e.py` is the only thing that scores quality.

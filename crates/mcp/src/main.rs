@@ -12,6 +12,7 @@ mod bm25;
 mod http;
 mod identifier;
 mod pipeline;
+mod protocol;
 mod tools;
 
 use std::sync::Arc;
@@ -22,12 +23,9 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 use pipeline::{Config, Pipeline};
 
-const PROTOCOL_VERSION: &str = "2024-11-05";
-
-/// JSON-RPC code for "at capacity, try again". The spec reserves
-/// -32768..=-32000 and defines only part of it; -32000 is where
-/// implementations are told to put their own.
-pub(crate) const BUSY_CODE: i64 = -32000;
+/// JSON-RPC codes and framing live in `protocol`, which is testable without a
+/// corpus. `BUSY_CODE` is re-exported because `http` maps it to 503.
+pub(crate) use protocol::BUSY_CODE;
 
 /// Log to stderr. ! Never stdout.
 macro_rules! log {
@@ -414,39 +412,28 @@ impl Server {
     /// Handle one JSON-RPC message. `None` means "notification, say nothing".
     pub(crate) async fn handle(&self, req: &Value) -> Option<Value> {
         let id = req.get("id").cloned();
-        let method = req.get("method").and_then(Value::as_str).unwrap_or("");
-        let params = req.get("params").cloned().unwrap_or(json!({}));
-
-        match method {
-            "initialize" => Some(ok(
+        match protocol::route(req) {
+            protocol::Route::Initialize => {
+                Some(protocol::ok(id.as_ref(), &protocol::initialize_result()))
+            }
+            protocol::Route::ToolsList => Some(protocol::ok(
                 id.as_ref(),
-                &json!({
-                    "protocolVersion": PROTOCOL_VERSION,
-                    "serverInfo": { "name": "vera", "version": env!("CARGO_PKG_VERSION") },
-                    "capabilities": { "tools": {} }
-                }),
+                &json!({ "tools": tools::definitions() }),
             )),
-            "tools/list" => Some(ok(id.as_ref(), &json!({ "tools": tools::definitions() }))),
-            "tools/call" => {
+            protocol::Route::ToolsCall(params) => {
+                // ! The permit is taken BEFORE dispatch and dropped after, so
+                // the ceiling bounds work in flight rather than requests
+                // accepted.
                 let Some(permit) = self.admit().await else {
-                    return Some(busy(id.as_ref(), self.queue_wait));
+                    return Some(protocol::busy(id.as_ref(), self.queue_wait));
                 };
                 let out = dispatch(&self.pipe, &params, self.limits).await;
                 drop(permit);
-                Some(ok(
-                    id.as_ref(),
-                    &json!({
-                        "content": [{ "type": "text", "text": out.to_string() }]
-                    }),
-                ))
+                Some(protocol::ok(id.as_ref(), &protocol::tool_content(&out)))
             }
             // Notifications carry no id and must not be answered.
-            m if m.starts_with("notifications/") => None,
-            other => Some(json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "error": { "code": -32601, "message": format!("method not found: {other}") }
-            })),
+            protocol::Route::Notification => None,
+            protocol::Route::Unknown(m) => Some(protocol::method_not_found(id.as_ref(), &m)),
         }
     }
 
@@ -474,27 +461,6 @@ async fn admit_within(
             .ok()?
             .ok(),
     }
-}
-
-fn ok(id: Option<&Value>, result: &Value) -> Value {
-    json!({ "jsonrpc": "2.0", "id": id, "result": result })
-}
-
-/// ! Backpressure is an answer, ✗ a failure. It states that the request was
-/// never attempted, which is what makes a retry safe — a generic 500 does not
-/// carry that, and a client that cannot tell the difference must assume the
-/// worst and stop.
-fn busy(id: Option<&Value>, waited: Option<std::time::Duration>) -> Value {
-    let ms = waited.map_or(0, |d| d.as_millis());
-    json!({
-        "jsonrpc": "2.0",
-        "id": id,
-        "error": {
-            "code": BUSY_CODE,
-            "message": format!("at capacity · waited {ms}ms for a slot · retry"),
-            "data": { "retry": true }
-        }
-    })
 }
 
 async fn dispatch(pipe: &Pipeline, params: &Value, limits: Limits) -> Value {
@@ -886,7 +852,7 @@ mod tests {
 
     #[test]
     fn a_refusal_says_it_is_retryable() {
-        let v = busy(Some(&json!(7)), Some(ms(1500)));
+        let v = protocol::busy(Some(&json!(7)), Some(ms(1500)));
         assert_eq!(v["error"]["code"], BUSY_CODE);
         assert_eq!(v["id"], 7, "a refusal must answer the id it refused");
         // ! The client has to be able to tell "never attempted" from "failed

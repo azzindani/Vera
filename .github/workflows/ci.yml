@@ -154,8 +154,20 @@ jobs:
       # ! --ignored, not --include-ignored. These tests are the point of this
       # job; running the hermetic suite again here would only hide them in the
       # noise of the ones the matrix already ran on three platforms.
-      - name: Integration tests
+      - name: Integration tests · the SQL layer
         run: cargo test -p store --locked -- --ignored --nocapture
+
+      # ! The WHOLE pipeline, startup canary included, with no embedding server.
+      # The fixture's dense vectors are a pure function of (theme, body), so
+      # FixtureProvider reproduces them exactly and the canary passes for real
+      # rather than being bypassed. Before this, everything above the SQL layer
+      # -- routing, the domain gate, fusion, factor scoring, the option
+      # surface, the response contract -- was reachable only on a machine with
+      # a GPU, which meant CI never touched it.
+      - name: Integration tests · the pipeline
+        env:
+          VERA_FX_DSN: host=localhost port=5432 dbname=vera user=vera password=vera
+        run: cargo test -p vera-mcp --locked -- --ignored --nocapture
 
   # ! The job that closes FAILURE_MODES §13. `SearchOps::text` has two SQL
   # paths and picks by probing for the RUM index; the `integration` job above
@@ -236,6 +248,15 @@ jobs:
 
       - name: Integration tests against the RUM path
         run: cargo test -p store --locked -- --ignored --nocapture
+
+      # ! The pipeline over the RUM text arm, which is the query that actually
+      # ships. The job above runs the same tests on a Postgres without RUM, so
+      # between them both branches of `SearchOps::text` are exercised end to
+      # end rather than only at the SQL layer.
+      - name: Pipeline tests against the RUM path
+        env:
+          VERA_FX_DSN: host=localhost port=5432 dbname=vera user=vera password=vera
+        run: cargo test -p vera-mcp --locked -- --ignored --nocapture
 
   # The engine image is built here for the same reason: so a broken Dockerfile
   # fails the pull request, ✗ the deploy. No registry push — CI proves it

@@ -895,3 +895,500 @@ mod tests {
         assert!(locator_of(&row(Some("N/A"), Some(""))).is_none());
     }
 }
+
+// ---------------------------------------------------------------------------
+// Live pipeline tests · the whole engine, no embedding server, no GPU.
+//
+// ! These need the FIXTURE corpus, not the real one:
+//
+//     DATABASE_URL="host=... dbname=vera_fx ..." python dev_tools/fixtures/seed.py
+//     VERA_FX_DSN="host=... dbname=vera_fx ..." cargo test -p vera-mcp -- --ignored
+//
+// The fixture's dense vectors are a pure function of (theme, body)
+// (`dev_tools/fixtures/seed.py`), so `FixtureProvider` below reproduces them
+// exactly and the STARTUP CANARY PASSES FOR REAL rather than being bypassed. A
+// test constructor that skipped the canary would be a hole in invariant 3, and
+// these tests exist partly to prove the canary works.
+//
+// ! What these do NOT test is retrieval quality. The vectors are derived from
+// hashes and say nothing about meaning; `dev_tools/eval/e2e.py` is the only
+// thing that scores that. These test MECHANICS -- that options are honoured,
+// that the pool is built and cut in the right order, that factors reorder
+// rather than filter, and that the contract comes back whole.
+// ---------------------------------------------------------------------------
+#[cfg(test)]
+mod live {
+    use super::*;
+    use std::collections::HashMap;
+
+    const DIM: usize = 1024;
+    const FIXTURE_MODEL: &str = "qwen/qwen3-embedding-0.6b";
+
+    fn dsn() -> String {
+        std::env::var("VERA_FX_DSN").expect("set VERA_FX_DSN to the fixture database")
+    }
+
+    /// Reproduces `dev_tools/fixtures/seed.py::dense_for`.
+    ///
+    /// ! Pinned to the Python by `the_provider_reproduces_the_stored_vectors`,
+    /// which is the canary in miniature. Two implementations of one formula
+    /// drift silently otherwise.
+    struct FixtureProvider {
+        /// body text -> theme, read from `seed.dense.json`.
+        themes: HashMap<String, String>,
+        theme_share: f32,
+    }
+
+    impl FixtureProvider {
+        fn load() -> Self {
+            let path = concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../dev_tools/fixtures/seed.dense.json"
+            );
+            let raw = std::fs::read_to_string(path)
+                .unwrap_or_else(|e| panic!("run dev_tools/fixtures/seed.py first · {path}: {e}"));
+            let v: serde_json::Value = serde_json::from_str(&raw).expect("seed.dense.json");
+            let themes = v["bodies"]
+                .as_object()
+                .expect("bodies")
+                .iter()
+                .map(|(k, t)| (k.clone(), t.as_str().unwrap_or_default().to_owned()))
+                .collect();
+            #[allow(clippy::cast_possible_truncation)]
+            let theme_share = v["theme_share"].as_f64().unwrap_or(0.95) as f32;
+            Self {
+                themes,
+                theme_share,
+            }
+        }
+
+        fn unit_of(text: &str) -> Vec<f32> {
+            Self::normalize(embed::StubProvider::vector_for(text, DIM))
+        }
+
+        fn normalize(mut v: Vec<f32>) -> Vec<f32> {
+            let n = v
+                .iter()
+                .map(|x| x * x)
+                .sum::<f32>()
+                .sqrt()
+                .max(f32::EPSILON);
+            for x in &mut v {
+                *x /= n;
+            }
+            v
+        }
+
+        /// The vector for a known body · exactly what ingestion stored.
+        fn dense_for(&self, theme: &str, body: &str) -> Vec<f32> {
+            let t = Self::unit_of(theme);
+            let b = Self::unit_of(body);
+            let s = self.theme_share;
+            Self::normalize(
+                t.iter()
+                    .zip(&b)
+                    .map(|(ti, bi)| s * ti + (1.0 - s) * bi)
+                    .collect(),
+            )
+        }
+
+        /// The themes this fixture holds, so a test can aim at a cluster.
+        fn theme_names(&self) -> Vec<String> {
+            let mut t: Vec<String> = self.themes.values().cloned().collect();
+            t.sort();
+            t.dedup();
+            t
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl embed::EmbeddingProvider for FixtureProvider {
+        async fn embed_query(&self, text: &str) -> Result<Vec<f32>, embed::EmbedError> {
+            // A stored body: reproduce ingestion exactly. This is the path the
+            // startup canary takes.
+            if let Some(theme) = self.themes.get(text) {
+                return Ok(self.dense_for(theme, text));
+            }
+            // A query: route by a theme word when one is present, so a test can
+            // aim at a cluster deliberately. Otherwise an arbitrary direction,
+            // which is honest -- a hash-based fixture has no semantics.
+            for theme in self.theme_names() {
+                if text.to_lowercase().contains(&theme) {
+                    return Ok(Self::unit_of(&theme));
+                }
+            }
+            Ok(Self::unit_of(text))
+        }
+
+        fn describe(&self) -> String {
+            format!("fixture(dim={DIM}, bodies={})", self.themes.len())
+        }
+    }
+
+    async fn pipeline(cfg: Config) -> Pipeline {
+        let ops = SearchOps::new(store::connect(&dsn(), 4, 15_000).expect("pool"));
+        let vocab = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../dev_tools/fixtures/seed.bm25.json"
+        );
+        let vectorizer = QueryVectorizer::load(std::path::Path::new(vocab)).expect("vocab");
+        Pipeline::new(
+            ops,
+            Arc::new(FixtureProvider::load()),
+            vectorizer,
+            FIXTURE_MODEL,
+            cfg,
+        )
+        .await
+        .expect("pipeline · did the canary fail?")
+    }
+
+    /// Floors off, so the domain gate cannot swallow a mechanics test. The gate
+    /// has its own tests below, which use the real floors.
+    fn open_cfg() -> Config {
+        Config {
+            domain_floor: -1.0,
+            domain_lexical_floor: -1.0,
+            ..Config::default()
+        }
+    }
+
+    fn no_factors() -> contract::FactorWeights {
+        contract::FactorWeights {
+            authority: 0.0,
+            structural: 0.0,
+            temporal: 0.0,
+            completeness: 0.0,
+            topical: 0.0,
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn the_provider_reproduces_the_stored_vectors() {
+        // ! The canary in miniature, and the reason every test below can run
+        // without a GPU. If seed.py's formula and FixtureProvider's ever
+        // diverge, this fails first and names the drift.
+        let ops = SearchOps::new(store::connect(&dsn(), 2, 15_000).expect("pool"));
+        let (id, body, stored) = ops.canary_sample().await.expect("canary sample");
+        let p = FixtureProvider::load();
+        let fresh = embed::EmbeddingProvider::embed_query(&p, &body)
+            .await
+            .expect("embed");
+        let got = cosine(&fresh, &stored);
+        assert!(got >= 0.999, "chunk {id} round-tripped at {got:.6}");
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn a_search_returns_a_whole_contract() {
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with("kelas jalan", &contract::SearchOptions::default())
+            .await
+            .expect("search");
+
+        assert!(r.success);
+        assert_eq!(r.op, "search_knowledge");
+        assert!(!r.results.is_empty(), "fixture should match 'kelas jalan'");
+        assert!(r.token_estimate > 0, "an unset estimate is a broken budget");
+        assert!(
+            !r.progress.is_empty(),
+            "progress is how routing is auditable"
+        );
+        for res in &r.results {
+            assert!(!res.id.is_empty(), "a result must be addressable");
+            assert!(!res.snippet.is_empty(), "a result must be quotable");
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn the_applied_options_come_back_even_when_none_were_sent() {
+        // "The defaults were used" is itself the reproducibility record.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with("retribusi", &contract::SearchOptions::default())
+            .await
+            .expect("search");
+        let a = r.applied.expect("applied must always be present");
+        assert_eq!(a.mode, contract::Mode::Hybrid);
+        assert_eq!(a.top_k, Config::default().top_k);
+        assert!(!a.experimental);
+        assert!(a.clamped.is_empty());
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn top_k_narrows_the_answer() {
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "jalan",
+                &contract::SearchOptions {
+                    top_k: Some(2),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        assert!(r.results.len() <= 2, "got {}", r.results.len());
+        assert_eq!(r.applied.expect("applied").top_k, 2);
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn a_caller_cannot_widen_past_the_server_ceiling() {
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "jalan",
+                &contract::SearchOptions {
+                    top_k: Some(9_999),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        let a = r.applied.clone().expect("applied");
+        assert_eq!(a.top_k, Config::default().top_k);
+        assert!(!a.clamped.is_empty(), "the clamp must be reported");
+        // And visible without reading the server's configuration.
+        assert!(
+            r.progress.iter().any(|l| l.contains("clamped")),
+            "{:?}",
+            r.progress
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn keyword_mode_still_answers_without_the_dense_arm() {
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "kelas jalan",
+                &contract::SearchOptions {
+                    mode: Some(contract::Mode::Keyword),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        assert!(!r.results.is_empty(), "the lexical arms carry this corpus");
+        assert_eq!(r.applied.expect("applied").mode, contract::Mode::Keyword);
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn semantic_mode_is_served_and_labelled() {
+        // Dense scores 0.0% on the real corpus. Serving it silently would be
+        // the dishonest option; the hint is the contract.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "energi",
+                &contract::SearchOptions {
+                    mode: Some(contract::Mode::Semantic),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        let hint = r.hint.unwrap_or_default();
+        assert!(hint.contains("semantic"), "hint was {hint:?}");
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn caller_supplied_weights_are_marked_and_echoed() {
+        let p = pipeline(open_cfg()).await;
+        let mine = contract::FactorWeights {
+            authority: 1.5,
+            ..no_factors()
+        };
+        let r = p
+            .search_with(
+                "jalan",
+                &contract::SearchOptions {
+                    factor_weights: Some(mine),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        let a = r.applied.expect("applied");
+        assert!(a.experimental);
+        assert_eq!(a.factor_weights, mine, "the ranking must be reproducible");
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn factors_reorder_but_never_filter() {
+        // The layer changes order. It must never drop or invent a candidate --
+        // that would make a recall change impossible to attribute.
+        let p = pipeline(open_cfg()).await;
+        let base = p
+            .search_with(
+                "bangunan gedung",
+                &contract::SearchOptions {
+                    factor_weights: Some(no_factors()),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        let scored = p
+            .search_with("bangunan gedung", &contract::SearchOptions::default())
+            .await
+            .expect("search");
+        assert_eq!(
+            base.results.len(),
+            scored.results.len(),
+            "factors must reorder, not filter"
+        );
+        let mut a: Vec<&str> = base.results.iter().map(|r| r.id.as_str()).collect();
+        let mut b: Vec<&str> = scored.results.iter().map(|r| r.id.as_str()).collect();
+        a.sort_unstable();
+        b.sort_unstable();
+        assert_eq!(a, b, "the same candidates, in a different order");
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn zeroed_factor_weights_are_the_identity_on_the_fused_order() {
+        // The layer must be switchable off in production without a rebuild,
+        // and "off" has to mean exactly the order fusion produced.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "jalan",
+                &contract::SearchOptions {
+                    factor_weights: Some(no_factors()),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        let scores: Vec<f32> = r.results.iter().map(|x| x.score).collect();
+        assert!(
+            scores.windows(2).all(|w| w[0] >= w[1]),
+            "fused order must be monotonic when factors are off: {scores:?}"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn an_identifier_query_finds_the_named_regulation() {
+        // Invariant 4: the exact path is never gated by routing. Run it with
+        // the REAL floors, which is the condition that matters.
+        let p = pipeline(Config::default()).await;
+        let r = p
+            .search_with(
+                "PERATURAN PEMERINTAH 26 tahun 2009",
+                &contract::SearchOptions::default(),
+            )
+            .await
+            .expect("search");
+        assert!(
+            !r.exact_matches.is_empty(),
+            "identifier path returned nothing · progress: {:?}",
+            r.progress
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn a_question_this_corpus_cannot_answer_is_refused_not_guessed() {
+        // Invariant 13, through the whole pipeline, with the real floors.
+        let p = pipeline(Config::default()).await;
+        let r = p
+            .search_with(
+                "resep kue coklat untuk ulang tahun anak",
+                &contract::SearchOptions::default(),
+            )
+            .await
+            .expect("search");
+        assert!(r.success, "a refusal is an answer, not an error");
+        assert!(r.results.is_empty(), "{:?}", r.results);
+        assert!(r.hint.is_some(), "a refusal must say why");
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn results_never_carry_a_synthesised_source_url() {
+        // Invariant 8. This fixture genuinely has no URLs, so every result must
+        // report None rather than inventing one.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with("jalan", &contract::SearchOptions::default())
+            .await
+            .expect("search");
+        assert!(!r.results.is_empty());
+        for res in &r.results {
+            assert!(res.source.url.is_none(), "invented {:?}", res.source.url);
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn an_unindexable_chunk_never_reaches_a_result() {
+        // seed.py marks one chunk unindexable on purpose. Every arm filters on
+        // `indexable`, and this is the test that would catch one that stopped.
+        const HIDDEN: &str = "fx-PE-26-2009-99-lampiran";
+        let p = pipeline(open_cfg()).await;
+
+        // Its own words, so if any arm stopped filtering this is what surfaces.
+        for q in [
+            "sanksi administrasi denda cukai lampiran tabel",
+            "jalan",
+            "energi",
+            "bangunan",
+            "rapat",
+        ] {
+            let r = p
+                .search_with(q, &contract::SearchOptions::default())
+                .await
+                .expect("search");
+            assert!(
+                r.results.iter().all(|res| res.id != HIDDEN),
+                "unindexable chunk surfaced for {q:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn the_response_serialises_with_success_first() {
+        // ! serde_json runs with preserve_order. Without it keys sort
+        // alphabetically and the contract's "success first" rule silently stops
+        // holding (`docs/OUTPUT_CONTRACT.md` §3).
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with("jalan", &contract::SearchOptions::default())
+            .await
+            .expect("search");
+        let s = serde_json::to_string(&r).expect("serialize");
+        assert!(s.starts_with("{\"success\":"), "{}", &s[..40.min(s.len())]);
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn a_narrower_pool_cannot_cap_the_answer_below_top_k() {
+        // A pool smaller than the answer is a wrong answer, not a slow one.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "jalan",
+                &contract::SearchOptions {
+                    top_k: Some(5),
+                    candidate_pool: Some(1),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        let a = r.applied.expect("applied");
+        assert!(a.candidate_pool >= a.top_k, "{a:?}");
+    }
+}

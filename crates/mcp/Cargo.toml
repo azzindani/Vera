@@ -20,5 +20,10 @@ embed = { path = "../embed" }
 engine = { path = "../engine" }
 store = { path = "../store" }
 
+[dev-dependencies]
+# ! Only the live pipeline tests need this — they implement EmbeddingProvider,
+# which `embed` declares with #[async_trait]. Not a runtime dependency.
+async-trait = "0.1.91"
+
 [lints]
 workspace = true

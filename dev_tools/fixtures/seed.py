@@ -25,9 +25,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import math
 import os
-import random
 import sys
 from pathlib import Path
 
@@ -40,7 +40,6 @@ SCHEMA_SQL = TOOLS / "pre_embed" / "schema.sql"
 CORPUS_ID = "fixture-01"
 DENSE_DIM = 1024  # must match the engine's pin; it_live.rs asserts on it
 SPARSE_DIM = 20_000  # production width, so sparse_literal indices stay valid
-SEED = 20260912
 
 # Four theme directions. Documents on a theme cluster together, which is what
 # makes `dense_in_cluster` a real test of pruning rather than a tautology.
@@ -287,16 +286,73 @@ UNINDEXABLE = {
 TRUNCATED_AT = 2  # index of the clause marked truncated_at_source
 
 
-def unit(rng: random.Random, dim: int) -> list[float]:
-    v = [rng.gauss(0.0, 1.0) for _ in range(dim)]
+# ---------------------------------------------------------------------------
+# Reproducible vectors · the half of this fixture the Rust side has to agree on.
+#
+# ! The dense vectors used to come from random.Random(SEED) in sequence, which
+# no other language can reproduce. That made the STARTUP CANARY impossible to
+# satisfy without a GPU: the canary re-embeds a stored chunk and checks it lands
+# where ingestion put it, so a pipeline test needs a provider that reproduces
+# these vectors exactly. Nothing below uses an RNG.
+#
+# `fnv_vector` mirrors `embed::StubProvider::vector_for` byte for byte. The two
+# are pinned to each other by a test in crates/embed and by seed.dense.json.
+# ---------------------------------------------------------------------------
+
+FNV_OFFSET = 0xCBF29CE484222325
+FNV_PRIME = 0x00000100000001B3
+U64 = (1 << 64) - 1
+
+
+def fnv1a(seed: int, data: bytes) -> int:
+    h = (seed ^ FNV_OFFSET) & U64
+    for b in data:
+        h = (h ^ b) & U64
+        h = (h * FNV_PRIME) & U64
+    return h
+
+
+def fnv_vector(text: str, dim: int) -> list[float]:
+    """Byte-identical to embed::StubProvider::vector_for."""
+    data = text.encode("utf-8")
+    out = []
+    for i in range(dim):
+        h = fnv1a(i, data)
+        out.append(((h >> 11) / float(1 << 53)) * 2.0 - 1.0)
+    return out
+
+
+def normalize(v: list[float]) -> list[float]:
     n = math.sqrt(sum(x * x for x in v)) or 1.0
     return [x / n for x in v]
 
 
-def near(rng: random.Random, base: list[float], jitter: float) -> list[float]:
-    v = [b + rng.gauss(0.0, jitter) for b in base]
-    n = math.sqrt(sum(x * x for x in v)) or 1.0
-    return [x / n for x in v]
+def unit_of(text: str, dim: int) -> list[float]:
+    return normalize(fnv_vector(text, dim))
+
+
+# How much of a chunk's direction comes from its theme rather than its own text.
+# High enough that theme members really do cluster -- which is what makes
+# `dense_in_cluster` a test of pruning rather than a tautology -- and non-zero
+# on the body so no two chunks share a vector.
+THEME_SHARE = 0.95
+
+
+def dense_for(theme: str, body: str, dim: int) -> list[float]:
+    """The stored vector for one chunk · a pure function of (theme, body)."""
+    t = unit_of(theme, dim)
+    b = unit_of(body, dim)
+    return normalize([THEME_SHARE * ti + (1.0 - THEME_SHARE) * bi for ti, bi in zip(t, b)])
+
+
+def body_key(body: str) -> str:
+    """How the Rust provider looks up a body's theme.
+
+    ! The body text itself, ✗ a hash of it. A hash would need a sha2 crate on
+    the Rust side for no benefit, and it would make the sidecar unreviewable --
+    this fixture is meant to be read.
+    """
+    return body
 
 
 def literal(v: list[float]) -> str:
@@ -342,6 +398,8 @@ def main() -> int:
     ap.add_argument("--force", action="store_true",
                     help="overwrite even if the database already holds a corpus")
     ap.add_argument("--vocab-out", default=str(Path(__file__).parent / "seed.bm25.json"))
+    ap.add_argument("--dense-out", default=str(Path(__file__).parent / "seed.dense.json"),
+                    help="theme map the Rust FixtureProvider reads to reproduce these vectors")
     args = ap.parse_args()
 
     import psycopg
@@ -350,7 +408,6 @@ def main() -> int:
         "DATABASE_URL", "host=localhost port=5432 dbname=vera user=vera password=vera"
     )
     rows = build_rows()
-    rng = random.Random(SEED)
 
     pg = psycopg.connect(url)
     cur = pg.cursor()
@@ -407,12 +464,15 @@ def main() -> int:
     )
 
     # -- dense side: theme directions, then members near them ---------------
-    theme_vecs = {t: unit(rng, DENSE_DIM) for t in THEMES}
+    #
+    # ! Derived, not sampled. Every vector here is a pure function of (theme,
+    # body), so `FixtureProvider` on the Rust side reproduces it exactly and the
+    # startup canary passes without an embedding server.
     cluster_of = {t: i for i, t in enumerate(THEMES)}
 
     payload = []
     for r in rows:
-        dv = near(rng, theme_vecs[r["theme"]], 0.05)
+        dv = dense_for(r["theme"], r["body"], DENSE_DIM)
         payload.append((
             r["id"], CORPUS_ID, r["type"], r["number"], r["year"], r["about"],
             r["chapter"], r["article"], r["chunk_no"], r["body"],
@@ -456,7 +516,27 @@ def main() -> int:
 
     cur.execute("SELECT count(*), count(*) FILTER (WHERE indexable) FROM chunks")
     total, indexable = cur.fetchone()
+    # -- the sidecar the Rust side reads ------------------------------------
+    #
+    # ! Body -> theme, ✗ body -> vector. Storing 1024 floats per chunk would
+    # make the fixture unreviewable and would let the two implementations of
+    # `dense_for` drift apart silently. The map is the only thing a provider
+    # cannot derive from the text it is handed.
+    dense_map = {
+        "dim": DENSE_DIM,
+        "theme_share": THEME_SHARE,
+        "note": ("body -> theme. dense = normalize(theme_share * unit(theme) "
+                 "+ (1 - theme_share) * unit(body)), unit(s) = normalize(fnv_vector(s)). "
+                 "fnv_vector mirrors embed::StubProvider::vector_for."),
+        "themes": {t: i for i, t in enumerate(THEMES)},
+        "bodies": {body_key(r["body"]): r["theme"] for r in rows},
+    }
+    Path(args.dense_out).write_text(
+        json.dumps(dense_map, indent=2, ensure_ascii=False) + chr(10), encoding="utf-8"
+    )
+
     print(f"seeded {total} chunks ({indexable} indexable) in {len(THEMES)} clusters")
+    print(f"dense  {len(dense_map['bodies'])} bodies mapped -> {args.dense_out}")
     print(f"vocab  {vz.n_docs} docs, {len(vz.vocab)} terms, sha {vocab_sha[:12]}")
     pg.close()
     return 0
