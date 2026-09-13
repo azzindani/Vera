@@ -142,6 +142,7 @@ article-level buckets, so they are excluded here and included in Recall@5.
 | `CLUSTERS_PROBED` | the smallest value that holds Recall@5 |
 | candidate caps | Recall@5 against cap-induced misses |
 | `CANDIDATE_POOL` | `pool_depth.py` — the depth at which "regulation absent" stops falling |
+| factor weights | `fit_factors.py` — leave-one-out Recall@5, ✗ the in-sample peak |
 | chunk strategy | Recall@5 across question shapes |
 | domain-gate floors | out-of-domain rejected without rejecting real queries |
 | re-cluster trigger | a drop in routing recall over time |
@@ -152,6 +153,9 @@ Optimisations this harness has **rejected**:
 |---|---|
 | drop low-IDF terms from the text query | 14× faster, Recall@5 40.9% → 22.7%. No. |
 | AND-first, OR as fallback | no gain: AND returns zero rows for 42 of 44 queries |
+| `temporal` factor (recency) | nothing at any weight. A 1999 statute still governs unless repealed. |
+| `topical` factor (`about` overlap) | +5.0 alone, **0.0 in combination** — redundant with the text arm, which already matched those words |
+| TurboQuant / TurboVec vector compression | wrong bottleneck: the dense arm is 53 ms of a 1,059 ms query and returns 0.0%. Compressing it 16× buys ~1% of latency on the one arm that contributes nothing. |
 
 Both looked obviously good on paper. That is what the harness is for.
 

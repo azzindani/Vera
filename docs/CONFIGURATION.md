@@ -81,6 +81,7 @@ safe.
 | `PER_CLUSTER_K` | `20` | candidates kept per cluster per arm |
 | `PER_ARM_K` | `20` | candidates each global arm contributes |
 | `TOP_K` | `10` | results returned |
+| `CANDIDATE_POOL` | `60` | candidates carried into scoring. **Metadata is fetched for this many, not for `TOP_K`** — a candidate whose metadata was never loaded cannot be reordered. Must be ≥ `TOP_K`; a smaller pool would silently cap the reply. 60 is where the "regulation absent" bucket stops falling (`SCORING.md` §7). |
 | `SNIPPET_CHARS` | `280` | preview length per result |
 
 ---
@@ -116,6 +117,42 @@ claims no precision the measurement supports.
 
 All three at zero is rejected at startup: it fuses nothing and returns nothing, which
 is indistinguishable from a corpus that simply has no match.
+
+---
+
+## 5b. Factor weights
+
+Fusion decides what is *relevant*; these decide what *matters* among the relevant
+(`SCORING.md` §2). They are a bounded multiplicative prior on the fused score, so
+no weight here can promote a candidate that retrieval did not find.
+
+| Variable | Default | |
+|---|---|---|
+| `FACTOR_AUTHORITY` | `0.5` | how binding the instrument is — the published hierarchy |
+| `FACTOR_STRUCTURAL` | `0.25` | operative clause vs annex |
+| `FACTOR_COMPLETENESS` | `0.25` | whole provision vs fragment |
+| `FACTOR_TEMPORAL` | `0.0` | recency — **measured to add nothing** |
+| `FACTOR_TOPICAL` | `0.0` | subject match — earns +5.0 alone, 0.0 in combination |
+
+Fitted, not chosen: `python dev_tools/eval/fit_factors.py` reranks the text arm over
+a 60-candidate pool on the 40 article-labelled cases.
+
+| | Recall@5 |
+|---|---|
+| text arm, no factors | 40.0% |
+| best in-sample | 57.5% |
+| **leave-one-out** | **47.5%** |
+
+! **+7.5 points, not +17.5.** Taking the best of 625 weight combinations on 40 cases
+overfits; leave-one-out is the number that survives out of sample. The gain is real
+rather than a lucky peak on two grounds: 539 of the 625 combinations (86%) beat the
+baseline, median 50.0%, and leave-one-out chose exactly these weights in 36 of 40 folds.
+
+Setting all five to `0` is exactly the identity on the fused order — the layer can be
+turned off in production without a rebuild, which is the point of it being config.
+
+! These numbers come from reranking **one arm** offline. The engine fuses three, and
+only `e2e.py` scores what ships.
 
 ---
 

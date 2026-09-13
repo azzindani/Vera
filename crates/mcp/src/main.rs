@@ -175,6 +175,21 @@ impl Settings {
                     d.domain_lexical_floor,
                 )?,
                 gate_sample: parsed("GATE_SAMPLE", "positive integer", d.gate_sample)?,
+                // ! Fitted against the eval set, never chosen by hand
+                // (`docs/SCORING.md` §4) -- and env-driven for the same reason
+                // the arm weights are: they are properties of the CORPUS, and
+                // refitting after a re-chunk must not require a release.
+                factor_weights: engine::Weights {
+                    authority: parsed("FACTOR_AUTHORITY", "number", d.factor_weights.authority)?,
+                    structural: parsed("FACTOR_STRUCTURAL", "number", d.factor_weights.structural)?,
+                    temporal: parsed("FACTOR_TEMPORAL", "number", d.factor_weights.temporal)?,
+                    completeness: parsed(
+                        "FACTOR_COMPLETENESS",
+                        "number",
+                        d.factor_weights.completeness,
+                    )?,
+                    topical: parsed("FACTOR_TOPICAL", "number", d.factor_weights.topical)?,
+                },
             },
         };
         s.validate()?;

@@ -17,7 +17,7 @@ use engine::{
 };
 use store::{CorpusMeta, SearchOps, sparse_literal};
 
-use crate::bm25::QueryVectorizer;
+use crate::bm25::{self, QueryVectorizer};
 use crate::identifier;
 
 /// Tunables. ! Config, ✗ constants (`CLAUDE.md` §7.12) — bigger hardware and
@@ -63,6 +63,11 @@ pub struct Config {
     pub domain_lexical_floor: f32,
     /// How many sparse hits the lexical evidence is pooled over.
     pub gate_sample: usize,
+    /// Relative influence of each metadata factor (`docs/SCORING.md` §2).
+    ///
+    /// ! `Weights::OFF` is exactly the identity on the fused order, so this
+    /// layer can be disabled in production without a rebuild.
+    pub factor_weights: engine::Weights,
 }
 
 impl Default for Config {
@@ -118,6 +123,9 @@ impl Default for Config {
             domain_floor: 0.45,
             domain_lexical_floor: 0.40,
             gate_sample: 5,
+            // Fitted, ✗ chosen: dev_tools/eval/fit_factors.py, +7.5 points
+            // leave-one-out over the text arm.
+            factor_weights: engine::Weights::FITTED,
         }
     }
 }
@@ -349,9 +357,30 @@ impl Pipeline {
             .filter_map(|f| rows.iter().find(|r| r.id == f.id).map(|row| (f, row)))
             .collect();
 
-        // >>> Factor scoring reorders `ranked` here (`docs/SCORING.md`). Every
-        // >>> candidate now has its metadata loaded, which is the whole point
-        // >>> of fetching the pool rather than the answer.
+        // Factor scoring (`docs/SCORING.md` §2). Every candidate has its
+        // metadata loaded by now, which is the whole point of fetching the pool
+        // rather than the answer.
+        //
+        // ! The relevance gate of §3 is structural here, ✗ a threshold: the
+        // prior MULTIPLIES the fused score, so a candidate no arm ranked has
+        // nothing for its pedigree to multiply. Pool membership is the floor.
+        let before = ranked.first().map(|(f, _)| f.id.clone());
+        let terms = bm25::tokenize(query);
+        let term_refs: Vec<&str> = terms.iter().map(String::as_str).collect();
+        let mut scored: Vec<(f32, engine::Facets<'_>, usize)> = ranked
+            .iter()
+            .enumerate()
+            .map(|(i, (f, row))| (f.score, Self::facets_of(row), i))
+            .collect();
+        engine::rescore(&mut scored, &self.cfg.factor_weights, &term_refs);
+        let reordered: Vec<_> = scored.iter().map(|(_, _, i)| ranked[*i]).collect();
+        ranked = reordered;
+        if let Some(was) = before {
+            let now = &ranked[0].0.id;
+            if *now != was {
+                progress.push(format!("factors promoted {now} over {was}"));
+            }
+        }
 
         ranked.truncate(self.cfg.top_k);
         progress.push(format!(
@@ -369,6 +398,26 @@ impl Pipeline {
             exact_matches,
             progress,
         ))
+    }
+
+    /// Map a stored row onto the scoring facets.
+    ///
+    /// ! Borrowed, so scoring a pool of 60 clones nothing. Lives here rather
+    /// than in `engine` because `engine` holds zero sibling dependencies by
+    /// design and must not learn about `store`.
+    fn facets_of(row: &store::ChunkRow) -> engine::Facets<'_> {
+        engine::Facets {
+            regulation_type: row.regulation_type.as_deref(),
+            article: row.article.as_deref(),
+            chapter: row.chapter.as_deref(),
+            year: row.year,
+            // ! `about` is in the schema and not selected by `chunks_by_id`,
+            // so the topical factor sees nothing. Harmless today — it carries
+            // weight 0.0, having been measured to add nothing — and the one
+            // line to add when that changes is in `SearchOps::chunks_by_id`.
+            about: None,
+            body_len: row.body.len(),
+        }
     }
 
     /// The domain gate · does this corpus hold anything that accounts for the

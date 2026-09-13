@@ -2,10 +2,11 @@
 
 How Vera ranks. Retrieval finds candidates; this decides their order.
 
-> **Status.** The factor model, viewpoints and consensus described here are
-> **designed, not implemented**. What ships today is §9. Sections 1–7 are the
-> target, written down so the build has something to be measured against, and
-> §7 is the one section whose payoff has been measured in advance.
+> **Status.** §2 (the factors) and §3 (the relevance gate) are **built and
+> shipping** — `crates/engine/src/factors.rs`, fitted by
+> `dev_tools/eval/fit_factors.py`. §4 (per-query-type weights), §5 (viewpoints
+> and consensus), §6 (tiered effort) and §7 (expansion) remain **designed, not
+> implemented**. §9 is the ledger of what actually runs.
 
 ---
 
@@ -314,7 +315,9 @@ everything else is additive.
 ### Needs adding
 
 - `enacting_body` and `about` are in the schema and **not selected** by
-  `chunks_by_id`. One line each.
+  `chunks_by_id`. One line each. Until then the `topical` factor sees `None`
+  for every candidate — harmless while it carries weight 0.0, and the first
+  thing to fix before re-fitting it.
 - `ComponentScores` publishes `dense` and `bm25` only — **the text arm, the
   best performer at 40.9%, is invisible in the output.** Factors will need their
   own scores published alongside, so this changes anyway.
@@ -350,11 +353,20 @@ example; no result from this corpus can carry one.
 | | |
 |---|---|
 | arms | dense (weight 0.0), sparse, text |
-| fusion | RRF over ranks, no factors |
+| fusion | RRF over ranks |
+| **factors** | **authority 0.5 · structural 0.25 · completeness 0.25 · temporal 0.0 · topical 0.0** |
+| **relevance gate** | **structural — the prior multiplies the fused score, so pool membership is the floor** |
+| weights | one global set, ✗ per query type (§4) |
+| viewpoints / consensus | ✗ |
 | exact identifiers | retrieved globally, fused normally |
 | confidence | heuristic over score spread |
 | effort | single round, always |
-| pool | fused candidates only — no expansion |
+| pool | 60 fused candidates, no expansion |
 | Recall@5 | **50.0%** |
 
-Everything above is the plan. The number is the baseline it has to beat.
+! **50.0% is the engine's last measured Recall@5 and predates the factor layer.**
+Factors were fitted and measured offline against the text arm (+7.5 points
+leave-one-out, `fit_factors.py`); what they are worth *through the fused engine*
+needs an `e2e.py` run, which needs the embedder. Until that runs, the honest
+statement is that the layer is built, unit-tested against the Python that fitted
+it, and **unmeasured in situ**.
