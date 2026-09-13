@@ -11,6 +11,12 @@ Retrieval over a large corpus is normally either accurate and heavy — a global
 index that has to be resident — or light and shallow. Vera replaces the global index
 with **routing**: the intelligence is in knowing where *not* to look.
 
+And retrieval alone does not rank legal text correctly. Text similarity can say a
+chunk addresses the query; it cannot say whether the instrument binds, whether it
+is still in force, or whether the passage is an operative clause or an annex. That
+is what the factor model in `SCORING.md` is for. **Routing decides what to look at;
+factors decide what matters.**
+
 The result is a retrieval server that holds 8.5 MB resident while searching 355,621
 chunks, and whose peak memory is a function of its concurrency ceiling rather than of
 corpus size.
@@ -47,6 +53,8 @@ LAYER 3   │  LEAF search                        │  load ONE cluster, scan it
                    RRF fusion over RANKS
                             │
                    + global exact-identifier hits (routing bypassed)
+                            │
+                   [ factor scoring · viewpoints · consensus ]   ← designed, ✗ built
                             │
                    top-k results + provenance  →  agent summarizes
 ```
@@ -117,6 +125,12 @@ arms genuinely agree on.
 
 No model reranker. Adding one would put a model back on the query path, which is the
 dependency this design exists to avoid.
+
+! Fusion produces a **candidate pool**, ✗ a final ranking — see `SCORING.md`. The
+three arms answer one question between them ("does this text address the query?"),
+and ordering legal results needs four more: how binding the instrument is, whether
+it is current, whether the passage is operative, and whether the provision is
+whole. Those come from metadata the corpus already carries.
 
 **The exact-identifier path bypasses routing entirely.** A query naming a regulation
 number is searched against the whole corpus, because semantic routing may miss and a

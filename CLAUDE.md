@@ -33,8 +33,13 @@ Vera is a **deterministic retrieval function**, not an assistant.
 
 ```
 Agent's job:   understand intent, choose tools, compose the summary + citations
-Vera's job:    embed → gate → route → search → fuse → return cited evidence
+Vera's job:    embed → gate → route → search → fuse → SCORE → return cited evidence
 ```
+
+Retrieval finds what is relevant; **scoring decides what matters**. Legal results
+cannot be ordered on text similarity alone — a district regulation and the national
+law it implements both match the query, and only metadata separates them. The
+multi-factor model, viewpoints and consensus are in `docs/SCORING.md`.
 
 Vera **never calls an LLM**. It does not summarize, rerank with a model, or interpret.
 It returns structured evidence; the agent does the thinking. This single rule is what
@@ -52,7 +57,10 @@ LAYER 2  k-means clusters → pick the 5 nearest centroids (held hot in the engi
 LAYER 3  per-cluster scan → load ONE cluster, flat halfvec scan, keep top-k, drop
                           ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM)
                           ⊕ global exact-identifier path (routing bypassed)
-                          → RRF over RANKS → top-k + provenance
+                          → RRF over RANKS → candidate pool
+SCORING  multi-factor     → relevance gate, then authority / temporal / structural /
+                            completeness · several viewpoints · consensus sets
+                            confidence and triggers more work  [designed, ✗ built]
 ```
 
 - **Embedding:** one model, both ends. The **corpus declares** its model, width,
@@ -61,7 +69,10 @@ LAYER 3  per-cluster scan → load ONE cluster, flat halfvec scan, keep top-k, d
   in. `docs/EMBEDDING.md`.
 - **Store:** PostgreSQL + pgvector. Dense as `halfvec`, sparse as `sparsevec`, text as
   `tsvector` ordered by a RUM index. **No global ANN index** — routing does the pruning.
-- **Fusion:** RRF over ranks, never over scores. No model reranker.
+- **Fusion:** RRF over ranks, never over scores. No model reranker. Fusion yields a
+  **candidate pool**, ✗ a final ranking.
+- **Scoring:** six factor families, only two of which need retrieval. Weights are
+  fitted per query type against the eval set, never chosen. `docs/SCORING.md`.
 - **Containers:** stateless Rust engine · Postgres/pgvector+RUM · embedding server.
 - **Offline tools** live in `dev_tools/` and never touch the query path.
 
@@ -88,7 +99,7 @@ vera/
 │
 ├── docs/                       ← how the running system works
 │   ├── ARCHITECTURE.md  MCP_ENGINE.md  OUTPUT_CONTRACT.md
-│   ├── CONFIGURATION.md  OPERATIONS.md  HARDWARE.md
+│   ├── CONFIGURATION.md  OPERATIONS.md  HARDWARE.md  SCORING.md
 │   ├── EMBEDDING.md  EVAL.md  FAILURE_MODES.md  STANDARDS_COMPLIANCE.md
 │
 └── dev_tools/                  ← offline, operator-side. Never on the query path.
@@ -122,7 +133,13 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
    with a read-only root filesystem.
 7. **Design for 2 vCPU / 4 GB; let bigger hardware benefit automatically.** Never
    hardcode a limit — read it from the environment.
-8. **Measure, then claim.** Every number in `docs/` names the command that produced it.
+8. **Measure, then claim.** Every number in `docs/` names the command that produced it,
+   and anything designed but not built says so.
+9. **Factors rank, but only after relevance.** A relevance floor precedes every
+   metadata prior. Authority without relevance ranks the most prestigious document in
+   the corpus first for every query, and it looks correct.
+10. **Effort is escalated on measured disagreement, never by default.** A query
+   answered confidently in one round must not be made to spend thirty seconds.
 
 ---
 

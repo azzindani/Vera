@@ -66,6 +66,9 @@ process cannot safely guess. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 - **Embedding** — one model, both ends. The corpus declares its vector space and the
   engine refuses to serve a provider that does not reproduce it.
 - **Fusion** — Reciprocal Rank Fusion over ranks. No reranker, no model in the loop.
+- **Scoring** — retrieval finds what is relevant; metadata factors (authority,
+  recency, structure) decide what matters. Designed, not yet built — see
+  [docs/SCORING.md](docs/SCORING.md).
 
 ## Layout
 
@@ -85,6 +88,7 @@ dev_tools/       offline, operator-side: embedding, clustering, eval, fixtures
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | the three routing layers, the three arms, why there is no ANN index |
 | [docs/MCP_ENGINE.md](docs/MCP_ENGINE.md) | tool surface, request path, concurrency, the OOM guarantee |
+| [docs/SCORING.md](docs/SCORING.md) | the multi-factor model, viewpoints, consensus, tiered effort |
 | [docs/OUTPUT_CONTRACT.md](docs/OUTPUT_CONTRACT.md) | response schema, provenance, confidence |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | every environment variable and what it costs |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | deploying, health, what each refusal means |
