@@ -124,10 +124,37 @@ impl CorpusMeta {
 /// network in every deployment described in `docs/HARDWARE.md`. Exposing Postgres
 /// across a public network is a deployment change that must add TLS here.
 ///
+/// `statement_timeout_ms` is the **third** concurrency bound, beside the
+/// semaphore and the wait ceiling. Without it a slow query holds its permit for
+/// as long as it runs: four of those and every later caller is refused while
+/// `permits_available` sits at zero forever. It is reachable, ✗ theoretical —
+/// the text arm ORs every lexeme of its input, and a pathological query
+/// measured 48 seconds over 98.7% of the corpus (`docs/FAILURE_MODES.md` §12).
+///
+/// ! Set as a connection **option**, ✗ a `SET` per checkout. libpq applies it
+/// when the session is established, so it costs no round-trip and cannot be
+/// skipped by a code path that forgets to issue it. `0` disables it.
+///
 /// # Errors
 /// An unparseable connection string, or a pool that cannot be built.
-pub fn connect(conn_str: &str, max_size: usize) -> Result<Pool, StoreError> {
-    let pg_cfg: tokio_postgres::Config = conn_str.parse()?;
+pub fn connect(
+    conn_str: &str,
+    max_size: usize,
+    statement_timeout_ms: u64,
+) -> Result<Pool, StoreError> {
+    let mut pg_cfg: tokio_postgres::Config = conn_str.parse()?;
+    if statement_timeout_ms > 0 {
+        // ! Appended, ✗ replacing. A connection string may already carry
+        // options an operator set deliberately.
+        let existing = pg_cfg.get_options().unwrap_or_default().to_owned();
+        let mine = format!("-c statement_timeout={statement_timeout_ms}");
+        let merged = if existing.is_empty() {
+            mine
+        } else {
+            format!("{existing} {mine}")
+        };
+        pg_cfg.options(&merged);
+    }
     let mgr = deadpool_postgres::Manager::from_config(
         pg_cfg,
         tokio_postgres::NoTls,

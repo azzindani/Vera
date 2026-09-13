@@ -20,7 +20,7 @@ const DEFAULT_PG: &str = "host=localhost port=5432 dbname=vera user=vera passwor
 
 fn ops() -> SearchOps {
     let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| DEFAULT_PG.to_owned());
-    SearchOps::new(connect(&url, 4).expect("pool"))
+    SearchOps::new(connect(&url, 4, 15_000).expect("pool"))
 }
 
 #[tokio::test]
@@ -302,4 +302,57 @@ async fn a_canary_sample_is_available_at_the_declared_width() {
     let (again, _, _) = store.canary_sample().await.expect("canary sample");
     assert_eq!(id, again);
     println!("canary chunk {id} · {} dims", vector.len());
+}
+
+/// a runaway query is killed rather than holding its permit
+///
+/// ! The third concurrency bound (`docs/FAILURE_MODES.md` §12). Without it a
+/// slow query holds its semaphore permit for as long as it runs, and four of
+/// those wedge the server at `permits_available: 0` forever. Reachable, ✗
+/// theoretical: the text arm ORs every lexeme of its input, and a query built
+/// from a whole chunk body was measured at 48 seconds over 98.7% of the corpus.
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn a_runaway_query_is_killed_rather_than_held() {
+    let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| DEFAULT_PG.to_owned());
+    // 250ms, so the test does not have to be slow to prove a bound exists.
+    let pool = connect(&url, 2, 250).expect("pool");
+    let client = pool.get().await.expect("checkout");
+
+    let started = std::time::Instant::now();
+    let err = client
+        .query("SELECT pg_sleep(10)", &[])
+        .await
+        .expect_err("a 10s sleep under a 250ms timeout must fail");
+    let elapsed = started.elapsed();
+
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "cancelled after {elapsed:?} · the timeout did not apply"
+    );
+    // ! Assert on the SQLSTATE, ✗ the message. tokio-postgres renders a server
+    // error as the bare string "db error"; 57014 query_canceled is what
+    // Postgres actually reports when statement_timeout fires, and it does not
+    // depend on the server's locale or version.
+    let code = err.as_db_error().map(|e| e.code().code().to_owned());
+    assert_eq!(
+        code.as_deref(),
+        Some("57014"),
+        "expected 57014 query_canceled, got {err} ({code:?})"
+    );
+}
+
+/// the timeout is off when set to zero, and does not clobber operator options
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn zero_disables_the_timeout() {
+    let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| DEFAULT_PG.to_owned());
+    let pool = connect(&url, 2, 0).expect("pool");
+    let client = pool.get().await.expect("checkout");
+    let row = client
+        .query_one("SHOW statement_timeout", &[])
+        .await
+        .expect("show");
+    let v: String = row.get(0);
+    assert_eq!(v, "0", "no timeout should be set when disabled");
 }

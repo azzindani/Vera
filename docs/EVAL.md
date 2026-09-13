@@ -133,10 +133,6 @@ Both looked obviously good on paper. That is what the harness is for.
 - Periodically in production: a routing-recall drop is the trigger for re-clustering —
   drift detected by measurement, not guessed by calendar.
 
-! **The gate does not cover the shipped text arm.** CI runs a Postgres without RUM, so
-its integration tests take the `ts_rank` fallback while the deployment takes the RUM
-index path — see `FAILURE_MODES.md` §13.
-
 ! **38 of the 50 labels have not been reviewed by a domain expert.** Whether a clause
 genuinely *answers* a question is a lawyer's judgement, not a retrieval engineer's, and
 a wrong label is worse than no label: it silently moves every dial this document gates.

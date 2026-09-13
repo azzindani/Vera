@@ -134,10 +134,11 @@ Two bounds, and both are necessary. The semaphore caps what executes; the wait c
 caps how long anything may queue. A bounded queue alone still lets a caller block
 indefinitely behind a full one, so the bound has to be on **time** as well as depth.
 
-! **A third bound is missing.** Nothing limits how long an admitted request may *run* —
-there is no `statement_timeout` on the pool and no deadline around the arms. A query
-that takes minutes holds its permit for minutes; four of those wedge the server.
-`FAILURE_MODES.md` §12, with the 48-second query that proves it is reachable.
+A **third** bound covers duration: `STATEMENT_TIMEOUT_MS` (default 15,000) is applied
+as a connection option, so a query that overruns is cancelled rather than holding its
+permit. Without it four slow queries wedge the server at `permits_available: 0`
+forever — reachable, ✗ theoretical, since a pathological text-arm query measured 48
+seconds over 98.7% of the corpus (`FAILURE_MODES.md` §12).
 
 Measured on the target profile, `MAX_CONCURRENCY=4`:
 

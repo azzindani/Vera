@@ -113,6 +113,7 @@ struct Settings {
     queue_wait: std::time::Duration,
     read_chunk_chars: usize,
     max_provenance_ids: usize,
+    statement_timeout: u64,
     pipeline: Config,
 }
 
@@ -138,6 +139,15 @@ impl Settings {
             )?),
             read_chunk_chars: parsed("READ_CHUNK_CHARS", "positive integer", 4000usize)?,
             max_provenance_ids: parsed("MAX_PROVENANCE_IDS", "positive integer", 50usize)?,
+            // ! The third concurrency bound. The semaphore caps what runs and
+            // QUEUE_WAIT_MS caps what waits; without this nothing caps how LONG
+            // a request runs, and a slow query holds its permit for its whole
+            // duration.
+            statement_timeout: parsed(
+                "STATEMENT_TIMEOUT_MS",
+                "duration in milliseconds",
+                15_000u64,
+            )?,
 
             pipeline: Config {
                 clusters_probed: parsed("CLUSTERS_PROBED", "positive integer", d.clusters_probed)?,
@@ -224,15 +234,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // engine log is the one place an operator pastes into a ticket without
     // thinking about it.
     log!(
-        "starting \u{b7} embed={} vocab={} transport={:?}",
+        "starting \u{b7} embed={} vocab={} transport={:?} \u{b7} statement timeout {}ms",
         s.embed_endpoint,
         s.bm25_vocab.display(),
-        s.transport
+        s.transport,
+        s.statement_timeout
     );
 
     // +2: the pool serves `max_concurrency` searches plus the startup canary
     // and health probes, which must not have to wait behind a full queue.
-    let pool = store::connect(&s.database_url, s.max_concurrency + 2)?;
+    let pool = store::connect(&s.database_url, s.max_concurrency + 2, s.statement_timeout)?;
     let ops = store::SearchOps::new(pool);
 
     // The corpus decides the vector space; the provider is built to match it.
@@ -646,6 +657,7 @@ mod tests {
             queue_wait: std::time::Duration::from_secs(2),
             read_chunk_chars: 4000,
             max_provenance_ids: 50,
+            statement_timeout: 15_000,
             pipeline: Config::default(),
         }
     }

@@ -156,3 +156,109 @@ jobs:
       # noise of the ones the matrix already ran on three platforms.
       - name: Integration tests
         run: cargo test -p store --locked -- --ignored --nocapture
+
+  # ! The job that closes FAILURE_MODES §13. `SearchOps::text` has two SQL
+  # paths and picks by probing for the RUM index; the `integration` job above
+  # runs pgvector/pgvector:pg16, which has none, so it only ever exercises the
+  # `ts_rank` FALLBACK. The deployment runs vera-db:pg16-rum and takes the
+  # index-ordered path. Without this job the SQL that actually serves queries
+  # is never executed by the gate.
+  #
+  # It also builds docker/Dockerfile.db, so a broken image is found by the pull
+  # request rather than by the deploy.
+  integration-rum:
+    name: integration (postgres + rum)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      DATABASE_URL: host=localhost port=5432 dbname=vera user=vera password=vera
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the RUM-enabled image
+        run: docker build -f docker/Dockerfile.db -t vera-db:ci .
+
+      - name: Start it
+        # Same locale pin as docker-compose.yml: collation changes ORDER BY on
+        # text, and a ranking that differs between CI and the box is worse than
+        # no ranking test at all.
+        run: |
+          docker run -d --name vera-db-ci \
+            -e POSTGRES_USER=vera -e POSTGRES_PASSWORD=vera -e POSTGRES_DB=vera \
+            -e POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=C" \
+            -p 5432:5432 vera-db:ci
+          for i in $(seq 1 40); do
+            docker exec vera-db-ci pg_isready -U vera -d vera && exit 0
+            sleep 2
+          done
+          echo "database never became ready" >&2
+          docker logs vera-db-ci
+          exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install --quiet "psycopg[binary]"
+
+      - name: Seed the fixture corpus
+        run: python dev_tools/fixtures/seed.py
+
+      - name: Create the RUM index
+        # ! After seeding. seed.py drops and recreates chunks, which would take
+        # the index with it.
+        run: docker exec -i vera-db-ci psql -U vera -d vera -v ON_ERROR_STOP=1 < migrations/0003_rum_text_index.sql
+
+      - name: Prove RUM is actually in use
+        # ! Without this the job could silently pass on the fallback — exactly
+        # the failure it exists to catch.
+        run: |
+          docker exec vera-db-ci psql -U vera -d vera -tAc \
+            "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname='rum')
+                AND EXISTS (SELECT 1 FROM pg_class WHERE relname='chunks_tsv_rum')" \
+            | grep -qx t || { echo "RUM not present · this job would test the fallback" >&2; exit 1; }
+
+      - name: Install toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ubuntu-latest-cargo-${{ hashFiles('**/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: ubuntu-latest-cargo-
+
+      - name: Integration tests against the RUM path
+        run: cargo test -p store --locked -- --ignored --nocapture
+
+  # The engine image is built here for the same reason: so a broken Dockerfile
+  # fails the pull request, ✗ the deploy. No registry push — CI proves it
+  # builds, the deployment builds its own.
+  image:
+    name: engine image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f docker/Dockerfile.engine -t vera-engine:ci .
+      - name: It starts and refuses without configuration
+        # ! A build that produces an unrunnable binary still "builds". The
+        # engine must exit non-zero and name the missing variable.
+        run: |
+          # ! `if`, not `cmd && { fail }`. GitHub runs these steps under
+          # `bash -e`, where a failing AND-OR list still exits the script — so
+          # the correct refusal would fail the step. An `if` condition is
+          # exempt from -e.
+          if out=$(docker run --rm vera-engine:ci 2>&1); then
+            echo "expected a refusal, got success:" >&2
+            echo "$out" >&2
+            exit 1
+          fi
+          echo "$out"
+          echo "$out" | grep -q "DATABASE_URL is not set"

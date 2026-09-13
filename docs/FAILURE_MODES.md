@@ -218,11 +218,20 @@ sorted. A long enough user query walks toward the same plan.
 `OPERATIONS.md` §2 already tells an operator that `permits_available: 0` with nothing
 completing means wedged — so the state is diagnosable, and nothing prevents it.
 
-**Not stopped.** The fix is a `statement_timeout` on the pool's connections, which
-turns an unbounded hang into a bounded error the existing envelope already reports.
-That also makes the third bound in the concurrency story real: today "bounded queue,
-bounded wait, bounded memory" is missing bounded *duration*, and duration is what the
-tiered-effort design in `SCORING.md` §6 proposes to spend deliberately.
+**Stopped by** `STATEMENT_TIMEOUT_MS` (default 15,000), applied as a connection
+**option** rather than a `SET` per checkout — libpq installs it when the session is
+established, so it costs no round trip and no code path can forget to issue it. `0`
+disables it. An operator's existing `options` in the connection string are appended to,
+never replaced.
+
+The concurrency story is now complete: bounded queue, bounded wait, bounded memory,
+**bounded duration**. Duration is what `SCORING.md` §6 proposes to start spending
+deliberately, so the bound had to exist before the tiers do.
+
+Tested against a live corpus — `a_runaway_query_is_killed_rather_than_held` asserts a
+10-second sleep dies under a 250 ms timeout, and on SQLSTATE `57014` rather than the
+error text, since tokio-postgres renders a server error as the bare string "db error".
+`zero_disables_the_timeout` holds the escape hatch honest.
 
 ---
 
@@ -248,10 +257,16 @@ differently, passes CI green.
 `docker/Dockerfile.engine` are only built at deploy time, so a broken image is
 discovered by the deployment rather than by the pull request.
 
-**Not stopped.** The fix is a second integration job on the RUM image, running the same
-`--ignored` tests. It is the same discipline the project already applied when it built
-`dev_tools/fixtures/seed.py` so that "needs a database" stopped meaning "never runs" —
-this is the variant that slipped through.
+**Stopped by** a second integration job, `integration-rum`, which builds
+`docker/Dockerfile.db` and runs the same `--ignored` tests against it.
+
+! It asserts RUM is actually present before running them. A job that silently fell back
+would pass green while testing exactly the path this one exists to stop testing — the
+same failure, one level up.
+
+A third job builds `docker/Dockerfile.engine` and checks the binary **refuses to start
+without configuration**, because an image that builds can still produce something that
+cannot run.
 
 ---
 

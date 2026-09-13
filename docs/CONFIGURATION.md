@@ -46,6 +46,7 @@ Peak RAM = fixed cost + (MAX_CONCURRENCY × one cluster)
 |---|---|---|
 | `MAX_CONCURRENCY` | `4` | the hard ceiling on in-flight requests |
 | `QUEUE_WAIT_MS` | `2000` | how long a call may wait for a slot before being refused |
+| `STATEMENT_TIMEOUT_MS` | `15000` | how long a query may **run** before Postgres cancels it; `0` disables |
 
 ! `MAX_CONCURRENCY` and the container's memory limit are **one decision, not two**.
 Raising it raises peak RAM linearly; the worst measured cluster is 23.4 MB.
@@ -55,6 +56,16 @@ healthy and refuses every request.
 ! `QUEUE_WAIT_MS` is the half of invariant 6 that people forget. A bounded queue
 alone still lets a caller block indefinitely behind a full one; the bound has to be
 on **time** as well as depth.
+
+! `STATEMENT_TIMEOUT_MS` is the third bound, and the one that was missing. The
+semaphore caps what runs, `QUEUE_WAIT_MS` caps what waits, and this caps how **long**.
+Without it a slow query holds its permit for its whole duration — four of those and
+every later caller is refused while `permits_available` sits at zero. It is set as a
+connection option, so it costs no round trip and cannot be skipped by a code path that
+forgets to issue it; any `options` already in `DATABASE_URL` are appended to.
+
+15 s is ~9× the measured p95 of 1,638 ms. Raise it only alongside the effort tiers in
+`SCORING.md` §6, and remember it bounds *each statement*, not the whole request.
 
 A refusal is `-32000` over JSON-RPC and `503` + `Retry-After: 1` over HTTP — never
 `500`. The distinction is the point: the request was never attempted, so a retry is
