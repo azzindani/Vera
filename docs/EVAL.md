@@ -207,8 +207,7 @@ Both looked obviously good on paper. That is what the harness is for.
 ## 6. Cadence and the open gap
 
 - On every dial or config change: re-run. A change that lowers Recall@5 is rejected.
-- After every re-chunk: refit the fusion weights, then re-run. (A re-embed would
-  mean the same thing, and is not planned — `EMBEDDING.md` §5.)
+- After every re-chunk: refit the fusion weights, then re-run.
 - Periodically in production: a routing-recall drop is the trigger for re-clustering —
   drift detected by measurement, not guessed by calendar.
 

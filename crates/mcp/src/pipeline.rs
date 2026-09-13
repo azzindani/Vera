@@ -102,11 +102,6 @@ impl Default for Config {
             // the measurement cannot support.
             //
             // dense stays 0.0: it adds nothing at any weight (row 3 above).
-            //
-            // ! Re-embedding the corpus is NOT queued behind this. An arm at
-            // weight 0.0 contributing 0.0% is absent, ✗ broken, and paying
-            // hours of GPU to improve it is a bet nothing has measured. See
-            // `docs/EMBEDDING.md` §5 for what would have to be measured first.
             dense_weight: 0.0,
             sparse_weight: 1.0,
             text_weight: 1.0,

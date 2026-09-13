@@ -106,28 +106,10 @@ self-retrieval scored 8/8. Only question→clause retrieval failed, because only
 crosses from one kind of text to another, and only the head-to-head above compares the
 space against an independent implementation of the same model.
 
-### Re-embedding is closed, ✗ deferred
-
-The obvious remedy is to re-embed the corpus with the reference implementation.
-**It will not be done.** The reasoning, so nobody reopens it on the strength of
-the paragraph above:
-
-- The dense arm ships at weight **0.0** and contributes **0.0%** Recall@5. It is
-  not degrading anything; it is absent. Sparse and text carry retrieval to
-  **54.5%** (`EVAL.md` §4) with dense switched off entirely.
-- Re-embedding is therefore not a fix for a regression. It is a bet that a
-  correctly-embedded dense arm would *add* something on top of 54.5%, and that
-  bet has never been measured — only assumed, on the strength of dense arms
-  being useful in general.
-- The cost is hours of contended GPU, every stored vector, every cluster
-  centroid and the canary baseline.
-
-! What would reopen it is a **measurement, ✗ an argument**: embed the chunks the
-40 labelled answers live in plus a few thousand distractors, and score the dense
-arm on that subset. Minutes of GPU. If dense still returns nothing, the full
-re-embed was never worth running. `dev_tools/pre_embed/dense_probe.py` is the
-shape of that experiment. Nothing in this repository should list a re-embed as
-pending work until that number exists.
+The dense arm ships at weight **0.0** and contributes **0.0%** Recall@5; sparse
+and text carry retrieval to **54.5%** without it (`EVAL.md` §4). The defect above
+is therefore documented, ✗ load-bearing — nothing in the query path depends on
+the dense vectors today.
 
 ---
 
