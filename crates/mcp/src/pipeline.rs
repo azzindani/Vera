@@ -154,6 +154,8 @@ struct Assembly<'a> {
     probed: usize,
     top_cluster: f32,
     results: Vec<SearchResult>,
+    /// Candidates that survived scoring, before the cut to `top_k`.
+    scored: usize,
     exact_matches: Vec<ExactMatch>,
     progress: Vec<String>,
     applied: contract::AppliedOptions,
@@ -296,15 +298,58 @@ impl Pipeline {
     pub async fn explain(&self, query: &str) -> Result<RouteExplain, PipelineError> {
         let q = self.embed_query(query).await?;
         let scores = select_clusters(&q, &self.centroids, self.cfg.clusters_probed);
+        let top_cluster = scores.first().map_or(0.0, |(_, s)| *s);
+        let identifiers: Vec<String> = identifier::extract(query)
+            .into_iter()
+            .map(|i| format!("{}/{}", i.number, i.year.unwrap_or(0)))
+            .collect();
+
+        // ! This tool used to report `detected_domain: <corpus id>`
+        // unconditionally, having never run the gate — so asked about a query
+        // `search_knowledge` REFUSES, it reported a matched domain. The one
+        // tool built to make routing falsifiable could not falsify the gate.
+        //
+        // ! The gate's lexical half needs the sparse arm, so this now costs a
+        // real retrieval. A transparency tool that is cheaper than the thing it
+        // explains is explaining something else.
+        let exempt = !identifiers.is_empty();
+        let lexical = if exempt {
+            1.0
+        } else {
+            let sparse = self
+                .ops
+                .sparse(
+                    &sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim()),
+                    i64::try_from(self.cfg.gate_sample).unwrap_or(i64::MAX),
+                )
+                .await?;
+            let ids: Vec<String> = sparse.iter().map(|s| s.id.clone()).collect();
+            let bodies: Vec<String> = self
+                .ops
+                .chunks_by_id(&ids)
+                .await?
+                .into_iter()
+                .map(|r| r.body)
+                .collect();
+            self.vectorizer.evidence(query, &bodies)
+        };
+        let passes = exempt
+            || (lexical >= self.cfg.domain_lexical_floor && top_cluster >= self.cfg.domain_floor);
+
         Ok(RouteExplain {
-            domain: self.meta.id.clone(),
+            // ! `None` when the gate would refuse, matching what
+            // `search_knowledge` puts on the wire for the same query.
+            domain: passes.then(|| self.meta.id.clone()),
             clusters_probed: scores.iter().map(|(id, _)| *id).collect(),
             cluster_scores: scores,
             total_clusters: self.centroids.len(),
-            identifiers: identifier::extract(query)
-                .into_iter()
-                .map(|i| format!("{}/{}", i.number, i.year.unwrap_or(0)))
-                .collect(),
+            lexical_evidence: lexical,
+            centroid_similarity: top_cluster,
+            lexical_floor: self.cfg.domain_lexical_floor,
+            centroid_floor: self.cfg.domain_floor,
+            would_refuse: !passes,
+            gate_bypassed: exempt,
+            identifiers,
             provider: self.provider.describe(),
         })
     }
@@ -352,20 +397,7 @@ impl Pipeline {
             self.centroids.len()
         ));
 
-        let dense = self.dense_arm(&qvec, &probed).await?;
-        progress.push(format!("dense: {} candidates", dense.len()));
-
-        let sparse = self
-            .ops
-            .sparse(
-                &sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim()),
-                self.cfg.per_arm_k,
-            )
-            .await?;
-        progress.push(format!("sparse: {} candidates", sparse.len()));
-
-        let text = self.ops.text(query, self.cfg.per_arm_k).await?;
-        progress.push(format!("text: {} candidates", text.len()));
+        let (dense, sparse, text) = self.arms(query, &qvec, &probed, &mut progress).await?;
 
         let exact_matches = self.exact_arm(query, &mut progress).await?;
 
@@ -410,8 +442,19 @@ impl Pipeline {
         progress.push(format!("fused to {} candidates", pool.len()));
 
         if pool.is_empty() {
-            let mut empty = SearchResponse::no_matching_domain(query, progress);
+            // ! The gate already passed to get here, so the domain DID match
+            // and only retrieval came back empty. Reporting this as
+            // `no_matching_domain` told the agent the corpus does not cover
+            // the subject — the one answer that makes it stop asking.
+            let mut empty = SearchResponse::no_match_in_domain(
+                query,
+                self.meta.id.clone(),
+                top_cluster,
+                probed.len(),
+                progress,
+            );
             empty.exact_matches = exact_matches;
+            empty.token_estimate = empty.estimate_tokens();
             return Ok(empty);
         }
 
@@ -434,6 +477,10 @@ impl Pipeline {
             exact_matches.is_empty(),
             &mut progress,
         );
+        // ! Counted BEFORE the cut. `truncated` is the only signal a caller
+        // has that raising `top_k` would return something it has not seen, and
+        // after `truncate` the number that would have said so is gone.
+        let scored = ranked.len();
         ranked.truncate(applied.top_k);
         progress.push(format!(
             "returning {} of {} candidates",
@@ -447,10 +494,42 @@ impl Pipeline {
             probed: probed.len(),
             top_cluster,
             results,
+            scored,
             exact_matches,
             progress,
             applied,
         }))
+    }
+
+    /// Run the three arms.
+    ///
+    /// ! Only `dense` is routed. `sparse` and `text` scan globally, which is
+    /// what makes a routing miss a latency cost rather than a zero-recall one
+    /// (`FAILURE_MODES.md` §1) — so this takes the probed clusters and uses
+    /// them for exactly one of the three.
+    async fn arms(
+        &self,
+        query: &str,
+        qvec: &[f32],
+        probed: &[(i32, f32)],
+        progress: &mut Vec<String>,
+    ) -> Result<(Vec<store::Scored>, Vec<store::Scored>, Vec<store::Scored>), PipelineError> {
+        let dense = self.dense_arm(qvec, probed).await?;
+        progress.push(format!("dense: {} candidates", dense.len()));
+
+        let sparse = self
+            .ops
+            .sparse(
+                &sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim()),
+                self.cfg.per_arm_k,
+            )
+            .await?;
+        progress.push(format!("sparse: {} candidates", sparse.len()));
+
+        let text = self.ops.text(query, self.cfg.per_arm_k).await?;
+        progress.push(format!("text: {} candidates", text.len()));
+
+        Ok((dense, sparse, text))
     }
 
     /// Arm weights for a requested mode.
@@ -701,6 +780,7 @@ impl Pipeline {
             probed,
             top_cluster,
             results,
+            scored,
             exact_matches,
             progress,
             applied,
@@ -716,6 +796,7 @@ impl Pipeline {
                 self.centroids.len()
             ),
         };
+        let results_len = results.len();
         let top_score = results.first().map_or(0.0, |r| r.score);
         let confidence = match trust_from(true, results.len(), top_score) {
             Trust::High => Confidence::High,
@@ -785,7 +866,10 @@ impl Pipeline {
             confidence,
             progress,
             token_estimate: 0,
-            truncated: false,
+            // ! Was hardcoded `false` while `top_k` dropped candidates
+            // silently, so a caller could not tell a complete answer from the
+            // visible tenth of one.
+            truncated: scored > results_len,
             applied: Some(applied),
             hint,
         };
@@ -827,10 +911,21 @@ impl Pipeline {
 /// What routing decided, for `explain_routing`.
 #[derive(Debug, Clone)]
 pub struct RouteExplain {
-    pub domain: String,
+    /// `None` when the gate would refuse · the same value `search_knowledge`
+    /// reports for this query, ✗ the corpus id unconditionally.
+    pub domain: Option<String>,
     pub clusters_probed: Vec<i32>,
     pub cluster_scores: Vec<(i32, f32)>,
     pub total_clusters: usize,
+    /// Both halves of the gate, with the thresholds they were compared to, so
+    /// a refusal can be attributed to one of them rather than guessed at.
+    pub lexical_evidence: f32,
+    pub centroid_similarity: f32,
+    pub lexical_floor: f32,
+    pub centroid_floor: f32,
+    pub would_refuse: bool,
+    /// The query names a regulation, so the gate is skipped (invariant 4).
+    pub gate_bypassed: bool,
     pub identifiers: Vec<String>,
     pub provider: String,
 }
@@ -1369,6 +1464,109 @@ mod live {
             scores.windows(2).all(|w| w[0] >= w[1]),
             "fused order must be monotonic when factors are off: {scores:?}"
         );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn truncated_says_whether_raising_top_k_would_show_more() {
+        // ! It was hardcoded `false`. A caller cannot tell a complete answer
+        // from the visible tenth of one, and the only way to find out was to
+        // re-ask with a bigger `top_k` and compare — which is the work this
+        // field exists to save.
+        let p = pipeline(open_cfg()).await;
+        let narrow = p
+            .search_with(
+                "bangunan gedung",
+                &contract::SearchOptions {
+                    top_k: Some(1),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        assert_eq!(narrow.results.len(), 1);
+        assert!(
+            narrow.truncated,
+            "one result out of a 60-candidate pool is a cut, and must say so"
+        );
+
+        // And the converse: a pool that fits must NOT claim it was cut.
+        let whole = p
+            .search_with(
+                "bangunan gedung",
+                &contract::SearchOptions {
+                    top_k: Some(10),
+                    candidate_pool: Some(1),
+                    ..contract::SearchOptions::default()
+                },
+            )
+            .await
+            .expect("search");
+        assert!(
+            !whole.truncated,
+            "nothing was dropped · {} results",
+            whole.results.len()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn explain_routing_agrees_with_what_search_would_do() {
+        // ! `explain_routing` reported the corpus id unconditionally — it
+        // never ran the gate. Asked about a query `search_knowledge` refuses,
+        // the transparency tool said the domain matched, so the one tool built
+        // to make routing falsifiable could not falsify the gate.
+        let p = pipeline(Config::default()).await;
+        for q in [
+            "bangunan gedung",
+            "what is the capital of France",
+            "cara memperbaiki keran air yang bocor di dapur",
+            "PP 26 tahun 2009",
+        ] {
+            let explained = p.explain(q).await.expect("explain");
+            let searched = p
+                .search_with(q, &contract::SearchOptions::default())
+                .await
+                .expect("search");
+            assert_eq!(
+                explained.domain, searched.detected_domain,
+                "the two tools disagree about {q:?}"
+            );
+            assert_eq!(
+                explained.would_refuse,
+                searched.detected_domain.is_none(),
+                "would_refuse must mean what it says for {q:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn the_gate_reports_which_half_refused() {
+        // A refusal the caller cannot attribute is a refusal they cannot act
+        // on: widening the wording and picking a different engine are
+        // different responses to the two halves.
+        let p = pipeline(Config::default()).await;
+        let r = p
+            .explain("what is the capital of France")
+            .await
+            .expect("explain");
+        assert!(r.would_refuse, "junk must not clear the gate");
+        assert!(
+            r.lexical_evidence < r.lexical_floor || r.centroid_similarity < r.centroid_floor,
+            "would_refuse with both halves passing is incoherent: {r:?}"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn an_identifier_bypasses_the_gate_in_both_tools() {
+        // Invariant 4, asserted on the explanation as well as the answer.
+        let p = pipeline(Config::default()).await;
+        let r = p.explain("PP 26 tahun 2009").await.expect("explain");
+        assert!(r.gate_bypassed, "a named regulation skips the gate");
+        assert!(!r.would_refuse);
+        assert!(r.domain.is_some());
     }
 
     #[tokio::test]

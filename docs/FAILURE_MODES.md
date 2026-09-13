@@ -173,24 +173,40 @@ The output contract exists so an agent can act on more than the results themselv
 Four of its fields do not carry the information they claim, and every one of them fails
 *quietly* — the agent reads a plausible value and draws a wrong conclusion.
 
-| Field | Promised | Actual |
+| Field | Promised | Was |
 |---|---|---|
-| `truncated` (search) | the result set was cut | always `false`; `TOP_K` drops candidates silently |
-| `token_estimate` | measured response size | hardcoded 60 / 120 on `list_domains` and `explain_routing` |
+| `truncated` (search) | the result set was cut | always `false`; `TOP_K` dropped candidates silently |
+| `token_estimate` | measured response size | hardcoded 60 / 120 on `list_domains` and `explain_routing`, `rows × 40` on `get_provenance`, `body.len() / 4` on `read_chunk` |
 | `detected_domain: null` | the corpus does not cover this | *also* returned when the domain matched and fusion simply found nothing |
-| `explain_routing.detected_domain` | what the gate decided | the corpus id, unconditionally — it never runs the gate |
+| `explain_routing.detected_domain` | what the gate decided | the corpus id, unconditionally — it never ran the gate |
 
-The third is the sharpest: an agent told `detected_domain: null` will stop asking. It
-cannot distinguish "wrong knowledge base" from "right knowledge base, no match", and
-the response can even carry `exact_matches` beside a null domain.
+The third was the sharpest: an agent told `detected_domain: null` stops asking. It could
+not distinguish "wrong knowledge base" from "right knowledge base, no match", and the
+response could even carry `exact_matches` beside a null domain.
 
-The fourth makes the transparency tool disagree with the tool it explains. Asked about
-a query `search_knowledge` would refuse, `explain_routing` reports a matched domain —
-so the one tool built to make routing falsifiable cannot falsify the gate.
+The fourth made the transparency tool disagree with the tool it explains. Asked about a
+query `search_knowledge` would refuse, `explain_routing` reported a matched domain — so
+the one tool built to make routing falsifiable could not falsify the gate.
 
-**Not stopped.** All four are recorded, none is fixed. They are grouped here because
-they share a cause: a field was added to the contract before the code that fills it,
-and nothing failed in between.
+**Stopped by** filling each field from the thing it describes:
+
+- `truncated` is `scored > returned`, counted **before** the cut to `top_k` — after
+  `truncate` the number that would have said so is gone.
+- `token_estimate` is measured by `tools::sized`, which serialises the response and
+  applies the same `len / 4` rule `SearchResponse::estimate_tokens` uses, so all five
+  tools are comparable. It costs one extra serialisation per reply.
+- A matched domain with an empty pool now returns `SearchResponse::no_match_in_domain`
+  — `detected_domain` set, `clusters_probed` reported, and a hint that says *rephrase*
+  rather than *go elsewhere*.
+- `explain_routing` runs the gate. That means it pays for a real sparse retrieval: a
+  transparency tool cheaper than the thing it explains is explaining something else. It
+  reports both halves with their thresholds, so a refusal can be attributed to the
+  lexical or the centroid side rather than guessed at.
+
+! The shared cause was **a field added to the contract before the code that fills it**,
+with nothing failing in between. The tests added with the fix assert the two tools
+*agree with each other* (`explain_routing_agrees_with_what_search_would_do`) rather than
+that each returns something plausible, because plausible is exactly what all four did.
 
 ---
 

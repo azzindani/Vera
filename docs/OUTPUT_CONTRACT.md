@@ -73,10 +73,9 @@ one.
 
   "confidence": "high",        // high | medium | low | none — §4
   "progress": ["embedded query (1024 dims)", "probed 5 of 177 clusters", "..."],
-  "token_estimate": 412,
-  // ! Always false. Nothing in the search path ever sets it — result count is
-  // bounded by TOP_K without reporting that anything was dropped. read_chunk
-  // has its own working `truncated`; this one is a promise, ✗ a signal.
+  "token_estimate": 412,   // measured, ✗ constant — the response's own length / 4
+  // true when scoring produced more candidates than `top_k` returned, so a
+  // caller can tell a complete answer from the visible tenth of one.
   "truncated": false,
   "hint": null                 // present only when there is something to act on
 }
@@ -130,20 +129,25 @@ verify without re-searching.
 global identifier path rather than semantic routing. Those are the high-trust "this
 regulation exists and here it is" results.
 
-! **Two different outcomes share this response today.** `SearchResponse::no_matching_domain`
-is returned both when the domain gate refuses *and* when fusion produced no candidates
-at all — a query whose terms are entirely out of vocabulary, say. The second case sets
-`detected_domain: null`, `clusters_probed: 0` and a hint reading "query matched no known
-knowledge base", none of which is true: the domain matched and clusters were probed.
-It can even carry non-empty `exact_matches` beside a null domain, which is
-self-contradictory. "The corpus does not cover this" and "this corpus covers it but
-nothing matched" are different answers and an agent should be able to tell them apart.
+### Two empty answers, and they mean opposite things
 
-**No matching domain returns `success: true`.** Empty `results`, `detected_domain:
-null`, `confidence: "none"`, and a hint saying the query did not match this knowledge
-base. The engine worked correctly and found nothing — which is deliberately distinct
-from an error, because a confidently wrong domain is worse than an honest "nothing
-matched", and downstream nothing reveals the difference if the engine guesses.
+Both return `success: true` with empty `results` — the engine worked correctly and
+found nothing, which is deliberately distinct from an error. They differ in what the
+agent should do next:
+
+| | `detected_domain` | `clusters_probed` | the hint says |
+|---|---|---|---|
+| the gate refused | `null` | 0 | this engine does not cover the subject |
+| the domain matched, retrieval found nothing | the corpus id | what was probed | rephrase, or name the regulation |
+
+! An agent told `detected_domain: null` **stops asking** — correctly when the corpus
+does not cover the subject, and wrongly when it does and only the phrasing missed. Both
+cases used to return the first row, including a hint reading "query matched no known
+knowledge base" when the domain had matched and clusters had been probed. It could even
+carry non-empty `exact_matches` beside a null domain, which is self-contradictory.
+
+`explain_routing` reports the same `detected_domain` for the same query, because it now
+runs the gate rather than naming the corpus unconditionally.
 
 ---
 
@@ -156,4 +160,7 @@ matched", and downstream nothing reveals the difference if the engine guesses.
   result set back is the normal case, and an uncapped id list is the one place a
   read-only server can still be made to allocate without limit.
 - Every response carries `token_estimate` so the agent can budget its own context.
-  Agentic loops are token-expensive, and the caller is the one that pays.
+  Agentic loops are token-expensive, and the caller is the one that pays. It is
+  **measured** — `len(json) / 4`, the same rule on all five tools — and costs one extra
+  serialisation per reply. Four of the five used to return a constant, which is wrong by
+  whatever the response actually was, in the direction that overruns.

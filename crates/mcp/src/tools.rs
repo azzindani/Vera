@@ -172,23 +172,87 @@ pub fn definitions() -> Vec<Value> {
 
 /// The uniform failure envelope.
 ///
+/// Fill in `token_estimate` by measuring the response, ✗ by guessing it.
+///
+/// ! Every tool but `search_knowledge` used to carry a constant here — 60 for
+/// `list_domains`, 120 for `explain_routing`, `rows * 40` for
+/// `get_provenance`, and `body.len() / 4` for `read_chunk`, which counted the
+/// body and none of the envelope around it. An agent budgets its own context
+/// with this number; a constant is wrong by whatever the response actually is,
+/// and wrong in the direction that overruns.
+///
+/// ! Same rule as `SearchResponse::estimate_tokens` — `len(json) / 4` — so the
+/// five tools are comparable to each other. Measuring means serialising twice:
+/// once to size it, once to send it. The responses are small and the
+/// alternative is a number nobody can trust.
+#[must_use]
+pub fn sized(mut out: Value) -> Value {
+    let n = serde_json::to_string(&out).map_or(0, |s| s.len() / 4);
+    if let Some(obj) = out.as_object_mut() {
+        obj.insert("token_estimate".into(), json!(n));
+    }
+    out
+}
+
 /// ! `success` first, and always an actionable `hint` (`CLAUDE.md` §6). An
 /// error the agent cannot act on just becomes a retry loop.
 #[must_use]
 pub fn error(op: &str, message: &str, hint: &str) -> Value {
-    json!({
+    sized(json!({
         "success": false,
         "op": op,
         "error": message,
         "hint": hint,
-        "token_estimate": (message.len() + hint.len()) / 4,
+        "token_estimate": 0,
         "progress": [],
-    })
+    }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sized_measures_the_response_rather_than_guessing_it() {
+        let small = sized(json!({ "op": "a", "token_estimate": 0 }));
+        let big = sized(json!({
+            "op": "a",
+            "token_estimate": 0,
+            "body": "x".repeat(4_000),
+        }));
+        let n = |v: &Value| v["token_estimate"].as_u64().unwrap();
+        assert!(n(&small) > 0, "an unset estimate is a broken budget");
+        assert!(
+            n(&big) > n(&small) + 900,
+            "4,000 more characters must move the estimate: {} vs {}",
+            n(&big),
+            n(&small)
+        );
+    }
+
+    #[test]
+    fn sized_counts_the_envelope_and_not_just_the_payload() {
+        // ! `read_chunk` used to report `body.len() / 4`, which is the payload
+        // with none of the JSON around it. The agent budgets context with this.
+        let body = "x".repeat(400);
+        let v = sized(json!({
+            "op": "read_chunk",
+            "token_estimate": 0,
+            "source": { "title": "a fairly long source title here", "url": null },
+            "body": body.clone(),
+        }));
+        assert!(
+            usize::try_from(v["token_estimate"].as_u64().unwrap()).unwrap() > body.len() / 4,
+            "the envelope is not free"
+        );
+    }
+
+    #[test]
+    fn an_error_carries_an_estimate_too() {
+        let e = error("search_knowledge", "boom", "try again");
+        assert!(e["token_estimate"].as_u64().unwrap() > 0);
+        assert_eq!(e["success"], json!(false));
+    }
 
     fn tool(name: &str) -> Value {
         definitions()

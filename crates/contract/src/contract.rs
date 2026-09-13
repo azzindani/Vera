@@ -164,6 +164,47 @@ impl SearchResponse {
         out
     }
 
+    /// The domain matched and retrieval still found nothing.
+    ///
+    /// ! Distinct from [`Self::no_matching_domain`], and the distinction is the
+    /// point. Both return zero results, and an agent told `detected_domain:
+    /// null` stops asking — correctly, if the corpus does not cover the
+    /// subject, and wrongly if it does and the phrasing simply missed. The
+    /// engine knows which of the two happened; until this existed it reported
+    /// only the discouraging one.
+    #[must_use]
+    pub fn no_match_in_domain(
+        query: impl Into<String>,
+        domain: impl Into<String>,
+        domain_confidence: f32,
+        clusters_probed: usize,
+        progress: Vec<String>,
+    ) -> Self {
+        let mut out = Self {
+            success: true,
+            op: "search_knowledge",
+            query: query.into(),
+            detected_domain: Some(domain.into()),
+            domain_confidence,
+            clusters_probed,
+            results: Vec::new(),
+            citation_block: Vec::new(),
+            summary_payload: SummaryPayload::default(),
+            exact_matches: Vec::new(),
+            confidence: Confidence::None,
+            progress,
+            token_estimate: 0,
+            truncated: false,
+            applied: None,
+            hint: Some(
+                "this corpus covers the subject but no passage matched the wording ·                  rephrase with the terms the source would use, or name the regulation                  directly"
+                    .into(),
+            ),
+        };
+        out.token_estimate = out.estimate_tokens();
+        out
+    }
+
     /// `len(str(response)) / 4` · the agent budgets its own context with this.
     #[must_use]
     pub fn estimate_tokens(&self) -> usize {
@@ -283,6 +324,25 @@ mod tests {
         let block = citation_block(&[r]);
         assert_eq!(block[0].text, "[1] UU No. 28 Tahun 2007, Pasal 9, p.14");
         assert!(!block[0].text.contains('—'), "no dangling separator");
+    }
+
+    #[test]
+    fn the_two_empty_answers_are_distinguishable() {
+        // ! They mean opposite things to a calling agent: one says stop asking
+        // this engine, the other says ask it differently. Returning the same
+        // shape for both is why this test exists.
+        let gate = SearchResponse::no_matching_domain("q", vec![]);
+        let miss = SearchResponse::no_match_in_domain("q", "id-regulations", 0.71, 5, vec![]);
+        assert!(gate.results.is_empty() && miss.results.is_empty());
+        assert!(gate.success && miss.success, "neither is an error");
+        assert!(gate.detected_domain.is_none(), "no domain cleared the gate");
+        assert_eq!(
+            miss.detected_domain.as_deref(),
+            Some("id-regulations"),
+            "the domain DID match · saying otherwise sends the agent away"
+        );
+        assert_ne!(gate.hint, miss.hint, "the same hint would undo the split");
+        assert_eq!(miss.clusters_probed, 5, "routing happened · report it");
     }
 
     #[test]

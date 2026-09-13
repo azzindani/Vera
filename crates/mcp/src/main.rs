@@ -490,7 +490,7 @@ async fn dispatch(pipe: &Pipeline, params: &Value, limits: Limits) -> Value {
 
 fn list_domains(pipe: &Pipeline) -> Value {
     let m = pipe.corpus();
-    json!({
+    tools::sized(json!({
         "success": true,
         "op": "list_domains",
         "domains": [{
@@ -501,8 +501,8 @@ fn list_domains(pipe: &Pipeline) -> Value {
             ),
         }],
         "progress": ["listed 1 domain"],
-        "token_estimate": 60,
-    })
+        "token_estimate": 0,
+    }))
 }
 
 /// Pull the option fields out of the tool's argument object.
@@ -571,7 +571,7 @@ async fn read_chunk(pipe: &Pipeline, args: &Value, limits: Limits) -> Value {
         .and_then(|v| usize::try_from(v).ok())
         .map_or(limits.read_chunk_chars, |n| n.min(limits.read_chunk_chars));
     match pipe.read_chunk(id, cap).await {
-        Ok(Some((row, body, truncated))) => json!({
+        Ok(Some((row, body, truncated))) => tools::sized(json!({
             "success": true,
             "op": "read_chunk",
             "id": row.id,
@@ -580,8 +580,8 @@ async fn read_chunk(pipe: &Pipeline, args: &Value, limits: Limits) -> Value {
             "truncated_at_source": row.truncated_at_source,
             "source": { "title": row.source_title, "url": row.source_url },
             "progress": ["read 1 chunk"],
-            "token_estimate": body.len() / 4,
-        }),
+            "token_estimate": 0,
+        })),
         Ok(None) => tools::error(
             "read_chunk",
             &format!("no chunk {id}"),
@@ -616,7 +616,7 @@ async fn get_provenance(pipe: &Pipeline, args: &Value, limits: Limits) -> Value 
     match pipe.provenance(&ids).await {
         Ok(rows) => {
             let incomplete = rows.iter().filter(|r| !r.provenance_complete()).count();
-            json!({
+            tools::sized(json!({
                 "success": true,
                 "op": "get_provenance",
                 "sources": rows.iter().map(|r| json!({
@@ -629,12 +629,12 @@ async fn get_provenance(pipe: &Pipeline, args: &Value, limits: Limits) -> Value 
                     "provenance_complete": r.provenance_complete(),
                 })).collect::<Vec<_>>(),
                 "progress": [format!("resolved {} ids", rows.len())],
-                "token_estimate": rows.len() * 40,
+                "token_estimate": 0,
                 "hint": (incomplete > 0).then(|| format!(
                     "{incomplete} of {} have no source_url · cite by title and locator",
                     rows.len()
                 )),
-            })
+            }))
         }
         Err(e) => tools::error("get_provenance", &e.to_string(), "check the database"),
     }
@@ -645,10 +645,22 @@ async fn explain_routing(pipe: &Pipeline, args: &Value) -> Value {
         return tools::error("explain_routing", "missing `query`", "pass a query");
     };
     match pipe.explain(q).await {
-        Ok(r) => json!({
+        Ok(r) => tools::sized(json!({
             "success": true,
             "op": "explain_routing",
+            // ! `null` when the gate would refuse — the same value
+            // `search_knowledge` reports for this query.
             "detected_domain": r.domain,
+            "would_refuse": r.would_refuse,
+            // Both halves, with their thresholds, so a refusal can be
+            // attributed rather than guessed at.
+            "domain_gate": {
+                "lexical_evidence": r.lexical_evidence,
+                "lexical_floor": r.lexical_floor,
+                "centroid_similarity": r.centroid_similarity,
+                "centroid_floor": r.centroid_floor,
+                "bypassed": r.gate_bypassed,
+            },
             "clusters_probed": r.clusters_probed,
             "cluster_scores": r.cluster_scores.iter()
                 .map(|(id, s)| json!({ "cluster": id, "similarity": s }))
@@ -657,9 +669,13 @@ async fn explain_routing(pipe: &Pipeline, args: &Value) -> Value {
             "identifiers_detected": r.identifiers,
             "routing_bypass": !r.identifiers.is_empty(),
             "provider": r.provider,
-            "progress": ["routed"],
-            "token_estimate": 120,
-        }),
+            "progress": ["routed", if r.would_refuse {
+                "domain gate: would REFUSE this query"
+            } else {
+                "domain gate: would serve this query"
+            }],
+            "token_estimate": 0,
+        })),
         Err(e) => tools::error(
             "explain_routing",
             &e.to_string(),

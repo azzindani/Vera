@@ -81,16 +81,44 @@ Capped at `MAX_PROVENANCE_IDS`. The locator is section-only on this corpus; see
 explain_routing(query: str) -> dict
 ```
 The routing decision without the search: which centroids were nearest, their scores,
-and any identifiers extracted. This is what makes routing falsifiable rather than a
-claim.
+any identifiers extracted, and **what the domain gate decided**. This is what makes
+routing falsifiable rather than a claim.
 
-! **It does not run the domain gate.** `Pipeline::explain` sets
-`domain: self.meta.id` unconditionally, so `explain_routing` reports a matched domain
-for a query `search_knowledge` would refuse — the two tools disagree about the same
-query. The gate needs retrieved evidence for its lexical half (`CONFIGURATION.md` §6)
-and `explain` deliberately skips retrieval, so reporting the gate here means either
-running the arms or reporting the centroid half alone and saying so. Today it reports
-neither and implies both.
+```jsonc
+{
+  "detected_domain": null,        // null when the gate would refuse — the same
+                                  // value search_knowledge reports for this query
+  "would_refuse": true,
+  "domain_gate": {
+    "lexical_evidence": 0.333, "lexical_floor": 0.40,
+    "centroid_similarity": 0.717, "centroid_floor": 0.45,
+    "bypassed": false             // true when the query names a regulation
+  },
+  "cluster_scores": [ { "cluster": 41, "similarity": 0.717 } ]
+}
+```
+
+! Both halves are reported **with their thresholds**, because "refused" is not
+actionable on its own: a lexical failure means rephrase, a centroid failure means this
+may be the wrong engine, and the caller cannot tell which from a bare `null`.
+
+! This costs a real sparse retrieval — the gate's lexical half needs retrieved evidence
+(`CONFIGURATION.md` §6). Measured on `spike-02`: **~210 ms**, against **61 ms** for a
+query naming a regulation (invariant 4 bypasses the gate, so there is nothing to
+retrieve) and a **691 ms** p50 for `search_knowledge`. `explain` used to skip retrieval
+and report `domain: self.meta.id` unconditionally, which made the transparency tool
+disagree with the tool it explains — and a transparency tool cheaper than the thing it
+explains is explaining something else.
+
+Both halves are load-bearing, and this tool now shows it per query:
+
+| query | lexical (floor 0.40) | centroid (floor 0.45) | refused by |
+|---|---|---|---|
+| "what is the capital of France" | 0.565 | **0.425** | the centroid half |
+| "cara memperbaiki keran air yang bocor di dapur" | **0.346** | 0.715 | the lexical half |
+
+Neither half catches both. That was measured once when the floors were chosen; it is
+now inspectable at runtime for any query.
 
 ---
 
@@ -108,19 +136,23 @@ holding.
 | `hint` | on failure | what to do about it |
 | `progress` | always | step log: embed / route / scan / fuse |
 | `token_estimate` | always | so the agent can budget its own context |
-| `truncated` | bounded reads | explicit on `read_chunk` |
+| `truncated` | bounded reads | explicit on `read_chunk` and on `search_knowledge` |
 
 The upstream write-tool fields — snapshot, dry_run, restore — do not apply. The query
 path never writes.
 
-! `token_estimate` is **hardcoded** on `list_domains` (60) and `explain_routing` (120).
-`SearchResponse::estimate_tokens` measures the real serialized length and `read_chunk`
-uses `body.len() / 4`; those two measure nothing. A constant defeats the field's only
-purpose.
+! `token_estimate` is **measured on all five tools** — `tools::sized` serialises the
+response and applies the same `len / 4` rule as `SearchResponse::estimate_tokens`, so
+the numbers are comparable across tools. It was previously a constant on
+`list_domains` (60) and `explain_routing` (120), `rows × 40` on `get_provenance`, and
+`body.len() / 4` on `read_chunk` — the payload with none of the envelope. A constant
+defeats the field's only purpose, and errs in the direction that overruns the caller's
+budget.
 
-! `truncated` works on `read_chunk` and is **always `false` on `search_knowledge`** —
-nothing in the search path sets it, so a result set cut to `TOP_K` reports no sign that
-anything was dropped.
+! `truncated` on `search_knowledge` is `scored > returned`, counted **before** the cut
+to `top_k`: after the cut the number that would have said so is gone. It is the only
+signal a caller has that raising `top_k` would show something new, and it was hardcoded
+`false` while `TOP_K` dropped candidates silently.
 
 ---
 
