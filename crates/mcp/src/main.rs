@@ -178,6 +178,13 @@ impl Settings {
                 // the arm weights are: they are properties of the CORPUS, and
                 // refitting after a re-chunk must not require a release.
                 factor_weights: engine::Weights {
+                    // ! A floor, not a weight -- and the single most valuable
+                    // dial measured (`docs/SCORING.md` §3).
+                    relevance_floor: parsed(
+                        "RELEVANCE_FLOOR",
+                        "number",
+                        d.factor_weights.relevance_floor,
+                    )?,
                     authority: parsed("FACTOR_AUTHORITY", "number", d.factor_weights.authority)?,
                     structural: parsed("FACTOR_STRUCTURAL", "number", d.factor_weights.structural)?,
                     temporal: parsed("FACTOR_TEMPORAL", "number", d.factor_weights.temporal)?,

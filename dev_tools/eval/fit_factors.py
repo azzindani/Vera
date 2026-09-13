@@ -66,7 +66,7 @@ WITH q AS (
          ) AS tq
 )
 SELECT id, regulation_type, regulation_number, year, article, chapter,
-       about, length(body) AS blen
+       about, length(body) AS blen, body
 FROM chunks, q
 WHERE indexable AND tsv @@ q.tq
 ORDER BY tsv <=> q.tq
@@ -82,7 +82,7 @@ STOP = {
 }
 
 FIELDS = ("id", "regulation_type", "regulation_number", "year",
-          "article", "chapter", "about", "blen")
+          "article", "chapter", "about", "blen", "body")
 
 FACTORS = ("authority", "structural", "temporal", "completeness", "topical")
 
@@ -151,7 +151,30 @@ def f_topical(row, qterms):
     return len(qterms & terms(row["about"])) / len(qterms)
 
 
-def score_pool(rows, qterms, weights):
+def coverage(row, qterms):
+    """Share of the query's content terms this chunk actually contains.
+
+    ! The relevance FLOOR of SCORING.md section 3, and the single most valuable
+    dial measured here: it is worth more on its own (+12.5 points) than every
+    factor weight combined. Unweighted term overlap, not IDF-weighted -- the
+    engine has `bm25::evidence`, which is strictly better, but the floor below
+    was fitted against THIS measure and the two live on different scales.
+    Refitting against evidence is the obvious next experiment.
+    """
+    if not qterms:
+        return 1.0
+    return len(qterms & terms(row["body"])) / len(qterms)
+
+
+def score_pool(rows, qterms, weights, floor=0.0):
+    # ! Applied BEFORE scoring, and this is what makes the gate real. Without
+    # it the prior (bounded at 1 + sum(weights) = 2.0x) exceeds the entire
+    # spread of RRF relevance across a 60-candidate pool (1.98x), so metadata
+    # alone can lift pool rank 59 to rank 1. Measured, not feared.
+    kept = [r for r in rows if coverage(r, qterms) >= floor]
+    # ! Never empty on account of the floor. "Nothing matches" is the domain
+    # gate's decision, not this one.
+    rows = kept or rows[:1]
     years = [r["year"] for r in rows if r["year"]]
     newest, oldest = (max(years), min(years)) if years else (0, 0)
     out = []
@@ -194,11 +217,11 @@ def key_of(row):
             row["year"], norm(row["article"]))
 
 
-def recall_at_k(loaded, weights, k=TOP_K):
+def recall_at_k(loaded, weights, k=TOP_K, floor=0.0):
     hits = 0
     per_type = collections.defaultdict(lambda: [0, 0])
     for case, rows, want, qterms in loaded:
-        got = {key_of(r) for _, r in score_pool(rows, qterms, weights)[:k]}
+        got = {key_of(r) for _, r in score_pool(rows, qterms, weights, floor)[:k]}
         hit = bool(got & want)
         hits += hit
         per_type[case["type"]][0] += hit
@@ -206,8 +229,29 @@ def recall_at_k(loaded, weights, k=TOP_K):
     return hits / len(loaded), per_type
 
 
-def rank_of(rows, want, qterms, weights):
-    for i, (_, row) in enumerate(score_pool(rows, qterms, weights)):
+FLOORS = (0.0, 0.2, 0.3, 0.4, 0.5)
+
+
+def leave_one_out(loaded, configs, hits):
+    """The only number worth quoting.
+
+    ! Taking the best of N configurations on 40 cases overfits, and by about
+    ten points here. Each fold refits on the other 39 and is scored on the one
+    held out, so the configuration never sees the case it is judged on.
+    """
+    n = len(loaded)
+    correct = 0
+    chosen = collections.Counter()
+    for i in range(n):
+        best = max(range(len(configs)), key=lambda j: sum(hits[j]) - hits[j][i])
+        correct += hits[best][i]
+        floor, w = configs[best]
+        chosen[(floor, tuple(round(w[k], 2) for k in FACTORS))] += 1
+    return correct / n, chosen
+
+
+def rank_of(rows, want, qterms, weights, floor=0.0):
+    for i, (_, row) in enumerate(score_pool(rows, qterms, weights, floor)):
         if key_of(row) in want:
             return i + 1
     return None
@@ -216,7 +260,7 @@ def rank_of(rows, want, qterms, weights):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--explain", action="store_true",
-                    help="show every case the fitted weights moved")
+                    help="show every case the fitted configuration moved")
     args = ap.parse_args()
 
     zero = dict.fromkeys(FACTORS, 0.0)
@@ -224,52 +268,91 @@ def main():
     with psycopg.connect(DSN) as conn:
         conn.execute("SET statement_timeout = '120s'")
         loaded = load_cases(conn)
+    n = len(loaded)
 
     base, base_types = recall_at_k(loaded, zero)
-    print(f"cases: {len(loaded)}   pool: {POOL}   scored at Recall@{TOP_K}\n")
-    print(f"baseline (text arm, no factors)      {base:6.1%}")
+    print(f"cases: {n}   pool: {POOL}   scored at Recall@{TOP_K}")
+    print()
+    print(f"baseline · text arm, no floor, no factors      {base:6.1%}")
 
-    # One factor at a time, so a factor that does nothing is visible as doing
-    # nothing rather than hidden inside a combination that happens to work.
-    print("\nper factor, alone:")
+    # The floor alone, before any factor earns anything. Measured first because
+    # it turns out to be worth more than all of them together.
+    print()
+    print("relevance floor alone (no factors):")
+    for f in FLOORS:
+        r, _ = recall_at_k(loaded, zero, floor=f)
+        print(f"  floor {f:<5} {r:6.1%}   {r - base:+5.1%}")
+
+    best_floor_solo = max(FLOORS, key=lambda f: recall_at_k(loaded, zero, floor=f)[0])
+    floor_base, _ = recall_at_k(loaded, zero, floor=best_floor_solo)
+    print()
+    print(f"per factor alone, at floor {best_floor_solo}:")
     grid = [0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0]
-    solo = {}
-    for f in FACTORS:
-        best_r, best_w = max((recall_at_k(loaded, {**zero, f: w})[0], w)
-                             for w in grid)
-        solo[f] = (best_r, best_w)
-        d = best_r - base
+    for fac in FACTORS:
+        best_r, best_w = max(
+            (recall_at_k(loaded, {**zero, fac: w}, floor=best_floor_solo)[0], w)
+            for w in grid
+        )
+        d = best_r - floor_base
         sign = "=" if abs(d) < 1e-9 else ("+" if d > 0 else "-")
-        print(f"  {f:<14} best {best_r:6.1%}  at w={best_w:<4}  {sign}{abs(d):5.1%}")
+        print(f"  {fac:<14} best {best_r:6.1%}  at w={best_w:<4}  {sign}{abs(d):5.1%}")
 
-    live = [f for f in FACTORS if solo[f][0] > base]
-    print(f"\njoint search over: {live if live else 'nothing earned a weight'}")
-    if not live:
-        return
-
+    # ! Floor and weights are fitted JOINTLY. Fitting them separately credits a
+    # factor for work the floor was doing -- which is exactly what happened the
+    # first time round: `completeness` earned 0.25 as a crude relevance proxy
+    # (longer chunks contain more query terms) and drops to 0.0 once a real
+    # floor exists. `temporal` is held at 0.0, having been measured to add
+    # nothing at any weight under any floor.
     coarse = [0.0, 0.25, 0.5, 1.0, 1.5]
-    best_w, best_r = zero, base
-    for combo in itertools.product(coarse, repeat=len(live)):
-        w = {**zero, **dict(zip(live, combo))}
-        r, _ = recall_at_k(loaded, w)
-        if r > best_r:
-            best_r, best_w = r, w
-    print(f"  best {best_r:6.1%}   ({best_r - base:+.1%} over baseline)")
-    print("  weights: " + "  ".join(f"{k}={v}" for k, v in best_w.items() if v))
+    configs = [
+        (f, {**zero, "authority": a, "structural": s, "completeness": c, "topical": t})
+        for f in FLOORS
+        for a, s, c, t in itertools.product(coarse, repeat=4)
+    ]
 
-    _, fitted_types = recall_at_k(loaded, best_w)
-    print(f"\n  {'shape':<16}{'base':>7}{'fitted':>9}")
+    hits = [
+        [
+            1 if {key_of(r) for _, r in score_pool(rows, qt, w, f)[:TOP_K]} & want else 0
+            for _, rows, want, qt in loaded
+        ]
+        for f, w in configs
+    ]
+
+    best_i = max(range(len(configs)), key=lambda i: sum(hits[i]))
+    best_floor, best_w = configs[best_i]
+    loo, chosen = leave_one_out(loaded, configs, hits)
+
+    print()
+    print(f"joint fit over {len(configs)} configurations:")
+    print(f"  best in-sample   {sum(hits[best_i]) / n:6.1%}")
+    print(f"  LEAVE-ONE-OUT    {loo:6.1%}   <- the only number worth quoting")
+    print(f"  floor {best_floor} · "
+          + "  ".join(f"{k}={v}" for k, v in best_w.items() if v))
+
+    beat = sum(1 for h in hits if sum(h) / n > base)
+    print()
+    print(f"  {beat} of {len(configs)} configurations beat the baseline "
+          f"({beat / len(configs):.0%})")
+    print("  chosen across the folds:")
+    for (f, w), count in chosen.most_common(3):
+        named = "  ".join(f"{k}={v}" for k, v in zip(FACTORS, w) if v)
+        print(f"    floor {f} · {named or 'no factors'}   x{count}")
+
+    _, fitted_types = recall_at_k(loaded, best_w, floor=best_floor)
+    print()
+    print(f"  {'shape':<16}{'base':>7}{'fitted':>9}")
     for shape in sorted(fitted_types,
                         key=lambda s: base_types[s][0] - fitted_types[s][0]):
-        b, f = base_types[shape], fitted_types[shape]
-        flag = "" if b[0] == f[0] else ("  <-- gained" if f[0] > b[0] else "  <-- LOST")
-        print(f"  {shape:<16}{b[0]}/{b[1]:>5}{f[0]}/{f[1]:>7}{flag}")
+        b, ft = base_types[shape], fitted_types[shape]
+        flag = "" if b[0] == ft[0] else ("  <-- gained" if ft[0] > b[0] else "  <-- LOST")
+        print(f"  {shape:<16}{b[0]}/{b[1]:>5}{ft[0]}/{ft[1]:>7}{flag}")
 
     if args.explain:
-        print("\nmoved cases (rank in pool, baseline -> fitted):")
+        print()
+        print("moved cases (rank in pool, baseline -> fitted):")
         for case, rows, want, qterms in loaded:
             a = rank_of(rows, want, qterms, zero)
-            b = rank_of(rows, want, qterms, best_w)
+            b = rank_of(rows, want, qterms, best_w, best_floor)
             if a != b:
                 print(f"  {case['id']}  {case['type']:<14} "
                       f"{a if a else '-':>4} -> {b if b else '-':>4}   {case['source']}")

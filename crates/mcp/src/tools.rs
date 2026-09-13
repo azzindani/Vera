@@ -76,6 +76,7 @@ pub fn definitions() -> Vec<Value> {
                         "type": "object",
                         "description": "EXPERIMENTAL. Raw factor weights, unfitted. Prefer `profile`. The effective weights are echoed in `applied`.",
                         "properties": {
+                            "relevance_floor": { "type": "number" },
                             "authority": { "type": "number" },
                             "structural": { "type": "number" },
                             "temporal": { "type": "number" },
@@ -83,7 +84,8 @@ pub fn definitions() -> Vec<Value> {
                             "topical": { "type": "number" }
                         },
                         "required": [
-                            "authority", "structural", "temporal", "completeness", "topical"
+                            "relevance_floor", "authority", "structural",
+                            "temporal", "completeness", "topical"
                         ],
                         "additionalProperties": false
                     }

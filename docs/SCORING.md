@@ -51,10 +51,29 @@ the chunk, computable at ingest and free at query time.
 Indonesian regulation is a strict hierarchy, so this is a lookup, not a model:
 
 ```
-UUD 10  ·  TAP MPR 9  ·  UU 8  ·  PERPU 7  ·  PP 6
-PERPRES 5  ·  PERMEN 4  ·  PERDA PROVINSI 3  ·  PERDA KAB/KOTA 2
-authority = (hierarchy / 10) * 0.7 + (enacting_body_level / 5) * 0.3
+UU 8  ·  PP 7  ·  PERPRES 6  ·  INPRES 5  ·  PERDA PROVINSI 4
+PERGUB / PERDA KAB / PERDA KOTA 3  ·  PERBUP / PERWALI 2
+authority = hierarchy / 10
 ```
+
+Ordering follows UU 12/2011: the Art 7 ladder, with Art 8 instruments — a
+governor's, regent's or mayor's own regulation — **below** the Perda they
+implement. An earlier table had `PERATURAN BUPATI` above `PERATURAN DAERAH
+KOTA`, inverting legislation and the regulation implementing it.
+
+! **The eval cannot tell the two apart.** Fitted against the corrected table and
+the inverted one, Recall@5 is identical (57.5% in-sample, 47.5% leave-one-out
+at the time of the test), and a coarse national-vs-local split does at least as
+well as either. At n=40 the fine ordering is not evidence-backed. It is correct
+here because a table stating something legally false is wrong regardless of
+whether this eval set can detect it — but no claim is made that it helps.
+
+! **`enacting_body` is not used, and the term that once appeared in this formula
+is gone.** The column is populated on all 367,069 rows and its contents are
+unusable: `PERATURAN BUPATI` with `enacting_body = 'MA'` (10,395 rows),
+`PERATURAN DAERAH KABUPATEN` with `'RI'` (7,770), `PERATURAN BUPATI` with `'RI'`
+(5,644). Those are extraction artefacts, not enacting bodies. A weighted term
+over them would be noise wearing a coefficient.
 
 ### structural
 
@@ -70,8 +89,8 @@ rarely the answer to a question about obligations; an article usually is, and
 ! Factors are applied **after** a relevance floor, never instead of one.
 
 ```
-relevance = mean(dense, sparse, text)
-if relevance < RELEVANCE_FLOOR:  drop the candidate entirely
+coverage = share of the query's content terms the chunk contains
+if coverage < RELEVANCE_FLOOR (0.4):  drop the candidate entirely
 ```
 
 Without this, authority weighting ranks the most prestigious document in the
@@ -79,6 +98,62 @@ corpus first for *every* query — a banking law for a tax question, because it
 scores high on authority and was never required to be relevant. High authority
 and zero relevance is the specific failure the gate exists to prevent, and it is
 a plausible-looking failure: the result is a real law, correctly cited.
+
+### It is a threshold, ✗ the shape of the formula
+
+An earlier version of this engine shipped **without** the floor, on the argument
+that the multiplicative form made it unnecessary: a candidate with no retrieval
+score has nothing for its metadata to multiply, so pool membership *was* the
+floor. That argument is wrong, and the numbers say so:
+
+| | |
+|---|---|
+| RRF relevance, pool rank 0 | 0.01667 |
+| RRF relevance, pool rank 59 | 0.00840 |
+| **spread across the whole pool** | **1.98×** |
+| prior bound, `1 + Σ weights`, as shipped then | **2.00×** |
+
+The prior could out-span the entire pool. Metadata alone could lift rank 59 to
+rank 1, and in the fit **5.5% of delivered results came from beyond pool rank
+40**. RRF scores are computed from *ranks*, so every pool member gets a
+comfortable score whether or not it matches anything — which is exactly why
+"it is in the pool" is not evidence of relevance.
+
+### What it is worth
+
+Measured by `dev_tools/eval/fit_factors.py` against the text arm:
+
+| | Recall@5 |
+|---|---|
+| no floor, no factors | 40.0% |
+| **floor alone** | **52.5%** |
+| best in-sample, floor + weights | 65.0% |
+| **leave-one-out** | **57.5%** |
+
+! **The floor is worth more than every weight combined** — +12.5 points against
++5.0 for the best single factor.
+
+! It also explains a factor that used to earn its keep and no longer does.
+Before the floor existed, `completeness` fitted to 0.25; longer chunks contain
+more query terms, so it was serving as a crude relevance proxy. With a real
+floor it earns nothing and ships at 0.0. A factor that is silently doing another
+factor's job is the failure mode of fitting weights separately, which is why
+floor and weights are now fitted **jointly**.
+
+### Two rules the floor must obey
+
+- **It never empties the answer.** "This corpus cannot answer the question" is
+  the domain gate's decision (invariant 13). A second, silent refusal here would
+  be indistinguishable from it, and the caller could not tell which component
+  declined. If the floor would drop everything, the top candidate survives.
+- **It accounts for what it drops**, in `progress`. A filter that leaves no
+  trace cannot be audited.
+
+! The floor measures **unweighted term overlap**, not `bm25::evidence`. Evidence
+is the better primitive and is what the domain gate uses — but the 0.4 was
+fitted against overlap and the two live on different scales. Swapping it in
+without refitting would apply a threshold nothing measured. Refitting against
+evidence is the obvious next experiment.
 
 ---
 
@@ -354,8 +429,8 @@ example; no result from this corpus can carry one.
 |---|---|
 | arms | dense (weight 0.0), sparse, text |
 | fusion | RRF over ranks |
-| **factors** | **authority 0.5 · structural 0.25 · completeness 0.25 · temporal 0.0 · topical 0.0** |
-| **relevance gate** | **structural — the prior multiplies the fused score, so pool membership is the floor** |
+| **relevance floor** | **0.4 of the query's content terms · drops candidates, reported in `progress`** |
+| **factors** | **authority 1.0 · structural 0.5 · topical 0.25 · completeness 0.0 · temporal 0.0** |
 | weights | one global set, ✗ per query type (§4) |
 | viewpoints / consensus | ✗ |
 | exact identifiers | retrieved globally, fused normally |
@@ -364,9 +439,9 @@ example; no result from this corpus can carry one.
 | pool | 60 fused candidates, no expansion |
 | Recall@5 | **50.0%** |
 
-! **50.0% is the engine's last measured Recall@5 and predates the factor layer.**
-Factors were fitted and measured offline against the text arm (+7.5 points
+! **50.0% is the engine's last measured Recall@5 and predates this layer.**
+Floor and factors were fitted offline against the text arm (+17.5 points
 leave-one-out, `fit_factors.py`); what they are worth *through the fused engine*
 needs an `e2e.py` run, which needs the embedder. Until that runs, the honest
-statement is that the layer is built, unit-tested against the Python that fitted
-it, and **unmeasured in situ**.
+statement is that the layer is built, pinned to the Python that fitted it by a
+cross-language test, and **unmeasured in situ**.

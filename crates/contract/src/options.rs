@@ -83,6 +83,10 @@ pub enum Profile {
 /// weights are echoed back whether or not the caller passed any.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct FactorWeights {
+    /// Minimum share of the query's content terms a candidate must contain ·
+    /// **a floor, ✗ a weight** (`docs/SCORING.md` §3). Worth more than every
+    /// weight below combined.
+    pub relevance_floor: f32,
     pub authority: f32,
     pub structural: f32,
     pub temporal: f32,
@@ -210,11 +214,12 @@ mod tests {
         candidate_pool: 60,
     };
     const W: FactorWeights = FactorWeights {
-        authority: 0.5,
-        structural: 0.25,
+        relevance_floor: 0.4,
+        authority: 1.0,
+        structural: 0.5,
         temporal: 0.0,
-        completeness: 0.25,
-        topical: 0.0,
+        completeness: 0.0,
+        topical: 0.25,
     };
 
     #[test]

@@ -17,7 +17,7 @@ use engine::{
 };
 use store::{CorpusMeta, SearchOps, sparse_literal};
 
-use crate::bm25::{self, QueryVectorizer};
+use crate::bm25::QueryVectorizer;
 use crate::identifier;
 
 /// Tunables. ! Config, ✗ constants (`CLAUDE.md` §7.12) — bigger hardware and
@@ -166,6 +166,7 @@ struct Assembly<'a> {
 /// internal one.
 fn weights_to_contract(w: &engine::Weights) -> contract::FactorWeights {
     contract::FactorWeights {
+        relevance_floor: w.relevance_floor,
         authority: w.authority,
         structural: w.structural,
         temporal: w.temporal,
@@ -177,6 +178,7 @@ fn weights_to_contract(w: &engine::Weights) -> contract::FactorWeights {
 /// The inverse. Caller-supplied weights arrive here.
 fn weights_from_contract(w: &contract::FactorWeights) -> engine::Weights {
     engine::Weights {
+        relevance_floor: w.relevance_floor,
         authority: w.authority,
         structural: w.structural,
         temporal: w.temporal,
@@ -471,9 +473,14 @@ impl Pipeline {
         progress: &mut Vec<String>,
     ) {
         let before = ranked.first().map(|(f, _)| f.id.clone());
-        let terms = bm25::tokenize(query);
+        // ! `content_terms`, ✗ `bm25::tokenize`. The relevance floor was fitted
+        // against the former — words longer than three characters with function
+        // words removed — and the two tokenisers disagree on short words, so
+        // the wrong one applies a threshold nothing measured.
+        let terms = engine::factors::content_terms(query);
         let term_refs: Vec<&str> = terms.iter().map(String::as_str).collect();
 
+        let scored_len_before = ranked.len();
         let mut scored: Vec<(f32, engine::Facets<'_>, usize)> = ranked
             .iter()
             .enumerate()
@@ -482,8 +489,15 @@ impl Pipeline {
         let weights = weights_from_contract(&applied.factor_weights);
         engine::rescore(&mut scored, &weights, &term_refs);
 
+        let kept = scored.len();
         *ranked = scored.iter().map(|(_, _, i)| ranked[*i]).collect();
 
+        let dropped = scored_len_before.saturating_sub(kept);
+        if dropped > 0 {
+            progress.push(format!(
+                "relevance floor dropped {dropped} of {scored_len_before} candidates"
+            ));
+        }
         if let (Some(was), Some((now, _))) = (before, ranked.first())
             && now.id != was
         {
@@ -503,10 +517,11 @@ impl Pipeline {
             chapter: row.chapter.as_deref(),
             year: row.year,
             // ! `about` is in the schema and not selected by `chunks_by_id`,
-            // so the topical factor sees nothing. Harmless today — it carries
-            // weight 0.0, having been measured to add nothing — and the one
-            // line to add when that changes is in `SearchOps::chunks_by_id`.
+            // so the topical factor sees nothing — and it now carries weight
+            // 0.25, so this is a live gap rather than a harmless one. The one
+            // line to close it is in `SearchOps::chunks_by_id`.
             about: None,
+            body: Some(&row.body),
             body_len: row.body.len(),
         }
     }
@@ -1055,6 +1070,7 @@ mod live {
 
     fn no_factors() -> contract::FactorWeights {
         contract::FactorWeights {
+            relevance_floor: 0.0,
             authority: 0.0,
             structural: 0.0,
             temporal: 0.0,
@@ -1224,10 +1240,19 @@ mod live {
 
     #[tokio::test]
     #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
-    async fn factors_reorder_but_never_filter() {
-        // The layer changes order. It must never drop or invent a candidate --
-        // that would make a recall change impossible to attribute.
+    async fn weights_without_a_floor_reorder_but_never_filter() {
+        // ! With the floor OFF the layer is pure ordering, and that must stay
+        // true: a weight that silently dropped a candidate would make a recall
+        // change impossible to attribute to either half of the layer.
         let p = pipeline(open_cfg()).await;
+        let ordering_only = contract::FactorWeights {
+            relevance_floor: 0.0,
+            authority: 1.0,
+            structural: 0.5,
+            temporal: 0.0,
+            completeness: 0.0,
+            topical: 0.25,
+        };
         let base = p
             .search_with(
                 "bangunan gedung",
@@ -1239,19 +1264,66 @@ mod live {
             .await
             .expect("search");
         let scored = p
-            .search_with("bangunan gedung", &contract::SearchOptions::default())
+            .search_with(
+                "bangunan gedung",
+                &contract::SearchOptions {
+                    factor_weights: Some(ordering_only),
+                    ..contract::SearchOptions::default()
+                },
+            )
             .await
             .expect("search");
         assert_eq!(
             base.results.len(),
             scored.results.len(),
-            "factors must reorder, not filter"
+            "weights alone must reorder, not filter"
         );
         let mut a: Vec<&str> = base.results.iter().map(|r| r.id.as_str()).collect();
         let mut b: Vec<&str> = scored.results.iter().map(|r| r.id.as_str()).collect();
         a.sort_unstable();
         b.sort_unstable();
         assert_eq!(a, b, "the same candidates, in a different order");
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn the_relevance_floor_accounts_for_what_it_drops() {
+        // ! The floor is the one part of scoring that REMOVES candidates, and
+        // it is where most of the measured gain is (+12.5 of +17.5 points).
+        // Whatever it drops it must report: a silent filter is unauditable, and
+        // the progress line is the only place a caller can see it happened.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "kelas jalan provinsi ditetapkan gubernur",
+                &contract::SearchOptions::default(),
+            )
+            .await
+            .expect("search");
+        if r.results.len() < Config::default().top_k {
+            assert!(
+                r.progress.iter().any(|l| l.contains("relevance floor")),
+                "a filter that leaves no trace is unauditable: {:?}",
+                r.progress
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn the_floor_never_turns_a_match_into_a_refusal() {
+        // ! "This corpus cannot answer the question" is the DOMAIN GATE's
+        // answer (invariant 13). If the floor could empty the pool, two
+        // components would be refusing for different reasons and a caller could
+        // not tell which one declined.
+        let p = pipeline(open_cfg()).await;
+        for q in ["jalan", "energi", "bangunan gedung", "retribusi pasar"] {
+            let r = p
+                .search_with(q, &contract::SearchOptions::default())
+                .await
+                .expect("search");
+            assert!(!r.results.is_empty(), "floor emptied the answer for {q:?}");
+        }
     }
 
     #[tokio::test]

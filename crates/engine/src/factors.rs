@@ -25,19 +25,25 @@
 //!
 //! | | Recall@5 |
 //! |---|---|
-//! | text arm, no factors | 40.0% |
-//! | best in-sample weights | 57.5% |
-//! | **leave-one-out** | **47.5%** |
+//! | text arm, no floor, no factors | 40.0% |
+//! | **relevance floor alone** | **52.5%** |
+//! | best in-sample, floor + weights | 65.0% |
+//! | **leave-one-out** | **57.5%** |
 //!
-//! ! The honest number is the leave-one-out one: **+7.5 points**, ✗ +17.5.
-//! Picking the maximum of 625 weight combinations on 40 cases overfits, and
+//! ! The honest number is the leave-one-out one: **+17.5 points**, ✗ +25.
+//! Picking the maximum of 3,125 configurations on 40 cases overfits, and
 //! reporting the in-sample peak would be claiming a number that was never
 //! measured out of sample (invariant 15).
 //!
-//! Two results say the gain is real rather than a lucky peak: **539 of those
-//! 625 combinations (86%) beat the baseline**, median 50.0% — the whole weight
-//! space is better than no factors — and leave-one-out chose exactly
-//! [`Weights::FITTED`] in **36 of 40 folds**.
+//! ! **The floor is worth more than every weight combined** — +12.5 points on
+//! its own against +5.0 for the best single factor. It was missing from the
+//! first version of this module, and `completeness` had silently taken its
+//! place: longer chunks contain more query terms, so it was acting as a crude
+//! relevance proxy. Once a real floor exists it earns nothing and ships at 0.0.
+//!
+//! Two results say the gain is not a lucky peak: **2,939 of 3,125
+//! configurations (94%) beat the baseline**, and leave-one-out chose exactly
+//! [`Weights::FITTED`] in **37 of 40 folds**.
 
 /// The tier of an Indonesian regulation, 1–10. `None` for a type the corpus
 /// does not contain.
@@ -45,17 +51,36 @@
 /// A lookup, ✗ a model: Indonesian regulation is a strict published hierarchy.
 /// These ten types are the complete set in the corpus, verified with
 /// `SELECT DISTINCT regulation_type FROM chunks`.
+///
+/// Ordering follows UU 12/2011: the Art 7 ladder (UU → PP → Perpres → Perda
+/// Provinsi → Perda Kab/Kota), with Art 8 instruments — a governor's,
+/// regent's or mayor's own regulation — placed **below** the Perda they
+/// implement rather than above it.
+///
+/// ! An earlier table had `PERATURAN BUPATI` (3) above `PERATURAN DAERAH KOTA`
+/// (2), which inverts legislation and the executive regulation implementing
+/// it. Corrected here — and **the eval cannot tell the difference**: fitted
+/// against both tables, Recall@5 is identical (57.5% in-sample, 47.5%
+/// leave-one-out), and a coarse national-vs-local split does at least as well
+/// as either. At n=40 the fine ordering is not evidence-backed; it is here
+/// because a table that states something legally false is wrong regardless of
+/// whether this eval set can detect it (`docs/EVAL.md` §5).
 #[must_use]
 pub fn tier(regulation_type: &str) -> Option<u8> {
     // Matched case-insensitively on the trimmed value; ingestion is consistent
     // today, and a stray space silently scoring 0.0 would be invisible.
     Some(match regulation_type.trim().to_uppercase().as_str() {
         "UNDANG-UNDANG" => 8,
-        "PERATURAN PEMERINTAH" => 6,
-        "PERATURAN PRESIDEN" | "INSTRUKSI PRESIDEN" => 5,
-        "PERATURAN GUBERNUR" => 4,
-        "PERATURAN BUPATI" | "PERATURAN WALIKOTA" | "PERATURAN DAERAH PROVINSI" => 3,
-        "PERATURAN DAERAH KABUPATEN" | "PERATURAN DAERAH KOTA" => 2,
+        "PERATURAN PEMERINTAH" => 7,
+        "PERATURAN PRESIDEN" => 6,
+        // An instruction binds the officials it addresses, ✗ the public. High
+        // issuer, low normativity — below a Perpres, above regional law.
+        "INSTRUKSI PRESIDEN" => 5,
+        "PERATURAN DAERAH PROVINSI" => 4,
+        // ! A governor's regulation implements provincial legislation; it does
+        // not outrank it. Same for a regent's or mayor's against their Perda.
+        "PERATURAN GUBERNUR" | "PERATURAN DAERAH KABUPATEN" | "PERATURAN DAERAH KOTA" => 3,
+        "PERATURAN BUPATI" | "PERATURAN WALIKOTA" => 2,
         _ => return None,
     })
 }
@@ -80,6 +105,9 @@ pub struct Facets<'a> {
     pub chapter: Option<&'a str>,
     pub year: Option<i32>,
     pub about: Option<&'a str>,
+    /// The chunk text · needed for the relevance floor, which is the one
+    /// factor input that is not metadata.
+    pub body: Option<&'a str>,
     pub body_len: usize,
 }
 
@@ -174,10 +202,107 @@ pub fn topical(f: &Facets<'_>, query_terms: &[&str]) -> f32 {
     }
 }
 
+/// Indonesian function words. They appear in nearly every chunk, so counting
+/// them would make every candidate look equally relevant.
+const STOP: &[&str] = &[
+    "yang",
+    "dan",
+    "atau",
+    "untuk",
+    "dengan",
+    "pada",
+    "dari",
+    "dalam",
+    "oleh",
+    "apakah",
+    "bagaimana",
+    "berapa",
+    "siapa",
+    "adalah",
+    "itu",
+    "ini",
+    "ke",
+    "di",
+    "tidak",
+    "dapat",
+    "harus",
+    "wajib",
+    "jika",
+    "akan",
+    "sebagai",
+];
+
+/// The content words of a text · lowercased, longer than three characters,
+/// function words removed.
+///
+/// ! Deliberately **not** `bm25::tokenize`, which keeps every run of two or
+/// more alphanumerics. The floor below was fitted against this rule
+/// (`dev_tools/eval/fit_factors.py::terms`) and the two disagree on short
+/// words, so using the wrong one would apply a threshold nothing measured.
+#[must_use]
+pub fn content_terms(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    let flush = |cur: &mut String, out: &mut Vec<String>| {
+        if cur.chars().count() > 3 && !STOP.contains(&cur.as_str()) && !out.contains(cur) {
+            out.push(cur.clone());
+        }
+        cur.clear();
+    };
+    for ch in text.chars() {
+        if ch.is_alphanumeric() || ch == '_' {
+            cur.extend(ch.to_lowercase());
+        } else {
+            flush(&mut cur, &mut out);
+        }
+    }
+    flush(&mut cur, &mut out);
+    out
+}
+
+/// Share of the query's content terms this text actually contains · the input
+/// to the relevance floor.
+///
+/// ! Unweighted overlap, ✗ IDF-weighted. `bm25::evidence` is the better
+/// primitive and is what `SCORING.md` §3 names, but [`Weights::relevance_floor`]
+/// was fitted against **this** measure and the two live on different scales.
+/// Swapping one in without refitting would apply a threshold nothing measured.
+#[must_use]
+pub fn coverage(text: &str, query_terms: &[&str]) -> f32 {
+    if query_terms.is_empty() {
+        return 1.0;
+    }
+    let have = content_terms(text);
+    let matched = query_terms
+        .iter()
+        .filter(|t| have.iter().any(|h| h == *t))
+        .count();
+    #[allow(clippy::cast_precision_loss)]
+    {
+        matched as f32 / query_terms.len() as f32
+    }
+}
+
 /// Relative influence of each factor. All-zero reproduces the arms' own order
 /// exactly, which is what makes this safe to ship dark.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Weights {
+    /// Minimum share of the query's content terms a candidate must contain to
+    /// be ranked at all · **a floor, ✗ a weight**.
+    ///
+    /// ! This is the relevance gate of `docs/SCORING.md` §3, and it is worth
+    /// more than every weight below combined: +12.5 points Recall@5 on its own
+    /// against +5.0 for the best single factor.
+    ///
+    /// It exists because the multiplicative form alone does **not** keep
+    /// relevance dominant, which was measured rather than assumed. Across a
+    /// 60-candidate pool the RRF relevance spread is only **1.98×** (rank 0 =
+    /// 0.01667, rank 59 = 0.00840) while the prior is bounded at
+    /// `1 + Σ weights`. At the previously shipped weights that bound was
+    /// exactly **2.00×** — so metadata alone could lift the bottom of the pool
+    /// to the top, and in the fit 5.5% of delivered results came from beyond
+    /// pool rank 40.
+    pub relevance_floor: f32,
     pub authority: f32,
     pub structural: f32,
     pub temporal: f32,
@@ -188,6 +313,7 @@ pub struct Weights {
 impl Weights {
     /// Every factor off · scoring becomes the identity on the fused order.
     pub const OFF: Self = Self {
+        relevance_floor: 0.0,
         authority: 0.0,
         structural: 0.0,
         temporal: 0.0,
@@ -201,11 +327,12 @@ impl Weights {
     /// ! `temporal` and `topical` are 0.0 because they were **measured** to add
     /// nothing, ✗ because they were forgotten.
     pub const FITTED: Self = Self {
-        authority: 0.5,
-        structural: 0.25,
+        relevance_floor: 0.4,
+        authority: 1.0,
+        structural: 0.5,
         temporal: 0.0,
-        completeness: 0.25,
-        topical: 0.0,
+        completeness: 0.0,
+        topical: 0.25,
     };
 }
 
@@ -230,22 +357,47 @@ pub fn prior(f: &Facets<'_>, w: &Weights, query_terms: &[&str], oldest: i32, new
         + w.topical * topical(f, query_terms)
 }
 
-/// Rescore a fused pool in place, best first.
+/// Apply the relevance floor, then rescore what survives, best first.
 ///
 /// `pool` is `(relevance, facets)` — relevance being the arms' fused score, the
 /// only signal that a candidate is relevant at all.
 ///
-/// ! The **relevance gate of `docs/SCORING.md` §3 is structural here, ✗ a
-/// threshold**: multiplying by relevance means a candidate with no retrieval
-/// score has nothing for its metadata to multiply. Membership of the pool is
-/// the floor, and every member earned it from an arm.
+/// ! The gate is **a real threshold, ✗ merely the shape of the formula**. An
+/// earlier version relied on the multiplication alone — "a candidate with no
+/// retrieval score has nothing for its metadata to multiply" — and that
+/// argument does not survive measurement: RRF scores across a 60-candidate
+/// pool span only 1.98×, less than the prior's 2.00× bound, so pool rank 59
+/// could reach rank 1 on metadata alone. Pool membership is not a relevance
+/// floor; [`Weights::relevance_floor`] is.
 ///
 /// Ties break on the incoming order, so an all-zero [`Weights`] is exactly the
 /// identity — `sort_by` is stable.
-pub fn rescore<T: Copy>(pool: &mut [(f32, Facets<'_>, T)], w: &Weights, query_terms: &[&str]) {
+pub fn rescore<T: Copy>(pool: &mut Vec<(f32, Facets<'_>, T)>, w: &Weights, query_terms: &[&str]) {
     if *w == Weights::OFF {
         return;
     }
+
+    // ! The relevance floor runs FIRST and it removes candidates. Ordering
+    // alone cannot express "this does not belong in the answer", and the
+    // measurement says the removal is where most of the gain is.
+    if w.relevance_floor > 0.0 && !query_terms.is_empty() {
+        let kept: Vec<_> = pool
+            .iter()
+            .filter(|(_, f, _)| {
+                coverage(f.body.unwrap_or_default(), query_terms) >= w.relevance_floor
+            })
+            .copied()
+            .collect();
+        // ! Never empty on account of the floor. "This corpus cannot answer
+        // the question" is the domain gate's decision (invariant 13), and a
+        // silent second refusal here would be indistinguishable from it.
+        if kept.is_empty() {
+            pool.truncate(1);
+        } else {
+            *pool = kept;
+        }
+    }
+
     let years: Vec<i32> = pool.iter().filter_map(|(_, f, _)| f.year).collect();
     let oldest = years.iter().copied().min().unwrap_or(0);
     let newest = years.iter().copied().max().unwrap_or(0);
@@ -271,11 +423,31 @@ mod tests {
         }
     }
 
+    /// Weights with the floor disabled · for tests about ORDERING, which is a
+    /// separate question from which candidates survive.
+    fn ordering_only() -> Weights {
+        Weights {
+            relevance_floor: 0.0,
+            ..Weights::FITTED
+        }
+    }
+
     #[test]
     fn the_hierarchy_orders_national_above_local() {
         assert!(tier("UNDANG-UNDANG") > tier("PERATURAN PEMERINTAH"));
-        assert!(tier("PERATURAN PEMERINTAH") > tier("PERATURAN BUPATI"));
-        assert!(tier("PERATURAN BUPATI") > tier("PERATURAN DAERAH KOTA"));
+        assert!(tier("PERATURAN PEMERINTAH") > tier("PERATURAN PRESIDEN"));
+        assert!(tier("PERATURAN PRESIDEN") > tier("PERATURAN DAERAH PROVINSI"));
+    }
+
+    #[test]
+    fn legislation_outranks_the_executive_regulation_implementing_it() {
+        // ! The previous table had this backwards -- PERATURAN BUPATI (3) above
+        // PERATURAN DAERAH KOTA (2) -- and the old test asserted the error. A
+        // Perda is legislation; a Perbup is the regent's own regulation under
+        // it, and cannot outrank it.
+        assert!(tier("PERATURAN DAERAH PROVINSI") > tier("PERATURAN GUBERNUR"));
+        assert!(tier("PERATURAN DAERAH KOTA") > tier("PERATURAN WALIKOTA"));
+        assert!(tier("PERATURAN DAERAH KABUPATEN") > tier("PERATURAN BUPATI"));
     }
 
     #[test]
@@ -357,25 +529,166 @@ mod tests {
             ),
             (0.85, facets("UNDANG-UNDANG", "Pasal 8"), 2),
         ];
-        rescore(&mut pool, &Weights::FITTED, &[]);
+        rescore(&mut pool, &ordering_only(), &[]);
         assert_eq!(pool[0].2, 2, "the statute should lead");
     }
 
     #[test]
-    fn metadata_cannot_rescue_a_candidate_retrieval_ranked_far_below() {
-        // Invariant 9: authority without relevance is not a result. With the
-        // fitted weights the prior is bounded by 1.0, so it can at most double
-        // a score -- never close a 3x relevance gap.
+    fn the_prior_cannot_outrun_a_real_relevance_gap() {
+        // ! This test used to assert the opposite of what the engine does, and
+        // it passed because its numbers could not occur. It compared 0.90
+        // against 0.20 -- a 4.5x relevance gap -- and concluded that "relevance
+        // still dominates". Across a real 60-candidate pool the RRF spread is
+        // 1/60 to 1/119, a ratio of 1.98x, so that gap is not reachable.
+        //
+        // What is true: the prior is bounded by `1 + sum(weights)`, so it
+        // cannot overcome a gap WIDER than that bound -- and at the shipped
+        // weights the bound (2.75x) EXCEEDS the pool's own spread. Ordering
+        // alone is therefore not a relevance guarantee; the floor is.
+        let w = ordering_only();
+        let bound = 1.0 + w.authority + w.structural + w.temporal + w.completeness + w.topical;
+
         let mut pool = vec![
             (
-                0.90_f32,
+                bound * 1.5,
                 facets("PERATURAN DAERAH KOTA", "LAMPIRAN I"),
                 1_u8,
             ),
-            (0.20, facets("UNDANG-UNDANG", "Pasal 8"), 2),
+            (1.0, facets("UNDANG-UNDANG", "Pasal 8"), 2),
         ];
-        rescore(&mut pool, &Weights::FITTED, &[]);
-        assert_eq!(pool[0].2, 1, "relevance must still dominate");
+        rescore(&mut pool, &w, &[]);
+        assert_eq!(pool[0].2, 1, "a gap wider than the bound must hold");
+
+        // And the honest converse, which is why the floor exists.
+        let rrf_spread = (1.0 / 60.0) / (1.0 / 119.0);
+        assert!(
+            bound > rrf_spread,
+            "the prior bound ({bound:.2}) is inside the pool's RRF spread \
+             ({rrf_spread:.2}) -- if this ever flips, the floor is redundant"
+        );
+    }
+
+    #[test]
+    fn content_terms_keeps_only_words_that_carry_meaning() {
+        let t = content_terms("Dalam Peraturan ini yang dimaksud dengan izin usaha");
+        // Function words and anything of three characters or fewer are gone.
+        assert!(!t.iter().any(|x| x == "yang"), "{t:?}");
+        assert!(!t.iter().any(|x| x == "dengan"), "{t:?}");
+        assert!(!t.iter().any(|x| x == "ini"), "{t:?}");
+        assert!(t.iter().any(|x| x == "peraturan"), "{t:?}");
+        assert!(t.iter().any(|x| x == "usaha"), "{t:?}");
+    }
+
+    #[test]
+    fn content_terms_are_deduplicated() {
+        // Coverage is set semantics: a query term repeated in the body counts
+        // once, or a long chunk would score higher for saying the same thing.
+        let t = content_terms("pajak pajak pajak daerah");
+        assert_eq!(t.iter().filter(|x| *x == "pajak").count(), 1, "{t:?}");
+    }
+
+    #[test]
+    fn coverage_matches_the_python_that_fitted_the_floor() {
+        // ! Printed by dev_tools/eval/fit_factors.py for the same inputs. The
+        // floor is a threshold on this number, so a tokenisation difference
+        // between the two would apply a cut nothing measured.
+        let body = "Pemegang izin usaha pertambangan wajib melaksanakan pengelolaan";
+        let q = ["izin", "usaha", "pertambangan", "reklamasi"];
+        assert!(
+            (coverage(body, &q) - 0.75).abs() < 1e-6,
+            "{}",
+            coverage(body, &q)
+        );
+        assert!((coverage("teks pendek", &["izin"]) - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn an_empty_query_never_filters_anything() {
+        // A query of only function words has no content terms. Filtering on
+        // zero terms would reject the whole pool.
+        assert!((coverage("apa pun", &[]) - 1.0).abs() < f32::EPSILON);
+    }
+
+    fn with_body(body: &'static str) -> Facets<'static> {
+        Facets {
+            regulation_type: Some("UNDANG-UNDANG"),
+            article: Some("Pasal 8"),
+            body: Some(body),
+            body_len: body.len(),
+            year: Some(2010),
+            ..Facets::default()
+        }
+    }
+
+    #[test]
+    fn the_floor_removes_candidates_rather_than_reordering_them() {
+        // ! The floor is the one part of this module that FILTERS. Ordering
+        // alone cannot express "this does not belong in the answer", and the
+        // fit says removal is where most of the gain is (+12.5 of +17.5).
+        let mut pool = vec![
+            (
+                0.010_f32,
+                with_body("ketentuan mengenai retribusi pelayanan pasar"),
+                1_u8,
+            ),
+            (
+                0.009,
+                with_body("izin usaha pertambangan mineral dan batubara"),
+                2,
+            ),
+        ];
+        rescore(
+            &mut pool,
+            &Weights::FITTED,
+            &["izin", "usaha", "pertambangan"],
+        );
+        assert_eq!(pool.len(), 1, "the unrelated candidate must be dropped");
+        assert_eq!(pool[0].2, 2);
+    }
+
+    #[test]
+    fn the_floor_never_empties_the_pool_on_its_own() {
+        // ! "This corpus cannot answer the question" is the DOMAIN GATE's
+        // decision (invariant 13). A silent second refusal here would be
+        // indistinguishable from it, and the caller could not tell which
+        // component declined to answer.
+        let mut pool = vec![
+            (0.010_f32, with_body("sama sekali tidak berkaitan"), 1_u8),
+            (0.009, with_body("juga tidak berkaitan sedikit pun"), 2),
+        ];
+        rescore(
+            &mut pool,
+            &Weights::FITTED,
+            &["izin", "usaha", "pertambangan"],
+        );
+        assert_eq!(pool.len(), 1, "one survivor, never zero");
+    }
+
+    #[test]
+    fn a_zero_floor_filters_nothing() {
+        // Weights::OFF must stay exactly the identity, which is what makes the
+        // layer switchable off in production without a rebuild.
+        let mut pool = vec![
+            (0.010_f32, with_body("tidak berkaitan sama sekali"), 1_u8),
+            (0.009, with_body("izin usaha pertambangan"), 2),
+        ];
+        rescore(&mut pool, &Weights::OFF, &["izin"]);
+        assert_eq!(pool.len(), 2);
+        assert_eq!(pool[0].2, 1, "OFF must not reorder either");
+    }
+
+    #[test]
+    fn the_shipped_floor_leaves_room_for_a_partial_match() {
+        // 0.4 was fitted, and the shape it encodes matters: a candidate
+        // answering most of a question must survive, because legal answers are
+        // rarely phrased in the querier's words. Half the terms is enough.
+        let body = "izin usaha pertambangan wajib memenuhi persyaratan";
+        let q = ["izin", "usaha", "reklamasi", "jaminan"];
+        assert!(
+            coverage(body, &q) >= Weights::FITTED.relevance_floor,
+            "coverage {} fell below the floor",
+            coverage(body, &q)
+        );
     }
 
     #[test]
@@ -411,7 +724,7 @@ mod tests {
                     body_len: 800,
                     ..Facets::default()
                 },
-                0.866_166,
+                1.3,
             ),
             (
                 Facets {
@@ -422,7 +735,7 @@ mod tests {
                     body_len: 3_000,
                     ..Facets::default()
                 },
-                0.349_862,
+                0.3,
             ),
             (
                 Facets {
@@ -433,7 +746,7 @@ mod tests {
                     body_len: 250,
                     ..Facets::default()
                 },
-                0.491_185,
+                0.85,
             ),
         ];
         for (f, expected) in cases {

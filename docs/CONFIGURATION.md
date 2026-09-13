@@ -128,25 +128,31 @@ no weight here can promote a candidate that retrieval did not find.
 
 | Variable | Default | |
 |---|---|---|
-| `FACTOR_AUTHORITY` | `0.5` | how binding the instrument is — the published hierarchy |
-| `FACTOR_STRUCTURAL` | `0.25` | operative clause vs annex |
-| `FACTOR_COMPLETENESS` | `0.25` | whole provision vs fragment |
+| `RELEVANCE_FLOOR` | `0.4` | **a floor, ✗ a weight.** Share of the query's content terms a candidate must contain to be ranked at all. Worth more than every weight below combined. |
+| `FACTOR_AUTHORITY` | `1.0` | how binding the instrument is — the published hierarchy |
+| `FACTOR_STRUCTURAL` | `0.5` | operative clause vs annex |
+| `FACTOR_TOPICAL` | `0.25` | subject match — earns its weight once the floor exists |
+| `FACTOR_COMPLETENESS` | `0.0` | **measured to add nothing** once a real floor exists |
 | `FACTOR_TEMPORAL` | `0.0` | recency — **measured to add nothing** |
-| `FACTOR_TOPICAL` | `0.0` | subject match — earns +5.0 alone, 0.0 in combination |
 
 Fitted, not chosen: `python dev_tools/eval/fit_factors.py` reranks the text arm over
 a 60-candidate pool on the 40 article-labelled cases.
 
 | | Recall@5 |
 |---|---|
-| text arm, no factors | 40.0% |
-| best in-sample | 57.5% |
-| **leave-one-out** | **47.5%** |
+| text arm, no floor, no factors | 40.0% |
+| **floor alone** | **52.5%** |
+| best in-sample | 65.0% |
+| **leave-one-out** | **57.5%** |
 
-! **+7.5 points, not +17.5.** Taking the best of 625 weight combinations on 40 cases
+! **+17.5 points, not +25.** Taking the best of 3,125 configurations on 40 cases
 overfits; leave-one-out is the number that survives out of sample. The gain is real
-rather than a lucky peak on two grounds: 539 of the 625 combinations (86%) beat the
-baseline, median 50.0%, and leave-one-out chose exactly these weights in 36 of 40 folds.
+rather than a lucky peak on two grounds: 2,939 of the 3,125 configurations (94%) beat
+the baseline, and leave-one-out chose exactly this configuration in 37 of 40 folds.
+
+! Floor and weights are fitted **jointly**. Fitting them separately credits a factor
+for work the floor was doing — which is what happened the first time: `completeness`
+took 0.25 as a crude relevance proxy, and drops to 0.0 once a real floor exists.
 
 Setting all five to `0` is exactly the identity on the fused order — the layer can be
 turned off in production without a rebuild, which is the point of it being config.
