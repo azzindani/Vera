@@ -1,4 +1,4 @@
-"""Score the retrieval arms against the labeled query set · EVAL.md §3.
+"""Score the retrieval arms against the labeled query set · docs/EVAL.md §3.
 
 Reports Recall@k and MRR per arm and for RRF fusion, so a dial change that
 helps one arm and hurts the whole is visible rather than averaged away.
@@ -16,9 +16,9 @@ single number hides the thing you need to see:
                   the routing score rather than against retrieved rows.
 
 Usage:
-    python eval/run.py
-    python eval/run.py --dense-column dense_ctx    # compare a candidate column
-    python eval/run.py --k 10
+    python dev_tools/eval/run.py
+    python dev_tools/eval/run.py --dense-column dense_ctx    # compare a candidate column
+    python dev_tools/eval/run.py --k 10
 """
 
 from __future__ import annotations
@@ -33,8 +33,8 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "pipelines" / "pre_embed"))
+TOOLS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(TOOLS / "pre_embed"))
 from sparse import Bm25Vectorizer, tokenize  # noqa: E402
 
 PG = os.environ.get(
@@ -44,9 +44,11 @@ TEI = os.environ.get("EMBED_ENDPOINT", "http://localhost:8080")
 # ! Must be the vocabulary THIS corpus was built with. Sparse vectors are
 # indexed by vocabulary position, so scoring a corpus with another run's vocab
 # silently compares unrelated dimensions rather than failing.
-VOCAB = Path(
-    os.environ.get("BM25_VOCAB", ROOT / ".test" / "runs" / "spike-01.bm25.json")
-)
+# ! No default. A default naming one run is how a corpus gets scored against
+# the wrong vocabulary by someone who never set the variable.
+if not os.environ.get("BM25_VOCAB"):
+    sys.exit("set BM25_VOCAB to the vocabulary this corpus was built with")
+VOCAB = Path(os.environ["BM25_VOCAB"])
 
 PER_ARM = 50
 RRF_K = 60

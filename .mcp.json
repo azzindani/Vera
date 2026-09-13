@@ -1,22 +1,18 @@
 {
   "mcpServers": {
-    "pipeline": {
-      "command": "pipeline",
-      "args": [
-        "mcp",
-        "--transport",
-        "stdio"
-      ]
-    },
     "vera": {
-      "command": "./target/release/mcp.exe",
+      "command": "./target/release/vera-mcp.exe",
       "args": [],
       "env": {
         "DATABASE_URL": "host=localhost port=5432 dbname=vera2 user=vera password=vera",
         "EMBED_ENDPOINT": "http://localhost:8080",
         "BM25_VOCAB": ".test/runs/spike-02.bm25.json",
+        "TRANSPORT": "stdio",
         "CLUSTERS_PROBED": "5",
-        "MAX_CONCURRENCY": "4"
+        "MAX_CONCURRENCY": "4",
+        "DENSE_WEIGHT": "0.0",
+        "SPARSE_WEIGHT": "1.0",
+        "TEXT_WEIGHT": "1.0"
       }
     }
   }

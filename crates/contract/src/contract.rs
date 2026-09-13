@@ -1,13 +1,13 @@
-//! The `search_knowledge` response contract · `OUTPUT_CONTRACT.md` §2.
+//! The `search_knowledge` response contract · `docs/OUTPUT_CONTRACT.md` §2.
 //!
 //! ! Vera returns **evidence**, the agent writes the prose. Nothing here holds a
 //! summary field, and nothing here may ever hold one: summarizing needs an LLM,
 //! and putting one in the engine breaks statelessness and adds a model
-//! dependency the design exists to avoid (`LOOPHOLES.md` §2).
+//! dependency the design exists to avoid (`docs/OUTPUT_CONTRACT.md` §1).
 
 use serde::{Deserialize, Serialize};
 
-/// How much the engine trusts this result set · `OUTPUT_CONTRACT.md` §4.
+/// How much the engine trusts this result set · `docs/OUTPUT_CONTRACT.md` §4.
 ///
 /// `None` is not "an error" — it is the honest answer when no domain anchor
 /// matched. A confidently wrong domain is worse than "nothing matched".
@@ -126,7 +126,7 @@ impl SearchResponse {
     /// The honest empty answer: no domain anchor matched above threshold.
     ///
     /// ! `success: true` — the engine worked correctly and found nothing. This
-    /// is deliberately distinct from an error (`OUTPUT_CONTRACT.md` §4).
+    /// is deliberately distinct from an error (`docs/OUTPUT_CONTRACT.md` §4).
     #[must_use]
     pub fn no_matching_domain(query: impl Into<String>, progress: Vec<String>) -> Self {
         let mut out = Self {

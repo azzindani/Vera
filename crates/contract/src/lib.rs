@@ -7,7 +7,7 @@
 //! shape from another.
 //!
 //! Field names here are the **wire format** an agent parses, fixed by
-//! `OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
+//! `docs/OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
 
 pub mod contract;
 
@@ -15,12 +15,6 @@ pub use contract::{
     Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
     Source, SummaryPayload, citation_block,
 };
-
-/// Embedding width · Qwen3-Embedding-8B at full dimensionality.
-///
-/// ! Load-bearing. 4096 is why there is no global ANN index (pgvector cannot
-/// index it) and therefore why routing exists at all (`EMBEDDING.md` §3).
-pub const EMBEDDING_DIM: usize = 4096;
 
 /// A stored chunk: body plus the provenance captured at ingest.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -41,7 +35,7 @@ impl Chunk {
     /// Provenance for this chunk, always derived from stored fields.
     ///
     /// ! Never synthesizes. If ingest recorded no locator, the locator is empty
-    /// rather than guessed (`LOOPHOLES.md` §8).
+    /// rather than guessed (`docs/FAILURE_MODES.md` §7).
     #[must_use]
     pub fn source(&self) -> Source {
         Source {

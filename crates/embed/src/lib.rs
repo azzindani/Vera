@@ -6,12 +6,12 @@
 //! ! The **only** outbound model call Vera ever makes is an *embedding* call.
 //! There is no completion path here and there must never be one — an LLM in the
 //! engine breaks statelessness and makes every query cost a model round-trip
-//! (`OUTPUT_CONTRACT.md` §1, `LOOPHOLES.md` §2).
+//! (`docs/OUTPUT_CONTRACT.md` §1).
 //!
 //! ! Corpus and query must land in the **same vector space**: same model, same
 //! version, same instruction, same pooling, same normalization. That is why the
 //! model id is pinned and a mismatch fails closed rather than degrading quietly
-//! (`EMBEDDING.md` §2).
+//! (`docs/EMBEDDING.md` §2).
 
 use async_trait::async_trait;
 
@@ -50,7 +50,7 @@ pub enum EmbedError {
 /// A source of query embeddings.
 ///
 /// Deliberately narrow: `embed_query` and nothing else. Document embedding
-/// happens offline on GPU (`PRE_EMBEDDING.md`), never on the query path.
+/// happens offline on GPU (`dev_tools/PRE_EMBEDDING.md`), never on the query path.
 #[async_trait]
 pub trait EmbeddingProvider: Send + Sync {
     /// Embed a query into the corpus's vector space.
@@ -69,13 +69,30 @@ pub trait EmbeddingProvider: Send + Sync {
 /// vector across runs or no retrieval test can assert a stable ranking. This is
 /// a hash expanded to the right width — it carries no semantics and must never
 /// be used against a real corpus.
-#[derive(Debug, Clone, Default)]
-pub struct StubProvider;
+///
+/// ! The width is a parameter, ✗ a constant. A stub that only ever produced one
+/// dimensionality would quietly stop standing in for the corpus the day the
+/// corpus changed width, which is precisely the failure it exists to catch.
+#[derive(Debug, Clone)]
+pub struct StubProvider {
+    model: String,
+    dim: usize,
+}
 
 impl StubProvider {
+    /// A stub standing in for `model` at `dim` dimensions.
     #[must_use]
-    pub fn new() -> Self {
-        Self
+    pub fn new(model: impl Into<String>, dim: usize) -> Self {
+        Self {
+            model: model.into(),
+            dim,
+        }
+    }
+
+    /// The model this stub claims to serve.
+    #[must_use]
+    pub fn model(&self) -> &str {
+        &self.model
     }
 
     /// FNV-1a · small, dependency-free, and stable across platforms and runs.
@@ -90,10 +107,10 @@ impl StubProvider {
 
     /// The vector a given text maps to · exposed so tests can predict it.
     #[must_use]
-    pub fn vector_for(text: &str) -> Vec<f32> {
+    pub fn vector_for(text: &str, dim: usize) -> Vec<f32> {
         let bytes = text.as_bytes();
-        let mut out = Vec::with_capacity(EMBEDDING_DIM);
-        for i in 0..EMBEDDING_DIM {
+        let mut out = Vec::with_capacity(dim);
+        for i in 0..dim {
             let h = Self::hash(i as u64, bytes);
             // Map into [-1, 1] · a plausible embedding range.
             #[allow(clippy::cast_precision_loss)]
@@ -108,13 +125,14 @@ impl StubProvider {
 #[async_trait]
 impl EmbeddingProvider for StubProvider {
     async fn embed_query(&self, query: &str) -> Result<Vec<f32>, EmbedError> {
-        // The instruction is part of the input on the real path, so the stub
-        // applies it too · otherwise the two providers key on different strings.
-        Ok(Self::vector_for(&format!("{QUERY_INSTRUCTION}{query}")))
+        Ok(Self::vector_for(query, self.dim))
     }
 
     fn describe(&self) -> String {
-        format!("stub(deterministic, dim={EMBEDDING_DIM})")
+        format!(
+            "stub(deterministic, model={}, dim={})",
+            self.model, self.dim
+        )
     }
 }
 
@@ -122,7 +140,7 @@ impl EmbeddingProvider for StubProvider {
 ///
 /// ! Embeddings only. There is no completion method here and there must never
 /// be one — an LLM on the query path breaks statelessness and makes every
-/// query cost a model round-trip (`OUTPUT_CONTRACT.md` §1).
+/// query cost a model round-trip (`docs/OUTPUT_CONTRACT.md` §1).
 ///
 /// The declared model and width come from the corpus, so a provider serving
 /// different weights than the corpus was built with fails closed rather than
@@ -218,27 +236,17 @@ impl EmbeddingProvider for HttpProvider {
     }
 }
 
-/// Validate a provider response before it reaches the routing layers.
+/// Validate against the space the **corpus declares**, ✗ a compiled-in pin.
+///
+/// ! This is the enforceable form of invariant 2, and it is deliberately the
+/// only validator. A constant in this crate could only ever encode the model
+/// the *author* expected; the rule that actually matters is that query and
+/// corpus agree, and only the corpus can state which space that is.
+/// `store::CorpusMeta` supplies `expected_model` and `expected_dim`.
 ///
 /// Shared by every real provider: a wrong-width or wrong-model vector is a
 /// silent-corruption bug, so it is rejected at the boundary (`error_handling`
 /// standard: validate at the edge, ✗ deep inside).
-///
-/// # Errors
-/// [`EmbedError::ModelMismatch`] if the model is not the pinned one,
-/// [`EmbedError::DimensionMismatch`] on the wrong width, [`EmbedError::Empty`]
-/// if no vector was returned.
-pub fn validate_response(model: &str, vector: Vec<f32>) -> Result<Vec<f32>, EmbedError> {
-    validate_against(MODEL_ID, EMBEDDING_DIM, model, vector)
-}
-
-/// Validate against the space the **corpus declares**, ✗ a compiled-in pin.
-///
-/// ! This is the enforceable form of invariant 2. [`MODEL_ID`] is the model
-/// this project intends to reach; the corpus in front of you may legitimately
-/// be a different one (a 1024-dim spike, say), and the rule that actually
-/// matters is that query and corpus agree — not that a constant is satisfied.
-/// `store::CorpusMeta` supplies `expected_model` and `expected_dim`.
 ///
 /// # Errors
 /// [`EmbedError::ModelMismatch`], [`EmbedError::DimensionMismatch`], or
@@ -271,9 +279,19 @@ pub fn validate_against(
 mod tests {
     use super::*;
 
+    /// The space the dev corpus declares. A literal here, ✗ a constant in the
+    /// library: tests pick a space to exercise, production reads it from the
+    /// corpus.
+    const MODEL: &str = "qwen/qwen3-embedding-0.6b";
+    const DIM: usize = 1024;
+
+    fn stub() -> StubProvider {
+        StubProvider::new(MODEL, DIM)
+    }
+
     #[tokio::test]
     async fn stub_is_deterministic_across_calls() {
-        let p = StubProvider::new();
+        let p = stub();
         let a = p.embed_query("ketentuan sanksi").await.unwrap();
         let b = p.embed_query("ketentuan sanksi").await.unwrap();
         assert_eq!(a, b, "same query must yield the same vector");
@@ -281,35 +299,23 @@ mod tests {
 
     #[tokio::test]
     async fn stub_separates_different_queries() {
-        let p = StubProvider::new();
+        let p = stub();
         let a = p.embed_query("ketentuan sanksi").await.unwrap();
         let b = p.embed_query("tarif pajak").await.unwrap();
         assert_ne!(a, b);
     }
 
     #[tokio::test]
-    async fn every_provider_returns_the_pinned_width() {
-        let v = StubProvider::new().embed_query("x").await.unwrap();
-        assert_eq!(v.len(), EMBEDDING_DIM);
-        assert_eq!(EMBEDDING_DIM, 4096);
-    }
-
-    #[tokio::test]
-    async fn the_query_instruction_is_part_of_the_embedded_input() {
-        // ! Queries carry the instruction, documents do not. If this stopped
-        // being true the query would land in a different space than the corpus.
-        let p = StubProvider::new();
-        let via_trait = p.embed_query("tarif").await.unwrap();
-        assert_eq!(
-            via_trait,
-            StubProvider::vector_for(&format!("{QUERY_INSTRUCTION}tarif"))
-        );
-        assert_ne!(via_trait, StubProvider::vector_for("tarif"));
+    async fn the_stub_answers_at_the_width_it_was_built_for() {
+        assert_eq!(stub().embed_query("x").await.unwrap().len(), DIM);
+        // ! And at a different one, which is the point of it being a parameter.
+        let wide = StubProvider::new("some/other-model", 4096);
+        assert_eq!(wide.embed_query("x").await.unwrap().len(), 4096);
     }
 
     #[test]
     fn a_different_model_fails_closed_rather_than_degrading() {
-        let e = validate_response("openai/text-embedding-3-large", vec![0.0; EMBEDDING_DIM])
+        let e = validate_against(MODEL, DIM, "openai/text-embedding-3-large", vec![0.0; DIM])
             .unwrap_err();
         assert!(matches!(e, EmbedError::ModelMismatch { .. }), "{e}");
         assert!(e.to_string().contains("would not share a space"));
@@ -317,12 +323,12 @@ mod tests {
 
     #[test]
     fn a_truncated_vector_is_rejected() {
-        let e = validate_response(MODEL_ID, vec![0.0; 1024]).unwrap_err();
+        let e = validate_against(MODEL, DIM, MODEL, vec![0.0; 512]).unwrap_err();
         assert!(matches!(
             e,
             EmbedError::DimensionMismatch {
-                expected: 4096,
-                got: 1024
+                expected: DIM,
+                got: 512
             }
         ));
     }
@@ -330,19 +336,19 @@ mod tests {
     #[test]
     fn an_empty_response_is_rejected() {
         assert!(matches!(
-            validate_response(MODEL_ID, vec![]).unwrap_err(),
+            validate_against(MODEL, DIM, MODEL, vec![]).unwrap_err(),
             EmbedError::Empty
         ));
     }
 
     #[test]
-    fn the_pinned_model_passes() {
-        assert!(validate_response(MODEL_ID, vec![0.5; EMBEDDING_DIM]).is_ok());
+    fn the_corpuss_own_space_passes() {
+        assert!(validate_against(MODEL, DIM, MODEL, vec![0.5; DIM]).is_ok());
     }
 
     #[test]
     fn stub_values_stay_in_a_plausible_embedding_range() {
-        let v = StubProvider::vector_for("anything");
+        let v = StubProvider::vector_for("anything", DIM);
         assert!(v.iter().all(|x| (-1.0..=1.0).contains(x)));
     }
 }

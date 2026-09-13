@@ -1,9 +1,11 @@
 project: Vera
-version: 0.0.1
+version: 0.1.0
 
 stack:
   runtime: rust
-  services: []
+  services:
+    - postgres
+    - embedding
 
 stages:
   fast:

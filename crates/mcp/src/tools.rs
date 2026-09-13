@@ -5,11 +5,20 @@
 //! (`CLAUDE.md` §7.13). Domain is detected inside the engine; letting an agent
 //! assert one invites a confidently wrong knowledge base, which is worse than
 //! an empty result because nothing in the output reveals it happened.
+//!
+//! ! Every tool is annotated `readOnlyHint` and `openWorldHint: false`. Nothing
+//! here mutates the corpus, and nothing reaches outside the deployment — the
+//! embedding endpoint is part of it, ✗ a third-party API.
 
 use serde_json::{Value, json};
 
 /// Every tool's JSON schema, as returned by `tools/list`.
+///
+/// One long literal by design: the whole agent-facing surface is visible in one
+/// screen, and splitting it per tool would trade that for five helpers that are
+/// each read once.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn definitions() -> Vec<Value> {
     vec![
         json!({
@@ -19,6 +28,13 @@ pub fn definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {},
                 "additionalProperties": false
+            },
+            "annotations": {
+                "title": "List domains",
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
             }
         }),
         json!({
@@ -35,6 +51,13 @@ pub fn definitions() -> Vec<Value> {
                 "required": ["query"],
                 // ! No `domain`. See the module note.
                 "additionalProperties": false
+            },
+            "annotations": {
+                "title": "Search knowledge",
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
             }
         }),
         json!({
@@ -44,10 +67,20 @@ pub fn definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "id": { "type": "string", "description": "Chunk id from search_knowledge." },
-                    "max_chars": { "type": "integer", "description": "Cap, default 4000." }
+                    "max_chars": {
+                        "type": "integer",
+                        "description": "Cap on characters. The server's own cap still applies."
+                    }
                 },
                 "required": ["id"],
                 "additionalProperties": false
+            },
+            "annotations": {
+                "title": "Read chunk",
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
             }
         }),
         json!({
@@ -64,6 +97,13 @@ pub fn definitions() -> Vec<Value> {
                 },
                 "required": ["ids"],
                 "additionalProperties": false
+            },
+            "annotations": {
+                "title": "Get provenance",
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
             }
         }),
         json!({
@@ -76,6 +116,13 @@ pub fn definitions() -> Vec<Value> {
                 },
                 "required": ["query"],
                 "additionalProperties": false
+            },
+            "annotations": {
+                "title": "Explain routing",
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
             }
         }),
     ]

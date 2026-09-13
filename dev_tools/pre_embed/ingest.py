@@ -331,7 +331,7 @@ def main() -> None:
           f"({done / el if el else 0:.1f}/s)", flush=True)
 
     # -- round-trip gate ----------------------------------------------------
-    print("\n--- round-trip gate (EMBEDDING.md §4) ---", flush=True)
+    print("\n--- round-trip gate (docs/EMBEDDING.md §4) ---", flush=True)
     if not gate:
         print("  (nothing new embedded · gate skipped)")
         con.close()

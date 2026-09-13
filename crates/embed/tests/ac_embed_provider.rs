@@ -1,33 +1,37 @@
-//! Acceptance tests for feature `embed-provider` · scaffolded by
-//! pipeline_test.ac_to_test, then filled in.
+//! Acceptance tests for the embedding provider.
 //!
-//! Each test began #[ignore]d. Deleting that attribute is the act of claiming
-//! the criterion — from here the gate enforces it.
+//! Two claims are under test here and they are the load-bearing ones: a query
+//! is embedded into the space the **corpus** declares, and nothing on the query
+//! path can reach a completion endpoint.
 
-use embed::{EMBEDDING_DIM, EmbedError, EmbeddingProvider, MODEL_ID, StubProvider};
+use embed::{EmbedError, EmbeddingProvider, StubProvider};
 
-/// trait exposes embed_query returning 4096 dimensions
+/// The space the dev corpus declares. Production reads this from `corpus_meta`;
+/// a test has to name one, so it names this one.
+const MODEL: &str = "qwen/qwen3-embedding-0.6b";
+const DIM: usize = 1024;
+
+/// the trait exposes `embed_query` at the corpus's width
 #[tokio::test]
-async fn ac_01_trait_exposes_embed_query_returning_4096_dimensions() {
+async fn ac_01_the_trait_exposes_embed_query_at_the_corpuss_width() {
     // Exercised through the trait object, not the concrete type: the contract is
     // what routing depends on.
-    let provider: Box<dyn EmbeddingProvider> = Box::new(StubProvider::new());
+    let provider: Box<dyn EmbeddingProvider> = Box::new(StubProvider::new(MODEL, DIM));
     let v = provider
         .embed_query("ketentuan sanksi pajak")
         .await
         .unwrap();
-    assert_eq!(v.len(), 4096);
-    assert_eq!(v.len(), EMBEDDING_DIM);
+    assert_eq!(v.len(), DIM);
 }
 
 /// stub provider is deterministic for a given input string
 #[tokio::test]
 async fn ac_02_stub_provider_is_deterministic_for_a_given_input_string() {
-    let p = StubProvider::new();
+    let p = StubProvider::new(MODEL, DIM);
     let first = p.embed_query("tarif pajak penghasilan").await.unwrap();
     // A fresh instance must agree with the first · determinism spans instances,
     // not just repeat calls on one object.
-    let second = StubProvider::new()
+    let second = StubProvider::new(MODEL, DIM)
         .embed_query("tarif pajak penghasilan")
         .await
         .unwrap();
@@ -37,28 +41,26 @@ async fn ac_02_stub_provider_is_deterministic_for_a_given_input_string() {
     assert_ne!(first, other);
 }
 
-/// real client pins the model id and fails closed on mismatch
+/// a provider serving another space fails closed rather than degrading
 #[test]
-fn ac_03_real_client_pins_the_model_id_and_fails_closed_on_mismatch() {
-    assert_eq!(MODEL_ID, "qwen/qwen3-embedding-8b");
-
-    // Right model, right width → accepted.
-    assert!(embed::validate_response(MODEL_ID, vec![0.1; EMBEDDING_DIM]).is_ok());
+fn ac_03_a_provider_serving_another_space_fails_closed() {
+    // The corpus's own space → accepted.
+    assert!(embed::validate_against(MODEL, DIM, MODEL, vec![0.1; DIM]).is_ok());
 
     // ! Wrong model → refuse. A different model produces vectors in a different
     // space, so ranking against this corpus would be meaningless but plausible.
     let mismatch =
-        embed::validate_response("openai/text-embedding-3-large", vec![0.1; EMBEDDING_DIM])
+        embed::validate_against(MODEL, DIM, "openai/text-embedding-3-large", vec![0.1; DIM])
             .unwrap_err();
     assert!(matches!(mismatch, EmbedError::ModelMismatch { .. }));
 
     // Right model, truncated vector → also refuse.
-    let truncated = embed::validate_response(MODEL_ID, vec![0.1; 1024]).unwrap_err();
+    let truncated = embed::validate_against(MODEL, DIM, MODEL, vec![0.1; 512]).unwrap_err();
     assert!(matches!(
         truncated,
         EmbedError::DimensionMismatch {
-            expected: 4096,
-            got: 1024
+            expected: DIM,
+            got: 512
         }
     ));
 }
@@ -67,14 +69,18 @@ fn ac_03_real_client_pins_the_model_id_and_fails_closed_on_mismatch() {
 #[test]
 fn ac_04_no_llm_completion_call_exists_anywhere_on_the_query_path() {
     // ! Structural check, not a runtime one. The invariant is "the engine never
-    // calls an LLM" (OUTPUT_CONTRACT.md §1) — a unit test cannot observe the
-    // absence of a call, so assert against the source of the query-path crates.
-    let roots = [
-        "crates/embed/src",
-        "crates/engine/src",
-        "crates/store/src",
-        "crates/contract/src",
-    ];
+    // calls an LLM" (docs/OUTPUT_CONTRACT.md §1) — a unit test cannot observe
+    // the absence of a call, so assert against the source of every crate on the
+    // query path.
+    //
+    // ! The workspace root is walked up to, ✗ assumed. `CARGO_MANIFEST_DIR` is
+    // this crate, and a test that silently finds no files to scan would pass
+    // for the wrong reason.
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .find(|p| p.join("crates").is_dir())
+        .expect("workspace root");
+
     // Completion-shaped API surfaces. Substrings, so `/v1/chat/completions`,
     // `messages.create`, and `generate_content` are all caught.
     let banned = [
@@ -84,17 +90,16 @@ fn ac_04_no_llm_completion_call_exists_anywhere_on_the_query_path() {
         "completions.create",
     ];
 
-    for root in roots {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(root);
-        if !dir.exists() {
-            continue;
-        }
+    let mut scanned = 0;
+    for crate_dir in ["embed", "engine", "store", "contract", "mcp"] {
+        let dir = root.join("crates").join(crate_dir).join("src");
         for entry in std::fs::read_dir(&dir).expect("read crate src") {
             let path = entry.expect("dir entry").path();
             if path.extension().is_none_or(|e| e != "rs") {
                 continue;
             }
             let text = std::fs::read_to_string(&path).expect("read source");
+            scanned += 1;
             for needle in banned {
                 assert!(
                     !text.contains(needle),
@@ -105,4 +110,8 @@ fn ac_04_no_llm_completion_call_exists_anywhere_on_the_query_path() {
             }
         }
     }
+    assert!(
+        scanned > 5,
+        "expected to scan the query path, saw {scanned} files"
+    );
 }

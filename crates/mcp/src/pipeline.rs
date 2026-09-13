@@ -89,7 +89,7 @@ impl Default for Config {
             sparse_weight: 1.0,
             text_weight: 1.0,
             canary_min_cosine: 0.98,
-            // ! Measured on the 50-case set in eval/, not chosen. With
+            // ! Measured on the 50-case set in dev_tools/eval/, not chosen. With
             // identifier queries exempt (invariant 4), this pair rejects 6 of
             // 6 out-of-domain queries and 0 of 39 real ones:
             //
@@ -204,12 +204,35 @@ impl Pipeline {
         self.centroids.len()
     }
 
+    /// Embed a query the way the corpus was embedded.
+    ///
+    /// ! The instruction comes from `corpus_meta`, ✗ from a constant here.
+    /// Qwen3-Embedding is instruction-aware, and an instruction applied to the
+    /// query but not the documents (or the reverse) puts the two sides in
+    /// different spaces — silently, since the vectors still normalize and the
+    /// rankings still look plausible. Only the corpus knows which convention it
+    /// was built under, so only the corpus gets to say.
+    ///
+    /// # Errors
+    /// Whatever the provider returns.
+    async fn embed_query(&self, query: &str) -> Result<Vec<f32>, PipelineError> {
+        let v = match self.meta.dense_instruction.as_deref() {
+            Some(prefix) => {
+                self.provider
+                    .embed_query(&format!("{prefix}{query}"))
+                    .await?
+            }
+            None => self.provider.embed_query(query).await?,
+        };
+        Ok(v)
+    }
+
     /// The routing decision alone · backs `explain_routing`.
     ///
     /// # Errors
     /// Embedding or database failure.
     pub async fn explain(&self, query: &str) -> Result<RouteExplain, PipelineError> {
-        let q = self.provider.embed_query(query).await?;
+        let q = self.embed_query(query).await?;
         let scores = select_clusters(&q, &self.centroids, self.cfg.clusters_probed);
         Ok(RouteExplain {
             domain: self.meta.id.clone(),
@@ -231,7 +254,7 @@ impl Pipeline {
     pub async fn search(&self, query: &str) -> Result<SearchResponse, PipelineError> {
         let mut progress = Vec::new();
 
-        let qvec = self.provider.embed_query(query).await?;
+        let qvec = self.embed_query(query).await?;
         progress.push(format!("embedded query ({} dims)", qvec.len()));
 
         let probed = select_clusters(&qvec, &self.centroids, self.cfg.clusters_probed);
@@ -349,7 +372,7 @@ impl Pipeline {
 
     /// Scan the probed clusters **one at a time**.
     ///
-    /// ! This loop is the OOM guarantee (`MCP_ENGINE.md` §5): a request holds
+    /// ! This loop is the OOM guarantee (`docs/MCP_ENGINE.md` §5): a request holds
     /// one cluster at a time, so the working set does not grow with
     /// `clusters_probed`.
     async fn dense_arm(
@@ -493,7 +516,7 @@ impl Pipeline {
             //
             // ! It is NOT yet the gate invariant 13 asks for, and pretending
             // otherwise would be worse than the honest gap. Measured over the
-            // 50-case set in eval/, nearest-centroid similarity does not
+            // 50-case set in dev_tools/eval/, nearest-centroid similarity does not
             // separate in-domain from out-of-domain: "cara memperbaiki keran
             // air yang bocor di dapur" scores 0.7163, above the in-domain mean
             // of 0.6993, while the exact_ref query "PP 60/2014" sits at 0.4178.

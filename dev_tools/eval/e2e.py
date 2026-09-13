@@ -1,9 +1,9 @@
 """Score the eval set through the real MCP server, over stdio or HTTP.
 
-    DATABASE_URL=... BM25_VOCAB=... python eval/e2e.py
-    TEXT_WEIGHT=0.5 python eval/e2e.py          # sweep a tunable
-    VERA_EXE=path/to/mcp.exe python eval/e2e.py
-    VERA_HTTP=http://localhost:8081 python eval/e2e.py   # a running deployment
+    DATABASE_URL=... BM25_VOCAB=... python dev_tools/eval/e2e.py
+    TEXT_WEIGHT=0.5 python dev_tools/eval/e2e.py          # sweep a tunable
+    VERA_EXE=./target/release/vera-mcp python dev_tools/eval/e2e.py
+    VERA_HTTP=http://localhost:8081 python dev_tools/eval/e2e.py   # a running deployment
 
 ! The HTTP mode scores the DEPLOYED server — the container, its limits, its
 config — rather than a subprocess started with this shell's environment. Under
@@ -35,7 +35,10 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).parent))
 from run import resolve_targets  # noqa: E402
 
-EXE = os.environ.get("VERA_EXE", "target/release/mcp.exe")
+# ! Platform-resolved, not hardcoded to one. A default with .exe in it is a
+# default that only works on one developer's machine.
+_DEFAULT_EXE = "target/release/vera-mcp" + (".exe" if os.name == "nt" else "")
+EXE = os.environ.get("VERA_EXE", _DEFAULT_EXE)
 PG = os.environ.get(
     "DATABASE_URL", "host=localhost port=5432 dbname=vera2 user=vera password=vera"
 )
@@ -45,6 +48,8 @@ PASSTHROUGH = (
     "EMBED_ENDPOINT", "BM25_VOCAB", "CLUSTERS_PROBED", "MAX_CONCURRENCY",
     "DENSE_WEIGHT", "SPARSE_WEIGHT", "TEXT_WEIGHT",
     "DOMAIN_FLOOR", "DOMAIN_LEXICAL_FLOOR", "CANARY_MIN_COSINE",
+    "PER_CLUSTER_K", "PER_ARM_K", "TOP_K", "SNIPPET_CHARS", "GATE_SAMPLE",
+    "QUEUE_WAIT_MS", "READ_CHUNK_CHARS", "MAX_PROVENANCE_IDS",
 )
 
 
@@ -86,10 +91,24 @@ class Server:
     """One MCP server on stdio, spoken to in JSON-RPC."""
 
     def __init__(self):
+        # ! The engine requires EMBED_ENDPOINT and BM25_VOCAB and will exit
+        # rather than guess. Checking here turns that into a usable message
+        # instead of a subprocess that dies with its stderr thrown away.
+        missing = [k for k in ("EMBED_ENDPOINT", "BM25_VOCAB")
+                   if not os.environ.get(k)]
+        if missing:
+            sys.exit(f"set {' and '.join(missing)} · the engine will not guess")
+        if not Path(EXE).exists():
+            sys.exit(f"no engine at {EXE} · cargo build --release -p vera-mcp, "
+                     f"or set VERA_EXE")
+
         env = dict(os.environ, DATABASE_URL=PG)
+        # ! stderr is kept. The engine reports a refusal to serve there — a
+        # canary failure, a missing vocabulary — and discarding it turns every
+        # one of those into an unexplained hang on the first read.
         self.p = subprocess.Popen(
             [EXE], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, env=env, bufsize=0,
+            stderr=None, env=env, bufsize=0,
         )
         self._n = 0
         self.call("initialize", {

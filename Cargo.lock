@@ -3,12 +3,6 @@
 version = 4
 
 [[package]]
-name = "anyhow"
-version = "1.0.104"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
-
-[[package]]
 name = "async-trait"
 version = "0.1.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -159,7 +153,7 @@ checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
 
 [[package]]
 name = "contract"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -250,7 +244,7 @@ dependencies = [
 
 [[package]]
 name = "embed"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "reqwest",
@@ -262,7 +256,7 @@ dependencies = [
 
 [[package]]
 name = "engine"
-version = "0.0.1"
+version = "0.1.0"
 
 [[package]]
 name = "equivalent"
@@ -670,21 +664,6 @@ name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
-
-[[package]]
-name = "mcp"
-version = "0.0.1"
-dependencies = [
- "axum",
- "contract",
- "embed",
- "engine",
- "serde",
- "serde_json",
- "store",
- "thiserror",
- "tokio",
-]
 
 [[package]]
 name = "md-5"
@@ -1181,7 +1160,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "store"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "contract",
  "deadpool-postgres",
@@ -1510,13 +1489,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
-name = "vera"
-version = "0.0.1"
+name = "vera-mcp"
+version = "0.1.0"
 dependencies = [
- "anyhow",
+ "axum",
+ "contract",
  "embed",
+ "engine",
  "serde",
  "serde_json",
+ "store",
+ "thiserror",
  "tokio",
 ]
 

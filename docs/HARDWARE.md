@@ -11,15 +11,26 @@
 
 ## 1. The target
 
-**2 vCPU / 4 GB, no GPU.**
+**2 vCPU / 4 GB.**
 
 Tightened from 2 vCPU / 8 GB. The 8 GB figure predated any measurement; the
 numbers in §2 say the working set does not need it.
 
-! The target has no GPU, and the embedding container currently pins a CUDA image
-(`text-embeddings-inference:86-1.7.2`, compute 8.6). **That gap is open.** TEI
-ships CPU images and 0.6B is small, but CPU embedding latency has not been
-measured, so nothing here claims it works yet.
+! **The query path needs a GPU for embedding, or a larger memory budget.** The
+default embedding image pins CUDA (`text-embeddings-inference:86-1.7.2`, compute
+8.6). Both CPU options were measured and neither fits this profile as it stands:
+
+| CPU option | Result |
+|---|---|
+| TEI `cpu-1.7.2` | **segfaults** (exit 139), reproducibly, at 1.25/4/6 GB, pinned and unpinned, float32 and default. ONNX Runtime declines last-token pooling, the candle CPU backend takes over, and MKL's SGEMM faults. |
+| transformers on CPU | works. Query p50 **202 ms**, p95 383 ms at 2 threads — but **2,768 MB RSS**, against a 1,280 MB embed budget. |
+
+The second is the closer of the two and the gap is memory, not speed: bfloat16 or
+quantization is the untested candidate. Corpus embedding on CPU is not viable at
+any budget — 1,364 ms/chunk is 135 hours for 355K chunks.
+
+Everything else in this document is measured on the target profile and holds
+without a GPU. This is the one component that does not.
 
 ---
 
@@ -41,7 +52,7 @@ memory that must be resident and `file` is cache the kernel can reclaim.
 
 ### Per-request working set
 
-Clusters are scanned **one at a time** (`CLAUDE.md` §5.4), so a request holds one
+Clusters are scanned **one at a time** (`CLAUDE.md` §7.5), so a request holds one
 cluster's vectors, never five:
 
 ```
@@ -93,7 +104,7 @@ Reproduce:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
-VERA_HTTP=http://localhost:8081 python eval/e2e.py
+VERA_HTTP=http://localhost:8081 python dev_tools/eval/e2e.py
 docker stats --no-stream vera-db vera-embed vera-mcp
 ```
 
@@ -106,8 +117,8 @@ reproduced across three runs at ±3%.
 
 | | p50 | p95 | max |
 |---|---|---|---|
-| `search_knowledge` — dev box | **866 ms** | 1,459 ms | 1,701 ms |
-| `search_knowledge` — **2 vCPU / 4 GB** | **1,059 ms** | 1,638 ms | 2,005 ms |
+| `search_knowledge` · dev box | **866 ms** | 1,459 ms | 1,701 ms |
+| `search_knowledge` · **2 vCPU / 4 GB** | **1,059 ms** | 1,638 ms | 2,005 ms |
 | refused by domain gate | 357 ms | | |
 | exact identifier (routing bypassed) | 444 ms | | |
 | `explain_routing` | 68 ms | | |
@@ -217,7 +228,7 @@ recall cost that has not been measured.
 
 ```bash
 # latency, end to end, through the real server
-DATABASE_URL=... BM25_VOCAB=... python eval/e2e.py
+DATABASE_URL=... BM25_VOCAB=... python dev_tools/eval/e2e.py
 
 # under the target profile
 docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d

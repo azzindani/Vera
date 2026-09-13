@@ -1,0 +1,25 @@
+# ! Without this the build context is the working tree: .test/ alone is 12 GB of
+# model weights and corpus, and target/ another 4 GB. Both are sent to the
+# daemon on every build, and neither is used by any image here.
+.test/
+target/
+.git/
+.github/
+
+# Offline tooling. Nothing in the runtime images imports it.
+dev_tools/
+eval/
+fixtures/
+
+# Docs and local state.
+docs/
+*.md
+.env
+.env.local
+.claude/
+__pycache__/
+*.pyc
+
+# ! Cargo.toml, Cargo.lock, crates/ and migrations/ are deliberately NOT here:
+# Dockerfile.engine needs the manifests for its dependency layer and the sources
+# for the build, and Dockerfile.db needs migrations/.

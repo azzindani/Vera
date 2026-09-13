@@ -91,7 +91,8 @@ impl SearchOps {
         let row = c
             .query_opt(
                 "SELECT id, dense_model, dense_dim, dense_pooling, dense_normalize,
-                        sparse_scheme, sparse_dim, sparse_vocab_sha256
+                        sparse_scheme, sparse_dim, sparse_vocab_sha256,
+                        dense_instruction
                  FROM corpus_meta ORDER BY created_at DESC LIMIT 1",
                 &[],
             )
@@ -106,6 +107,7 @@ impl SearchOps {
             sparse_scheme: row.get(5),
             sparse_dim: row.get(6),
             sparse_vocab_sha256: row.get(7),
+            dense_instruction: row.get(8),
         })
     }
 
@@ -231,7 +233,7 @@ impl SearchOps {
     /// corpus, so 5% of the time the right document sits in a cluster that was
     /// never probed. A known regulation number must never be lost that way, so
     /// this scans globally and is never gated by cluster selection
-    /// (`LOOPHOLES.md` §1).
+    /// (`docs/FAILURE_MODES.md` §1).
     ///
     /// # Errors
     /// Database failure.

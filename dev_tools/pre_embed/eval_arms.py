@@ -1,4 +1,4 @@
-"""Measure each retrieval arm against known answers · the first EVAL.md numbers.
+"""Measure each retrieval arm against known answers · the first docs/EVAL.md numbers.
 
 Query set is built automatically from the fixture: a regulation's `about` field
 is its subject line, so it makes a fair stand-in for "what a user would ask,"

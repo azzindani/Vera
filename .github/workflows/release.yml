@@ -1,11 +1,12 @@
 name: Release
 
-# Tag-triggered binary release for the three supported platforms.
+# Tag-triggered release of the `vera-mcp` engine binary.
 #
-# ! No container image yet. pipeline.yaml declares an image_size_mb gate, but
-# vera-mcp is still a stub — there is nothing to put in an image, and a gate
-# with nothing to measure is theatre. Add the Docker job when the engine
-# actually serves.
+# ! Binaries, ✗ a container image. The deployed artifact is built from
+# docker/Dockerfile.engine against the same source; publishing a second image
+# from here would give two things called v0.1.0 that nobody diffs. What a
+# release adds is a binary an operator can run outside Docker — stdio
+# transport, on a laptop, next to a local Postgres.
 #
 #   git tag v0.1.0 && git push origin v0.1.0
 
@@ -83,7 +84,7 @@ jobs:
           restore-keys: ${{ matrix.os }}-release-
 
       - name: Build
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        run: cargo build --release --locked --target ${{ matrix.target }} -p vera-mcp
 
       - name: Package (unix)
         if: matrix.archive == 'tar.gz'
@@ -92,8 +93,8 @@ jobs:
           set -euo pipefail
           name="vera-${{ matrix.target }}"
           mkdir -p "dist/$name"
-          cp target/${{ matrix.target }}/release/vera "dist/$name/vera"
-          cp README.md LICENSE "dist/$name/" 2>/dev/null || true
+          cp target/${{ matrix.target }}/release/vera-mcp "dist/$name/vera-mcp"
+          cp README.md LICENSE .env.example "dist/$name/" 2>/dev/null || true
           tar -C dist -czf "$name.tar.gz" "$name"
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
 
@@ -104,8 +105,8 @@ jobs:
           set -euo pipefail
           name="vera-${{ matrix.target }}"
           mkdir -p "dist/$name"
-          cp target/${{ matrix.target }}/release/vera.exe "dist/$name/vera.exe"
-          cp README.md "dist/$name/" 2>/dev/null || true
+          cp target/${{ matrix.target }}/release/vera-mcp.exe "dist/$name/vera-mcp.exe"
+          cp README.md .env.example "dist/$name/" 2>/dev/null || true
           powershell -Command "Compress-Archive -Path dist/$name -DestinationPath $name.zip"
           certutil -hashfile "$name.zip" SHA256 | sed -n '2p' > "$name.zip.sha256"
 

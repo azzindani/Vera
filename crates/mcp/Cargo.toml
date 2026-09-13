@@ -1,5 +1,5 @@
 [package]
-name = "mcp"
+name = "vera-mcp"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,10 +15,10 @@ thiserror = "2"
 # HTTP transport. `axum` only — no tower-http, no tracing stack: this
 # server has five endpoints and a 2 vCPU budget to defend.
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
-contract = { version = "0.0.1", path = "../contract" }
-embed = { version = "0.0.1", path = "../embed" }
-engine = { version = "0.0.1", path = "../engine" }
-store = { version = "0.0.1", path = "../store" }
+contract = { path = "../contract" }
+embed = { path = "../embed" }
+engine = { path = "../engine" }
+store = { path = "../store" }
 
 [lints]
 workspace = true

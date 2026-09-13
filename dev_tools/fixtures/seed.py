@@ -14,8 +14,8 @@ say nothing about embedding quality, and nothing here should be read as an
 eval. This fixture tests SQL semantics, filters and the pruning guarantee.
 Retrieval quality is measured against the real corpus by `eval/run.py`.
 
-    python fixtures/seed.py                  # DATABASE_URL or the dev default
-    python fixtures/seed.py --force          # overwrite a populated database
+    python dev_tools/fixtures/seed.py                  # DATABASE_URL or the dev default
+    python dev_tools/fixtures/seed.py --force          # overwrite a populated database
 
 Safety: refuses to touch a database that already holds a real corpus unless
 `--force` is given. Wiping 181K embedded rows costs a GPU-day to rebuild.
@@ -31,11 +31,11 @@ import random
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "pipelines" / "pre_embed"))
+TOOLS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(TOOLS / "pre_embed"))
 from sparse import Bm25Vectorizer  # noqa: E402
 
-SCHEMA_SQL = ROOT / "pipelines" / "pre_embed" / "schema.sql"
+SCHEMA_SQL = TOOLS / "pre_embed" / "schema.sql"
 
 CORPUS_ID = "fixture-01"
 DENSE_DIM = 1024  # must match the engine's pin; it_live.rs asserts on it

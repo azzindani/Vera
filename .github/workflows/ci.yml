@@ -2,7 +2,7 @@ name: CI
 
 # Two stages, mirroring pipeline.yaml:
 #   fast — static + unit, on all three platforms
-#   full — integration against a real Postgres, seeded from fixtures/seed.py
+#   full — integration against a real Postgres, seeded from dev_tools/fixtures/seed.py
 #
 # The `full` stage runs on Linux only. It is testing SQL semantics against a
 # Postgres server, and that server behaves the same whichever OS drove the
@@ -89,7 +89,7 @@ jobs:
         run: cargo build --workspace --locked
 
   # The stage that would have caught the plainto_tsquery bug. `store`'s tests
-  # are `#[ignore]`d because they need a loaded corpus; fixtures/seed.py builds
+  # are `#[ignore]`d because they need a loaded corpus; dev_tools/fixtures/seed.py builds
   # a ~30-row one in seconds, so "needs a database" stops meaning "never runs".
   integration:
     name: integration (postgres)
@@ -135,10 +135,10 @@ jobs:
       # is. The chunker decides what a retrieval unit IS, so a regression here
       # silently changes every number the eval harness reports.
       - name: Chunker tests
-        run: python pipelines/pre_embed/test_chunking.py
+        run: python dev_tools/pre_embed/test_chunking.py
 
       - name: Seed the fixture corpus
-        run: python fixtures/seed.py
+        run: python dev_tools/fixtures/seed.py
 
       - name: Cache cargo
         uses: actions/cache@v4

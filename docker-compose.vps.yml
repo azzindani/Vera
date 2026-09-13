@@ -15,7 +15,7 @@
 #
 #   embed   1280 MB   model weights measured at 1060 MB anon, + runtime
 #   db      1792 MB   shared_buffers 512 + work_mem + the rest as page cache
-#   engine   512 MB   8.3 MB resident + 4 concurrent x 23.4 MB worst in-flight
+#   engine   512 MB   8.5 MB resident + 4 concurrent x 23.4 MB worst in-flight
 #   ----------------
 #   total   3584 MB   leaving ~512 MB for the OS
 #
@@ -26,7 +26,7 @@
 
 services:
   db:
-    cpuset: "0,1"
+    cpuset: "${VPS_CPUSET:-0,1}"
     command:
       - postgres
       - -c
@@ -37,6 +37,12 @@ services:
       - maintenance_work_mem=128MB
       - -c
       - work_mem=16MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - max_connections=32
+      - -c
+      - log_min_duration_statement=1000
       # 2 vCPU: one parallel worker, not the default 2. Three processes
       # competing for two cores makes p95 worse, not better.
       - -c
@@ -55,7 +61,7 @@ services:
           memory: 1280M
 
   engine:
-    cpuset: "0,1"
+    cpuset: "${VPS_CPUSET:-0,1}"
     deploy:
       resources:
         limits:

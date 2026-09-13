@@ -1,8 +1,8 @@
 # The Vera engine · stateless, HTTP transport.
 #
-# ! Distroless, not alpine. The engine links the system allocator and OpenSSL
+# ! debian-slim, ✗ alpine. The engine links the system allocator and rustls
 # through reqwest; musl would mean a different allocator and a rebuild of both,
-# for an image that is already 5 MB of binary. Debian-slim runtime, no shell.
+# for an image that is already ~5 MB of binary.
 #
 #   docker compose up -d engine
 
@@ -17,31 +17,42 @@ COPY crates/embed/Cargo.toml    crates/embed/
 COPY crates/engine/Cargo.toml   crates/engine/
 COPY crates/mcp/Cargo.toml      crates/mcp/
 COPY crates/store/Cargo.toml    crates/store/
-RUN mkdir -p src crates/contract/src crates/embed/src crates/engine/src \
+RUN mkdir -p crates/contract/src crates/embed/src crates/engine/src \
              crates/mcp/src crates/store/src \
- && echo 'fn main() {}' > src/main.rs \
  && echo 'fn main() {}' > crates/mcp/src/main.rs \
  && touch crates/contract/src/lib.rs crates/embed/src/lib.rs \
           crates/engine/src/lib.rs crates/store/src/lib.rs \
- && cargo build --release --workspace 2>/dev/null || true
+ && cargo build --release --locked --workspace 2>/dev/null || true
 
 COPY . .
 # ! Touch the real sources: cargo keys off mtime, and the stub main.rs above is
 # newer than the files just copied over it.
+#
+# ! --locked. A container built from a different dependency resolution than CI
+# verified is a different artifact wearing the same tag.
 RUN touch crates/*/src/lib.rs crates/mcp/src/main.rs \
- && cargo build --release -p mcp
+ && cargo build --release --locked -p vera-mcp
 
 FROM debian:bookworm-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates wget \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --system --uid 10001 vera
-COPY --from=builder /src/target/release/mcp /usr/local/bin/vera-mcp
+COPY --from=builder /src/target/release/vera-mcp /usr/local/bin/vera-mcp
 
-# ! Non-root. The query path is read-only (CLAUDE.md §5.6) and the container
-# holds no state, so there is nothing it needs privileges for.
+# ! Non-root, and the compose file mounts the root filesystem read-only. The
+# query path never writes (CLAUDE.md §5.6) and the container holds no state, so
+# there is nothing it needs privileges or a writable disk for.
 USER 10001
+
+# ! Transport only. Every other setting is deliberately absent so a missing
+# variable fails at startup rather than picking up a default baked into an
+# image nobody re-reads. See .env.example.
 ENV TRANSPORT=http \
     HTTP_ADDR=0.0.0.0:8081
 EXPOSE 8081
+
+# ! No shell form. `ENTRYPOINT vera-mcp` would run it under `/bin/sh -c`, which
+# swallows SIGTERM and leaves the orchestrator waiting out its kill timeout on
+# every deploy.
 ENTRYPOINT ["/usr/local/bin/vera-mcp"]

@@ -4,7 +4,7 @@
 //! database. They run two ways, and every assertion here must hold for BOTH:
 //!
 //!     docker compose up -d && cargo test -p store -- --ignored   # real corpus
-//!     python fixtures/seed.py && cargo test -p store -- --ignored # ~30 rows
+//!     python dev_tools/fixtures/seed.py && cargo test -p store -- --ignored # ~30 rows
 //!
 //! The fixture is what CI runs. It carries the same regulations these tests
 //! name, so a test that passes locally against 181K rows passes there too —

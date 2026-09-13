@@ -1,15 +1,18 @@
-# The M0 dev stack: Postgres/pgvector plus a local embedding server.
+# Vera · the three-container stack.
 #
-# The embedding container stands in for OpenRouter. It runs the SAME model that
-# produced the corpus vectors in .test/ — same weights, same pooling, same
-# normalization — which is the whole of invariant 2 (CLAUDE.md §7.2). It is not
-# an LLM and there is no completion endpoint here; TEI serves /embed only.
+#   cp .env.example .env && docker compose up -d
 #
-#   docker compose up -d
+# ! Every credential and path comes from `.env`, ✗ from this file. A compose
+# file with a password in it is a password in git history.
 #
-# Resource limits are deliberately NOT set here — bulk-loading 748K rows and
-# building a GIN index wants the whole laptop. Overlay the VPS profile when you
-# want to test the guarantees in HARDWARE.md §2:
+# The embedding container runs the SAME model that produced the corpus vectors
+# — same weights, same pooling, same normalization — which is the whole of
+# the corpus-declares-the-space rule (CLAUDE.md §5.2). It is not an LLM: TEI
+# serves /embed only, and there is no completion endpoint anywhere in this stack.
+#
+# Resource limits are deliberately NOT set here — bulk-loading and index builds
+# want the whole machine. Overlay the target profile to test the guarantees in
+# docs/HARDWARE.md:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 
@@ -25,40 +28,43 @@ services:
     image: vera-db:pg16-rum
     container_name: vera-db
     environment:
-      POSTGRES_USER: vera
-      POSTGRES_PASSWORD: vera
-      POSTGRES_DB: vera
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
       # ! locale=C. Collation changes ORDER BY on text and BM25 tie-breaks;
       # pinning it keeps ranking reproducible across machines.
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     command:
       - postgres
-      # Budget mirrors HARDWARE.md §2 (~2.0 GB for Postgres) even when the
-      # container is unconstrained, so query plans resemble the VPS's.
+      # Budget mirrors docs/HARDWARE.md even when the container is
+      # unconstrained, so query plans resemble the target box's.
       - -c
-      - shared_buffers=1500MB
+      - shared_buffers=${PG_SHARED_BUFFERS:-1500MB}
       - -c
-      - effective_cache_size=4GB
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-4GB}
       - -c
-      - maintenance_work_mem=512MB
+      - maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-512MB}
       - -c
-      - work_mem=32MB
+      - work_mem=${PG_WORK_MEM:-32MB}
       # ! NVMe. The default 4.0 tells the planner random reads are expensive and
       # pushes it to seq-scan a partition the cluster index should have pruned.
       - -c
       - random_page_cost=1.1
       - -c
-      - max_connections=32
+      - max_connections=${PG_MAX_CONNECTIONS:-32}
       - -c
       - log_min_duration_statement=1000
+    # ! Bound to loopback. The database is reachable by the engine over the
+    # compose network; publishing it on 0.0.0.0 puts the corpus on the internet
+    # the first time this runs on a box with a public interface.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
-      # ! Named volume. Without it the 748K-row load dies on `compose down`.
+      # ! Named volume. Without it a bulk load dies on `compose down`.
       - pgdata:/var/lib/postgresql/data
     shm_size: 1gb
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vera -d vera"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -66,26 +72,28 @@ services:
     restart: unless-stopped
 
   embed:
-    # Tag 86 = CUDA compute capability 8.6 = RTX 3070 Ti (GA104).
-    image: ghcr.io/huggingface/text-embeddings-inference:86-1.7.2
+    # ! Tag pinned, ✗ :latest. This container defines the vector space; an image
+    # that updates underneath a loaded corpus breaks that rule silently.
+    # The default tag targets CUDA compute capability 8.6; set EMBED_IMAGE for
+    # other hardware.
+    image: ${EMBED_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:86-1.7.2}
     container_name: vera-embed
     command:
       - --model-id=/data/model
-      # ! Must match .test/Qwen3-Embedding-0.6B/1_Pooling/config.json, which sets
-      # pooling_mode_lasttoken. Mean-pooling the same weights yields a different
-      # vector space and silently plausible, wrong rankings.
-      - --pooling=last-token
-      - --dtype=float16
+      # ! Must match the model's 1_Pooling/config.json. Mean-pooling the same
+      # weights yields a different vector space and silently plausible, wrong
+      # rankings.
+      - --pooling=${EMBED_POOLING:-last-token}
+      - --dtype=${EMBED_DTYPE:-float16}
       - --max-client-batch-size=64
-      # ! 32768 = the model's context. The default 16384 silently truncated
-      # ~5,240 corpus chunks (longest is 19,281 tokens), embedding a vector
-      # that did not represent its text. auto-truncate is deliberately OFF so
-      # an over-length chunk fails loudly instead.
-      - --max-batch-tokens=32768
+      # ! The model's full context. A lower value silently truncates long
+      # chunks, embedding a vector that does not represent its text.
+      # auto-truncate is deliberately OFF so an over-length chunk fails loudly.
+      - --max-batch-tokens=${EMBED_MAX_BATCH_TOKENS:-32768}
     volumes:
-      - ./.test/Qwen3-Embedding-0.6B:/data/model:ro
+      - ${MODEL_DIR:?set MODEL_DIR in .env}:/data/model:ro
     ports:
-      - "8080:80"
+      - "127.0.0.1:${EMBED_PORT:-8080}:80"
     deploy:
       resources:
         reservations:
@@ -97,7 +105,7 @@ services:
       # ! Loading and warming the model takes ~40s, and TEI accepts connections
       # before it can answer one. Without this the engine's startup canary hits
       # a live socket that refuses work, refuses to serve (correctly —
-      # invariant 3), exits, and restart-loops until the model is warm.
+      # CLAUDE.md §7.3), exits, and restart-loops until the model is warm.
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/health || exit 1"]
       interval: 5s
       timeout: 3s
@@ -109,27 +117,31 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.engine
-    image: vera-engine:dev
+    image: vera-engine:${VERA_VERSION:-dev}
     container_name: vera-mcp
     environment:
-      DATABASE_URL: "host=db port=5432 dbname=vera2 user=vera password=vera"
-      EMBED_ENDPOINT: "http://embed:80"
-      BM25_VOCAB: "/vocab/spike-02.bm25.json"
-      TRANSPORT: http
-      HTTP_ADDR: "0.0.0.0:8081"
-      # ! Peak RAM is fixed cost + MAX_CONCURRENCY x per-request ceiling
-      # (CLAUDE.md §5.4). Raising this raises the memory limit the VPS overlay
-      # sets; the two are one decision, ✗ two.
-      MAX_CONCURRENCY: "4"
-      QUEUE_WAIT_MS: "2000"
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+      EMBED_ENDPOINT: ${EMBED_ENDPOINT:?set EMBED_ENDPOINT in .env}
+      BM25_VOCAB: ${BM25_VOCAB:?set BM25_VOCAB in .env}
+      TRANSPORT: ${TRANSPORT:-http}
+      HTTP_ADDR: ${HTTP_ADDR:-0.0.0.0:8081}
+      # ! Peak RAM is fixed cost + MAX_CONCURRENCY × per-request ceiling
+      # (CLAUDE.md §5.4). Raising this raises the memory limit the target
+      # overlay sets; the two are one decision, ✗ two.
+      MAX_CONCURRENCY: ${MAX_CONCURRENCY:-4}
+      QUEUE_WAIT_MS: ${QUEUE_WAIT_MS:-2000}
+      CLUSTERS_PROBED: ${CLUSTERS_PROBED:-5}
+      DENSE_WEIGHT: ${DENSE_WEIGHT:-0.0}
+      SPARSE_WEIGHT: ${SPARSE_WEIGHT:-1.0}
+      TEXT_WEIGHT: ${TEXT_WEIGHT:-1.0}
     volumes:
       # ! Sparse vectors are indexed by vocabulary POSITION. Serving a corpus
       # against another run's vocabulary compares unrelated dimensions and
       # returns plausible nonsense rather than failing, so the vocab is mounted
       # beside the corpus it was built from.
-      - ./.test/runs:/vocab:ro
+      - ${VOCAB_DIR:?set VOCAB_DIR in .env}:/vocab:ro
     ports:
-      - "8081:8081"
+      - "${ENGINE_BIND:-127.0.0.1}:${ENGINE_PORT:-8081}:8081"
     depends_on:
       db:
         condition: service_healthy
@@ -147,6 +159,13 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    # ! Read-only root. The query path never writes (CLAUDE.md §5.6) and the
+    # container holds no state, so anything that tries is a bug worth crashing.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   pgdata:

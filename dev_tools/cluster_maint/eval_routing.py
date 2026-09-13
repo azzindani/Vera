@@ -3,7 +3,7 @@
 This is the measurement CLAUDE.md §3 rests on: probe ~5 of N clusters instead of
 scanning everything, and lose nothing worth keeping.
 
-Two metrics, per EVAL.md §3:
+Two metrics, per docs/EVAL.md §3:
 
   routing recall   is the flat-scan top-1 inside a probed cluster at all?
                    Separates a ROUTING miss from a RANKING miss -- if this is

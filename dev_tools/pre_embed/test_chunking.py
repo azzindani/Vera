@@ -1,6 +1,6 @@
 """Tests for the article chunker · plain asserts, no test runner needed.
 
-    python pipelines/pre_embed/test_chunking.py
+    python dev_tools/pre_embed/test_chunking.py
 
 Deliberately dependency-free: the pipelines have no pytest in CI, and a test
 that only runs on one machine is the situation this project already fixed once

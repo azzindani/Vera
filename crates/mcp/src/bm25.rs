@@ -1,6 +1,6 @@
 //! Query-side BM25 vectorisation.
 //!
-//! ! Documents are vectorised offline by `pipelines/pre_embed/sparse.py`. This
+//! ! Documents are vectorised offline by `dev_tools/pre_embed/sparse.py`. This
 //! is only the query half — and the two halves must tokenise **identically**.
 //! The vocabulary artifact records the tokeniser it was built with, and loading
 //! refuses on mismatch, because a query tokenised differently than the corpus

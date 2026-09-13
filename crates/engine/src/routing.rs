@@ -8,7 +8,7 @@
 //!
 //! Measured on the 182K-row spike: probing 5 of 85 clusters touches 5.9% of the
 //! corpus and retains 95.0% routing recall. The 5% that misses is exactly what
-//! the global exact-identifier path exists to catch (`LOOPHOLES.md` §1) —
+//! the global exact-identifier path exists to catch (`docs/FAILURE_MODES.md` §1) —
 //! routing accelerates, the keyword net guarantees.
 
 /// Cosine similarity between two vectors of equal length.

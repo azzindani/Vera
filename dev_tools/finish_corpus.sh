@@ -8,7 +8,7 @@
 # it reports numbers that mean nothing.
 #
 #   DATABASE_URL="host=localhost port=5432 dbname=vera2 user=vera password=vera" \
-#     bash pipelines/finish_corpus.sh .test/runs/spike-02.bm25.json
+#     bash dev_tools/finish_corpus.sh .test/runs/spike-02.bm25.json
 #
 set -euo pipefail
 
@@ -35,7 +35,7 @@ PY
 echo
 echo "== layer-2 clusters (k-means) =="
 # ! Must run AFTER embedding: centroids are computed from the dense vectors.
-python pipelines/cluster_maint/kmeans.py --rows-per-cluster 2000
+python dev_tools/cluster_maint/kmeans.py --rows-per-cluster 2000
 
 echo
 echo "== eval · 50 labelled cases =="
@@ -46,7 +46,7 @@ echo "== eval · 50 labelled cases =="
 # plausible nonsense instead of failing.
 BM25_VOCAB="$VOCAB" \
 EMBED_ENDPOINT="${EMBED_ENDPOINT:-http://localhost:8080}" \
-  python eval/run.py --by-type
+  python dev_tools/eval/run.py --by-type
 
 echo
 echo "done · compare against the previous corpus before switching .mcp.json"

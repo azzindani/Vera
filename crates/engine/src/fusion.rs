@@ -8,7 +8,7 @@
 //! Measured on the 182K-row spike corpus, the arms are lopsided — the lexical
 //! arms far outrank dense on subject-line queries. Weights exist so that can be
 //! corrected from config once a *paraphrase-based* eval set exists, ✗ tuned by
-//! hand against a biased one (`EVAL.md` §2).
+//! hand against a biased one (`docs/EVAL.md` §2).
 
 use std::collections::HashMap;
 

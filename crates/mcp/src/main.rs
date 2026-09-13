@@ -1,27 +1,12 @@
-//! `mcp` · the MCP server: transport and tool dispatch, no domain logic.
+//! `vera-mcp` · the MCP server: transport and tool dispatch, no domain logic.
 //!
 //! ! Every log line goes to **stderr** (`CLAUDE.md` §7.10). stdout carries the
 //! JSON-RPC stream and nothing else; one stray `println!` corrupts the channel
 //! and the client sees a protocol error rather than a message.
 //!
-//! Configuration, all from the environment so nothing is hardcoded:
-//!
-//! ```text
-//! DATABASE_URL     postgres connection string
-//! EMBED_ENDPOINT   embedding server base URL      (default http://localhost:8080)
-//! BM25_VOCAB       path to the corpus's vocabulary artifact
-//! CLUSTERS_PROBED  layer-2 probe width            (default 5)
-//! DENSE_WEIGHT     RRF weight for the dense arm   (default 0.0, measured)
-//! SPARSE_WEIGHT    RRF weight for BM25            (default 1.0)
-//! TEXT_WEIGHT      RRF weight for tsvector        (default 0.0, measured)
-//! MAX_CONCURRENCY  in-flight request ceiling      (default 4)
-//! TRANSPORT        stdio | http                    (default stdio)
-//! HTTP_ADDR        bind address for http           (default 0.0.0.0:8081)
-//! QUEUE_WAIT_MS    how long a request may queue    (default 2000)
-//! CANARY_MIN_COSINE startup round-trip threshold   (default 0.98)
-//! DOMAIN_FLOOR     domain gate · centroid similarity (default 0.45)
-//! DOMAIN_LEXICAL_FLOOR domain gate · lexical evidence (default 0.40)
-//! ```
+//! All configuration is read from the environment (invariant 12) and resolved
+//! once, at startup, by [`Settings::from_env`]. See `docs/CONFIGURATION.md` for
+//! the full table and `.env.example` for a working set.
 
 mod bm25;
 mod http;
@@ -43,38 +28,181 @@ const PROTOCOL_VERSION: &str = "2024-11-05";
 /// -32768..=-32000 and defines only part of it; -32000 is where
 /// implementations are told to put their own.
 pub(crate) const BUSY_CODE: i64 = -32000;
-const DEFAULT_READ_CHUNK_CHARS: usize = 4000;
 
 /// Log to stderr. ! Never stdout.
 macro_rules! log {
     ($($arg:tt)*) => { eprintln!($($arg)*) };
 }
 
-/// Tunables from the environment · invariant 12, so bigger hardware and a
-/// different corpus move these without a rebuild.
-fn config_from_env(clusters_probed: usize) -> Config {
-    fn f32_from(key: &str, fallback: f32) -> f32 {
-        std::env::var(key)
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(fallback)
+/// A required variable is missing, or one that is set cannot be parsed.
+///
+/// ! Both are fatal, ✗ defaulted. A typo in `MAX_CONCURRENCY` that silently
+/// became 4 would be a memory bound nobody chose, and a `DATABASE_URL` that
+/// defaults to localhost is how a container ends up serving an empty corpus and
+/// saying nothing about it.
+#[derive(Debug, thiserror::Error)]
+enum ConfigError {
+    #[error("{0} is not set · see .env.example")]
+    Missing(&'static str),
+    #[error("{key}={value:?} is not a valid {kind}")]
+    Invalid {
+        key: &'static str,
+        value: String,
+        kind: &'static str,
+    },
+}
+
+/// A variable that must be set. There is no sensible default for any of these:
+/// each names something outside the process that only the operator knows.
+fn required(key: &'static str) -> Result<String, ConfigError> {
+    std::env::var(key)
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .ok_or(ConfigError::Missing(key))
+}
+
+/// A variable with a defensible default, parsed strictly.
+fn parsed<T: std::str::FromStr>(
+    key: &'static str,
+    kind: &'static str,
+    fallback: T,
+) -> Result<T, ConfigError> {
+    match std::env::var(key) {
+        Err(_) => Ok(fallback),
+        Ok(v) if v.trim().is_empty() => Ok(fallback),
+        Ok(v) => v.trim().parse().map_err(|_| ConfigError::Invalid {
+            key,
+            value: v,
+            kind,
+        }),
     }
-    let d = Config::default();
-    Config {
-        clusters_probed,
-        // ! Loosening the canary is a deliberate, visible act — there is no
-        // code path that quietly skips it.
-        canary_min_cosine: f32_from("CANARY_MIN_COSINE", d.canary_min_cosine),
-        domain_floor: f32_from("DOMAIN_FLOOR", d.domain_floor),
-        domain_lexical_floor: f32_from("DOMAIN_LEXICAL_FLOOR", d.domain_lexical_floor),
-        // ! These were documented as overridable for three releases while
-        // `..d` quietly discarded them, which is invariant 12 violated in the
-        // one place it is most expensive: arm weights are corpus-specific, and
-        // a corpus is re-chunked far more often than the engine is rebuilt.
-        dense_weight: f32_from("DENSE_WEIGHT", d.dense_weight),
-        sparse_weight: f32_from("SPARSE_WEIGHT", d.sparse_weight),
-        text_weight: f32_from("TEXT_WEIGHT", d.text_weight),
-        ..d
+}
+
+/// Which transport the process serves on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Transport {
+    Stdio,
+    Http,
+}
+
+impl std::str::FromStr for Transport {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        match s {
+            "stdio" => Ok(Self::Stdio),
+            "http" => Ok(Self::Http),
+            _ => Err(()),
+        }
+    }
+}
+
+/// Everything the process reads from its environment, resolved once.
+///
+/// ! Resolved up front, ✗ read where needed. A process that discovers a missing
+/// variable on its first request has already told its orchestrator it is
+/// healthy; this way a misconfigured deployment dies at startup, where a
+/// rollout can still see it.
+#[derive(Debug)]
+struct Settings {
+    database_url: String,
+    embed_endpoint: String,
+    bm25_vocab: std::path::PathBuf,
+    max_concurrency: usize,
+    transport: Transport,
+    http_addr: String,
+    queue_wait: std::time::Duration,
+    read_chunk_chars: usize,
+    max_provenance_ids: usize,
+    pipeline: Config,
+}
+
+impl Settings {
+    fn from_env() -> Result<Self, ConfigError> {
+        let d = Config::default();
+        let s = Self {
+            // ! No defaults. Each names something the process cannot guess, and
+            // a wrong guess fails silently rather than loudly: the wrong
+            // vocabulary compares unrelated sparse dimensions, and the wrong
+            // database serves a corpus the operator did not intend.
+            database_url: required("DATABASE_URL")?,
+            embed_endpoint: required("EMBED_ENDPOINT")?,
+            bm25_vocab: required("BM25_VOCAB")?.into(),
+
+            max_concurrency: parsed("MAX_CONCURRENCY", "positive integer", 4usize)?,
+            transport: parsed("TRANSPORT", "transport (stdio|http)", Transport::Stdio)?,
+            http_addr: std::env::var("HTTP_ADDR").unwrap_or_else(|_| "0.0.0.0:8081".into()),
+            queue_wait: std::time::Duration::from_millis(parsed(
+                "QUEUE_WAIT_MS",
+                "duration in milliseconds",
+                2000u64,
+            )?),
+            read_chunk_chars: parsed("READ_CHUNK_CHARS", "positive integer", 4000usize)?,
+            max_provenance_ids: parsed("MAX_PROVENANCE_IDS", "positive integer", 50usize)?,
+
+            pipeline: Config {
+                clusters_probed: parsed("CLUSTERS_PROBED", "positive integer", d.clusters_probed)?,
+                per_cluster_k: parsed("PER_CLUSTER_K", "positive integer", d.per_cluster_k)?,
+                per_arm_k: parsed("PER_ARM_K", "positive integer", d.per_arm_k)?,
+                top_k: parsed("TOP_K", "positive integer", d.top_k)?,
+                snippet_chars: parsed("SNIPPET_CHARS", "positive integer", d.snippet_chars)?,
+                // ! Arm weights are properties of the CORPUS, not of the engine,
+                // and a corpus is re-chunked far more often than the engine is
+                // rebuilt. Refitting must not require a release.
+                dense_weight: parsed("DENSE_WEIGHT", "number", d.dense_weight)?,
+                sparse_weight: parsed("SPARSE_WEIGHT", "number", d.sparse_weight)?,
+                text_weight: parsed("TEXT_WEIGHT", "number", d.text_weight)?,
+                // ! Loosening the canary is a deliberate, visible act. There is
+                // no code path that quietly skips it.
+                canary_min_cosine: parsed("CANARY_MIN_COSINE", "number", d.canary_min_cosine)?,
+                domain_floor: parsed("DOMAIN_FLOOR", "number", d.domain_floor)?,
+                domain_lexical_floor: parsed(
+                    "DOMAIN_LEXICAL_FLOOR",
+                    "number",
+                    d.domain_lexical_floor,
+                )?,
+                gate_sample: parsed("GATE_SAMPLE", "positive integer", d.gate_sample)?,
+            },
+        };
+        s.validate()?;
+        Ok(s)
+    }
+
+    /// Reject values that parse but cannot work.
+    ///
+    /// ! `MAX_CONCURRENCY=0` builds a semaphore that admits nobody: the server
+    /// starts, reports healthy, and refuses every request. A parser cannot
+    /// catch that; only a range check can.
+    fn validate(&self) -> Result<(), ConfigError> {
+        let positive = [
+            ("MAX_CONCURRENCY", self.max_concurrency),
+            ("READ_CHUNK_CHARS", self.read_chunk_chars),
+            ("MAX_PROVENANCE_IDS", self.max_provenance_ids),
+            ("CLUSTERS_PROBED", self.pipeline.clusters_probed),
+            ("TOP_K", self.pipeline.top_k),
+            ("SNIPPET_CHARS", self.pipeline.snippet_chars),
+            ("GATE_SAMPLE", self.pipeline.gate_sample),
+        ];
+        for (key, value) in positive {
+            if value == 0 {
+                return Err(ConfigError::Invalid {
+                    key,
+                    value: "0".into(),
+                    kind: "positive integer",
+                });
+            }
+        }
+        // ! All three weights at zero fuses nothing and returns nothing, which
+        // looks exactly like a corpus with no matches.
+        let weights =
+            self.pipeline.dense_weight + self.pipeline.sparse_weight + self.pipeline.text_weight;
+        if weights <= 0.0 {
+            return Err(ConfigError::Invalid {
+                key: "DENSE_WEIGHT/SPARSE_WEIGHT/TEXT_WEIGHT",
+                value: format!("{weights}"),
+                kind: "set of weights with a positive sum",
+            });
+        }
+        Ok(())
     }
 }
 
@@ -84,69 +212,79 @@ async fn main() {
     // went wrong and why; `CanaryFailed { got: 0.61, want: 0.98 }` makes them
     // go read the source, and the message already explains itself.
     if let Err(e) = run().await {
-        log!("refusing to serve · {e}");
+        log!("refusing to serve \u{b7} {e}");
         std::process::exit(1);
     }
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let db = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "host=localhost port=5432 dbname=vera user=vera password=vera".into());
-    let endpoint =
-        std::env::var("EMBED_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".into());
-    let vocab =
-        std::env::var("BM25_VOCAB").unwrap_or_else(|_| ".test/runs/spike-01.bm25.json".into());
-    let probed: usize = std::env::var("CLUSTERS_PROBED")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(5);
-    let max_conc: usize = std::env::var("MAX_CONCURRENCY")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(4);
+    let s = Settings::from_env()?;
 
-    log!("starting · db={db} embed={endpoint} vocab={vocab}");
+    // ! The connection string is never logged. It carries a password, and an
+    // engine log is the one place an operator pastes into a ticket without
+    // thinking about it.
+    log!(
+        "starting \u{b7} embed={} vocab={} transport={:?}",
+        s.embed_endpoint,
+        s.bm25_vocab.display(),
+        s.transport
+    );
 
-    let pool = store::connect(&db, max_conc + 2)?;
+    // +2: the pool serves `max_concurrency` searches plus the startup canary
+    // and health probes, which must not have to wait behind a full queue.
+    let pool = store::connect(&s.database_url, s.max_concurrency + 2)?;
     let ops = store::SearchOps::new(pool);
 
     // The corpus decides the vector space; the provider is built to match it.
     let meta = ops.corpus_meta().await?;
     log!(
-        "corpus {} · {} @ {}d · {} pooling",
+        "corpus {} \u{b7} {} @ {}d \u{b7} {} pooling{}",
         meta.id,
         meta.dense_model,
         meta.dense_dim,
-        meta.dense_pooling
+        meta.dense_pooling,
+        if meta.dense_instruction.is_some() {
+            " \u{b7} instruction-aware"
+        } else {
+            ""
+        }
     );
 
     let dim = usize::try_from(meta.dense_dim).unwrap_or(0);
-    let provider = Arc::new(embed::HttpProvider::new(&endpoint, &meta.dense_model, dim)?);
-    let vectorizer = bm25::QueryVectorizer::load(std::path::Path::new(&vocab))?;
+    let provider = Arc::new(embed::HttpProvider::new(
+        &s.embed_endpoint,
+        &meta.dense_model,
+        dim,
+    )?);
+    let vectorizer = bm25::QueryVectorizer::load(&s.bm25_vocab)?;
 
-    let cfg = config_from_env(probed);
-    let pipe =
-        Arc::new(Pipeline::new(ops, provider, vectorizer, &meta.dense_model.clone(), cfg).await?);
+    let pipe = Arc::new(
+        Pipeline::new(
+            ops,
+            provider,
+            vectorizer,
+            &meta.dense_model.clone(),
+            s.pipeline.clone(),
+        )
+        .await?,
+    );
     log!(
-        "ready · {} clusters, probing {} · concurrency {}",
+        "ready \u{b7} {} clusters, probing {} \u{b7} concurrency {}",
         pipe.cluster_count(),
-        probed,
-        max_conc
+        s.pipeline.clusters_probed,
+        s.max_concurrency
     );
 
-    // ! Bounded concurrency (`CLAUDE.md` §7.6). Peak RAM is fixed costs plus
+    // ! Bounded concurrency (`CLAUDE.md` \u{a7}7.6). Peak RAM is fixed costs plus
     // this ceiling times the per-request ceiling, and both terms are bounded.
-    let permits = Arc::new(Semaphore::new(max_conc));
+    let permits = Arc::new(Semaphore::new(s.max_concurrency));
+    let limits = Limits {
+        read_chunk_chars: s.read_chunk_chars,
+        max_provenance_ids: s.max_provenance_ids,
+    };
 
-    match std::env::var("TRANSPORT")
-        .unwrap_or_else(|_| "stdio".into())
-        .as_str()
-    {
-        "http" => {
-            let wait: u64 = std::env::var("QUEUE_WAIT_MS")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(2000);
+    match s.transport {
+        Transport::Http => {
             // ! A wait ceiling is the other half of invariant 6. A bounded
             // queue alone still lets a caller block indefinitely behind a full
             // one; the bound has to be on TIME as well as on depth, or
@@ -154,28 +292,34 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             let server = Arc::new(Server {
                 pipe,
                 permits,
-                queue_wait: Some(std::time::Duration::from_millis(wait)),
+                queue_wait: Some(s.queue_wait),
+                limits,
             });
-            let addr = std::env::var("HTTP_ADDR").unwrap_or_else(|_| "0.0.0.0:8081".into());
-            log!("transport http · {addr} · queue wait {wait}ms");
-            http::serve(server, &addr).await?;
-            return Ok(());
+            log!(
+                "transport http \u{b7} {} \u{b7} queue wait {}ms",
+                s.http_addr,
+                s.queue_wait.as_millis()
+            );
+            http::serve(server, &s.http_addr).await?;
+            Ok(())
         }
-        "stdio" => {}
-        other => {
-            return Err(format!("unknown TRANSPORT '{other}' · expected stdio or http").into());
+        // ! stdio is serial: one line is read, handled, answered, and only then
+        // is the next read. Nothing can queue, so there is nobody to refuse and
+        // a wait ceiling could only ever fire against the request already being
+        // served.
+        Transport::Stdio => {
+            let server = Arc::new(Server {
+                pipe,
+                permits,
+                queue_wait: None,
+                limits,
+            });
+            serve_stdio(&server).await
         }
     }
+}
 
-    // ! stdio is serial: one line is read, handled, answered, and only then is
-    // the next read. Nothing can queue, so there is nobody to refuse and a wait
-    // ceiling could only ever fire against the request already being served.
-    let server = Arc::new(Server {
-        pipe,
-        permits,
-        queue_wait: None,
-    });
-
+async fn serve_stdio(server: &Server) -> Result<(), Box<dyn std::error::Error>> {
     let mut lines = BufReader::new(tokio::io::stdin()).lines();
     let mut stdout = tokio::io::stdout();
 
@@ -211,6 +355,18 @@ pub(crate) struct Server {
     /// How long a call may wait for a permit. `None` waits forever, which is
     /// correct only for a serial transport.
     pub(crate) queue_wait: Option<std::time::Duration>,
+    pub(crate) limits: Limits,
+}
+
+/// Caps on what one response may contain.
+///
+/// ! Carried, \u{2717} compiled in. These bound the size of a reply, and the right
+/// bound depends on the caller's context window and the corpus's chunk size,
+/// neither of which this binary knows.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Limits {
+    pub(crate) read_chunk_chars: usize,
+    pub(crate) max_provenance_ids: usize,
 }
 
 impl Server {
@@ -234,7 +390,7 @@ impl Server {
                 let Some(permit) = self.admit().await else {
                     return Some(busy(id.as_ref(), self.queue_wait));
                 };
-                let out = dispatch(&self.pipe, &params).await;
+                let out = dispatch(&self.pipe, &params, self.limits).await;
                 drop(permit);
                 Some(ok(
                     id.as_ref(),
@@ -272,7 +428,10 @@ async fn admit_within(
     let sem = permits.clone();
     match wait {
         None => sem.acquire_owned().await.ok(),
-        Some(d) => tokio::time::timeout(d, sem.acquire_owned()).await.ok()?.ok(),
+        Some(d) => tokio::time::timeout(d, sem.acquire_owned())
+            .await
+            .ok()?
+            .ok(),
     }
 }
 
@@ -297,15 +456,15 @@ fn busy(id: Option<&Value>, waited: Option<std::time::Duration>) -> Value {
     })
 }
 
-async fn dispatch(pipe: &Pipeline, params: &Value) -> Value {
+async fn dispatch(pipe: &Pipeline, params: &Value, limits: Limits) -> Value {
     let name = params.get("name").and_then(Value::as_str).unwrap_or("");
     let args = params.get("arguments").cloned().unwrap_or(json!({}));
 
     match name {
         "list_domains" => list_domains(pipe),
         "search_knowledge" => search_knowledge(pipe, &args).await,
-        "read_chunk" => read_chunk(pipe, &args).await,
-        "get_provenance" => get_provenance(pipe, &args).await,
+        "read_chunk" => read_chunk(pipe, &args, limits).await,
+        "get_provenance" => get_provenance(pipe, &args, limits).await,
         "explain_routing" => explain_routing(pipe, &args).await,
         other => tools::error(
             "tools/call",
@@ -359,7 +518,7 @@ async fn search_knowledge(pipe: &Pipeline, args: &Value) -> Value {
     }
 }
 
-async fn read_chunk(pipe: &Pipeline, args: &Value) -> Value {
+async fn read_chunk(pipe: &Pipeline, args: &Value, limits: Limits) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tools::error(
             "read_chunk",
@@ -371,7 +530,7 @@ async fn read_chunk(pipe: &Pipeline, args: &Value) -> Value {
         .get("max_chars")
         .and_then(Value::as_u64)
         .and_then(|v| usize::try_from(v).ok())
-        .unwrap_or(DEFAULT_READ_CHUNK_CHARS);
+        .map_or(limits.read_chunk_chars, |n| n.min(limits.read_chunk_chars));
     match pipe.read_chunk(id, cap).await {
         Ok(Some((row, body, truncated))) => json!({
             "success": true,
@@ -393,13 +552,18 @@ async fn read_chunk(pipe: &Pipeline, args: &Value) -> Value {
     }
 }
 
-async fn get_provenance(pipe: &Pipeline, args: &Value) -> Value {
+async fn get_provenance(pipe: &Pipeline, args: &Value, limits: Limits) -> Value {
+    // ! Capped. An agent that pastes a whole result set back is the normal
+    // case, and an uncapped IN-list is an unbounded query and an unbounded
+    // reply — the one place a read-only server can still be made to allocate
+    // without limit.
     let ids: Vec<String> = args
         .get("ids")
         .and_then(Value::as_array)
         .map(|a| {
             a.iter()
                 .filter_map(|v| v.as_str().map(str::to_owned))
+                .take(limits.max_provenance_ids)
                 .collect()
         })
         .unwrap_or_default();
@@ -465,10 +629,103 @@ async fn explain_routing(pipe: &Pipeline, args: &Value) -> Value {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A settings value that is valid, so a test can change one field and
+    /// assert that field alone is what rejects it.
+    fn settings() -> Settings {
+        Settings {
+            database_url: "host=db dbname=vera".into(),
+            embed_endpoint: "http://embed:80".into(),
+            bm25_vocab: "/vocab/corpus.bm25.json".into(),
+            max_concurrency: 4,
+            transport: Transport::Http,
+            http_addr: "0.0.0.0:8081".into(),
+            queue_wait: std::time::Duration::from_secs(2),
+            read_chunk_chars: 4000,
+            max_provenance_ids: 50,
+            pipeline: Config::default(),
+        }
+    }
+
+    #[test]
+    fn the_shipped_defaults_are_a_valid_configuration() {
+        // ! If this ever fails, a default was changed to something the server
+        // would refuse to start on \u2014 which no operator would ever see, because
+        // they would have set the variable.
+        assert!(settings().validate().is_ok());
+    }
+
+    #[test]
+    fn a_ceiling_of_zero_is_refused_rather_than_served() {
+        // ! It parses. A semaphore of 0 admits nobody, so the server would
+        // start, report healthy, and refuse every request forever.
+        let mut s = settings();
+        s.max_concurrency = 0;
+        let e = s.validate().unwrap_err();
+        assert!(e.to_string().contains("MAX_CONCURRENCY"), "{e}");
+    }
+
+    #[test]
+    fn probing_zero_clusters_is_refused() {
+        let mut s = settings();
+        s.pipeline.clusters_probed = 0;
+        assert!(s.validate().is_err());
+    }
+
+    #[test]
+    fn weights_that_sum_to_nothing_are_refused() {
+        // ! Every arm at zero fuses nothing and returns nothing, which is
+        // indistinguishable from a corpus that simply has no match.
+        let mut s = settings();
+        s.pipeline.dense_weight = 0.0;
+        s.pipeline.sparse_weight = 0.0;
+        s.pipeline.text_weight = 0.0;
+        let e = s.validate().unwrap_err();
+        assert!(e.to_string().contains("WEIGHT"), "{e}");
+    }
+
+    #[test]
+    fn one_live_arm_is_enough() {
+        // dense currently carries 0.0 weight and the server is expected to run.
+        let mut s = settings();
+        s.pipeline.dense_weight = 0.0;
+        s.pipeline.text_weight = 0.0;
+        assert!(s.validate().is_ok());
+    }
+
+    #[test]
+    fn a_transport_it_cannot_serve_is_a_parse_failure() {
+        assert_eq!("stdio".parse::<Transport>(), Ok(Transport::Stdio));
+        assert_eq!("http".parse::<Transport>(), Ok(Transport::Http));
+        assert!("grpc".parse::<Transport>().is_err());
+        // ! Not case-folded. Accepting "HTTP" here would mean the documented
+        // spelling and the accepted spellings drift apart over time.
+        assert!("HTTP".parse::<Transport>().is_err());
+    }
+
+    #[test]
+    fn a_missing_variable_names_itself_and_where_to_look() {
+        let e = ConfigError::Missing("DATABASE_URL").to_string();
+        assert!(e.contains("DATABASE_URL"), "{e}");
+        assert!(e.contains(".env.example"), "{e}");
+    }
+
+    #[test]
+    fn an_unparseable_value_is_quoted_back_at_the_operator() {
+        // ! The bad value is echoed. "not a valid positive integer" without it
+        // sends someone reading their own deployment manifest line by line.
+        let e = ConfigError::Invalid {
+            key: "MAX_CONCURRENCY",
+            value: "four".into(),
+            kind: "positive integer",
+        }
+        .to_string();
+        assert!(e.contains("MAX_CONCURRENCY"), "{e}");
+        assert!(e.contains("four"), "{e}");
+    }
 
     fn ms(n: u64) -> std::time::Duration {
         std::time::Duration::from_millis(n)

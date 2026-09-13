@@ -130,7 +130,7 @@ def main():
                     centroid   halfvec(1024) NOT NULL,
                     row_count  BIGINT NOT NULL DEFAULT 0,
                     -- ! generation supports the atomic swap in
-                    -- CLUSTER_MAINTENANCE.md · a live cluster is never mutated.
+                    -- dev_tools/CLUSTER_MAINTENANCE.md · a live cluster is never mutated.
                     generation INTEGER NOT NULL DEFAULT 1
                 )""")
             cur.execute("SELECT id FROM corpus_meta LIMIT 1")

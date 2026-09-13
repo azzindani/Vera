@@ -73,6 +73,14 @@ pub struct CorpusMeta {
     pub dense_dim: i32,
     pub dense_pooling: String,
     pub dense_normalize: bool,
+    /// Instruction the corpus was embedded with, or `None` if it was embedded
+    /// without one.
+    ///
+    /// ! Qwen3-Embedding is instruction-aware, and an instruction applied to
+    /// one side only puts query and corpus in different spaces. Storing it
+    /// with the corpus is what lets the engine reproduce the corpus's own
+    /// convention instead of compiling a guess into the binary.
+    pub dense_instruction: Option<String>,
     pub sparse_scheme: String,
     pub sparse_dim: i32,
     pub sparse_vocab_sha256: String,
@@ -105,12 +113,12 @@ impl CorpusMeta {
 /// Build a bounded connection pool.
 ///
 /// ! `max_size` is the database half of the concurrency budget
-/// (`MCP_ENGINE.md` §4). Postgres connections each carry `work_mem`, so an
+/// (`docs/MCP_ENGINE.md` §4). Postgres connections each carry `work_mem`, so an
 /// unbounded pool is an OOM vector on the 8 GB target just as surely as an
 /// unbounded request queue is.
 ///
 /// `NoTls` because the engine and the database share a host or a private
-/// network in every deployment described in `HARDWARE.md`. Exposing Postgres
+/// network in every deployment described in `docs/HARDWARE.md`. Exposing Postgres
 /// across a public network is a deployment change that must add TLS here.
 ///
 /// # Errors
@@ -177,6 +185,7 @@ mod tests {
             dense_dim: 1024,
             dense_pooling: "last-token".into(),
             dense_normalize: true,
+            dense_instruction: None,
             sparse_scheme: "bm25".into(),
             sparse_dim: 20000,
             sparse_vocab_sha256: "abc".into(),
