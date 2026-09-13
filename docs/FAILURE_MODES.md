@@ -226,6 +226,35 @@ tiered-effort design in `SCORING.md` §6 proposes to spend deliberately.
 
 ---
 
+## 13. CI tests a different text arm than production runs
+
+`SearchOps::text` has two SQL paths, chosen by probing for the RUM index:
+
+```
+RUM present   ORDER BY tsv <=> q.tq        one ordered index scan   ← what ships
+RUM absent    ORDER BY ts_rank(...) DESC   score and sort every match
+```
+
+CI runs `pgvector/pgvector:pg16`, which has no RUM extension, so **every integration
+test exercises the fallback**. The deployment runs `vera-db:pg16-rum`. The SQL that
+actually serves queries is never executed by the gate.
+
+The two paths are believed equivalent — measured at 98.9% top-20 overlap and identical
+rank-1 on 44/44 eval queries — but that was a manual measurement taken once, ✗ a check
+that runs. A change to the RUM query, or a RUM version whose operator behaves
+differently, passes CI green.
+
+! Neither container image is built in CI either. `docker/Dockerfile.db` and
+`docker/Dockerfile.engine` are only built at deploy time, so a broken image is
+discovered by the deployment rather than by the pull request.
+
+**Not stopped.** The fix is a second integration job on the RUM image, running the same
+`--ignored` tests. It is the same discipline the project already applied when it built
+`dev_tools/fixtures/seed.py` so that "needs a database" stopped meaning "never runs" —
+this is the variant that slipped through.
+
+---
+
 ## Review rule
 
 A change to routing, the candidate caps, the provider, the queue, or the cluster-update
