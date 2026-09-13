@@ -1,0 +1,24 @@
+# CPU embedding server · the 2 vCPU / 4 GB profile's missing piece.
+#
+# ! NOT WIRED INTO docker-compose.yml, and not usable against the current
+# corpus: its vectors are orthogonal to the stored ones and the startup canary
+# refuses them (docs/HARDWARE.md §1). It is kept because it is the measurement
+# that proved the corpus space is a property of one container tag, and because
+# it is a working CPU embedder for the day that stops being true.
+#
+# The CPU-only torch wheel, ✗ the default: the CUDA build pulls ~2.5 GB of
+# runtime this image can never use.
+FROM python:3.11-slim
+
+RUN pip install --no-cache-dir \
+      --index-url https://download.pytorch.org/whl/cpu \
+      torch==2.5.1 \
+ && pip install --no-cache-dir transformers==4.53.2 tokenizers safetensors
+
+COPY docker/embed_cpu/server.py /app/server.py
+WORKDIR /app
+
+# stdout stays unbuffered so a refusal to load is visible immediately.
+ENV PYTHONUNBUFFERED=1
+EXPOSE 80
+CMD ["python", "server.py"]

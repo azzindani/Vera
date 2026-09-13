@@ -16,18 +16,40 @@
 Tightened from 2 vCPU / 8 GB. The 8 GB figure predated any measurement; the
 numbers in §2 say the working set does not need it.
 
-! **The query path needs a GPU for embedding, or a larger memory budget.** The
-default embedding image pins CUDA (`text-embeddings-inference:86-1.7.2`, compute
-8.6). Both CPU options were measured and neither fits this profile as it stands:
+! **The query path cannot run CPU-only today, and the reason is not the
+hardware.** The default embedding image pins CUDA
+(`text-embeddings-inference:86-1.7.2`, compute 8.6). Three CPU options have now
+been measured:
 
-| CPU option | Result |
-|---|---|
-| TEI `cpu-1.7.2` | **segfaults** (exit 139), reproducibly, at 1.25/4/6 GB, pinned and unpinned, float32 and default. ONNX Runtime declines last-token pooling, the candle CPU backend takes over, and MKL's SGEMM faults. |
-| transformers on CPU | works. Query p50 **202 ms**, p95 383 ms at 2 threads — but **2,768 MB RSS**, against a 1,280 MB embed budget. |
+| CPU option | Runs? | Reproduces the corpus space? |
+|---|---|---|
+| TEI `cpu-1.7.2` | **no** — segfaults (exit 139) at 1.25/4/6 GB, pinned and unpinned. ORT declines last-token pooling, candle takes over, MKL's SGEMM faults. | — |
+| TEI `cpu-1.8.2` / `cpu-1.9.3` | **yes** — the fault above is fixed upstream. Starts and serves on 2 pinned cores. | **no** |
+| transformers on CPU (`docker/embed_cpu`) | **yes** — 2.49 GiB resident, p50 202 ms at 2 threads | **no** |
 
-The second is the closer of the two and the gap is memory, not speed: bfloat16 or
-quantization is the untested candidate. Corpus embedding on CPU is not viable at
-any budget — 1,364 ms/chunk is 135 hours for 355K chunks.
+! **The blocker is the vector space, ✗ memory.** Both working CPU options
+produce vectors that are near-ORTHOGONAL to the stored corpus — and produce
+**byte-identical vectors to each other**, agreeing to five decimals across five
+chunks:
+
+| chunk | TEI cpu-1.9.3 | `docker/embed_cpu` | required |
+|---|---|---|---|
+| `0` | 0.19040 | 0.19040 | ≥ 0.98 |
+| `1#0` | 0.11873 | 0.11873 | ≥ 0.98 |
+| `1#2` | 0.00190 | 0.00190 | ≥ 0.98 |
+
+Two independent implementations agreeing with each other and disagreeing with
+the corpus says the **corpus** is the outlier. `86-1.7.2` reproduces it at
+0.99998; nothing else tried does. See `EMBEDDING.md` §5 — this is that defect
+measured from the other side, and it means the corpus is welded to one pinned
+image, on CPU **and on GPU**.
+
+An earlier version of this section said the transformers path "works" and that
+"the gap is memory, not speed". It runs, and it cannot serve this corpus at any
+memory budget. Quantizing to fit 1,280 MB would not have helped.
+
+Corpus embedding on CPU is separately not viable at any budget — 1,364 ms/chunk
+is 135 hours for 355K chunks.
 
 Everything else in this document is measured on the target profile and holds
 without a GPU. This is the one component that does not.

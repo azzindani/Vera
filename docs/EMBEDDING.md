@@ -108,8 +108,32 @@ space against an independent implementation of the same model.
 
 The dense arm ships at weight **0.0** and contributes **0.0%** Recall@5; sparse
 and text carry retrieval to **54.5%** without it (`EVAL.md` §4). The defect above
-is therefore documented, ✗ load-bearing — nothing in the query path depends on
-the dense vectors today.
+is therefore documented, ✗ load-bearing for *ranking* — nothing in the query path
+depends on the dense vectors today.
+
+### It does constrain the deployment, though
+
+The corpus is reproducible **only** by the pinned `86-1.7.2` image. Measured
+against stored vectors (`HARDWARE.md` §1):
+
+| provider | worst cosine over 5 chunks |
+|---|---|
+| TEI `86-1.7.2` (the image that embedded it) | **0.99998** |
+| TEI `cpu-1.9.3` | 0.00190 |
+| transformers reference (`docker/embed_cpu`) | 0.00190 |
+
+The last two are **byte-identical to each other**. Two independent
+implementations agreeing and both being orthogonal to the corpus is what turns
+§5 from "the space looks wrong" into "the space is a property of one container
+tag". Consequences, neither of them about CPU:
+
+- **TEI cannot be upgraded**, on GPU or CPU. The startup canary refuses any
+  other provider, which is the guard working correctly.
+- A CPU-only deployment is impossible while that remains true, because no CPU
+  build of 1.7.2 runs (it segfaults) and every build that does run is in the
+  other space.
+
+Both unblock the same way and only that way.
 
 ---
 
