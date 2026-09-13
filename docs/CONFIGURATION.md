@@ -163,6 +163,7 @@ Read by `docker-compose.yml`, not by the engine.
 | `EMBED_POOLING` | `last-token` | must match the model's `1_Pooling/config.json` |
 | `EMBED_DTYPE` | `float16` | |
 | `EMBED_MAX_BATCH_TOKENS` | `32768` | the model's full context; lower silently truncates long chunks |
+| `EMBED_PORT` | `8080` | published on `127.0.0.1` only |
 | `ENGINE_BIND` / `ENGINE_PORT` | `127.0.0.1` / `8081` | |
 | `VPS_CPUSET` | `0,1` | overlay only; db and engine share the same pair on purpose |
 
