@@ -1,37 +1,62 @@
-# VPS emulation overlay · the 2 vCPU / 8 GB target from HARDWARE.md §1.
+# VPS emulation overlay · 2 vCPU / 4 GB.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 #
-# ! Testing on 14 cores and 48 GB proves nothing about the target box. Every
-# number in HARDWARE.md §2 and the OOM guarantee in MCP_ENGINE.md §5 is a claim
-# about 2 vCPU / 8 GB, so the claims are only under test with this overlay on.
+# ! Testing on 14 cores and 48 GB proves nothing about the target box. The OOM
+# guarantee (CLAUDE.md §5.4) and every latency number are claims about 2 vCPU /
+# 4 GB, so they are only under test with this overlay on.
 #
-# cpuset pins db and engine to the SAME two host cores. That is the part a
-# per-container `cpus:` limit cannot express: on the real VPS, Postgres and the
-# engine contend for two cores, and that contention is what sets p95 under
-# concurrency. Give each its own 2 cores and the numbers come out optimistic.
+# cpuset pins db and engine to the SAME two host cores. A per-container `cpus:`
+# limit cannot express that: on the real VPS, Postgres and the engine contend
+# for two cores, and that contention is what sets p95 under concurrency. Give
+# each its own pair and the numbers come out optimistic.
 #
-# Memory splits the 8 GB the way HARDWARE.md §2 budgets it, leaving ~0.8 GB for
-# the OS and ~1.0 GB margin:
+# The 4 GB budget, measured rather than guessed (see docs/HARDWARE.md §2):
 #
-#   db      2.5 GB   (shared_buffers 1.5 GB + connections + work_mem)
-#   engine  1.7 GB   (0.2 GB resident + 4 concurrent × ~120 MB in-flight)
+#   embed   1280 MB   model weights measured at 1060 MB anon, + runtime
+#   db      1792 MB   shared_buffers 512 + work_mem + the rest as page cache
+#   engine   512 MB   8.3 MB resident + 4 concurrent x 23.4 MB worst in-flight
+#   ----------------
+#   total   3584 MB   leaving ~512 MB for the OS
 #
-# The embedding container is NOT constrained: it stands in for OpenRouter, which
-# is a remote service and never shares the VPS's budget.
+# ! shared_buffers drops 1500 -> 512 MB. On a 4 GB box with a 2.4 GB database,
+# page cache beats a big private buffer pool: every arm is a scan, and scans are
+# exactly what Postgres declines to keep in shared_buffers anyway (it ring-
+# buffers large sequential reads to avoid evicting everything else).
 
 services:
   db:
     cpuset: "0,1"
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1200MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - work_mem=16MB
+      # 2 vCPU: one parallel worker, not the default 2. Three processes
+      # competing for two cores makes p95 worse, not better.
+      - -c
+      - max_parallel_workers_per_gather=1
+      - -c
+      - max_parallel_workers=2
     deploy:
       resources:
         limits:
-          memory: 2560M
+          memory: 1792M
 
-  # Uncomment once vera-mcp is a real service (M3).
-  # engine:
-  #   cpuset: "0,1"
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 1740M
+  embed:
+    deploy:
+      resources:
+        limits:
+          memory: 1280M
+
+  engine:
+    cpuset: "0,1"
+    deploy:
+      resources:
+        limits:
+          memory: 512M

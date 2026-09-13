@@ -1,0 +1,47 @@
+# The Vera engine · stateless, HTTP transport.
+#
+# ! Distroless, not alpine. The engine links the system allocator and OpenSSL
+# through reqwest; musl would mean a different allocator and a rebuild of both,
+# for an image that is already 5 MB of binary. Debian-slim runtime, no shell.
+#
+#   docker compose up -d engine
+
+FROM rust:1-bookworm AS builder
+WORKDIR /src
+
+# ! Manifests first. Dependencies change far less often than sources, so this
+# layer survives almost every rebuild — without it each edit recompiles reqwest.
+COPY Cargo.toml Cargo.lock ./
+COPY crates/contract/Cargo.toml crates/contract/
+COPY crates/embed/Cargo.toml    crates/embed/
+COPY crates/engine/Cargo.toml   crates/engine/
+COPY crates/mcp/Cargo.toml      crates/mcp/
+COPY crates/store/Cargo.toml    crates/store/
+RUN mkdir -p src crates/contract/src crates/embed/src crates/engine/src \
+             crates/mcp/src crates/store/src \
+ && echo 'fn main() {}' > src/main.rs \
+ && echo 'fn main() {}' > crates/mcp/src/main.rs \
+ && touch crates/contract/src/lib.rs crates/embed/src/lib.rs \
+          crates/engine/src/lib.rs crates/store/src/lib.rs \
+ && cargo build --release --workspace 2>/dev/null || true
+
+COPY . .
+# ! Touch the real sources: cargo keys off mtime, and the stub main.rs above is
+# newer than the files just copied over it.
+RUN touch crates/*/src/lib.rs crates/mcp/src/main.rs \
+ && cargo build --release -p mcp
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates wget \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --uid 10001 vera
+COPY --from=builder /src/target/release/mcp /usr/local/bin/vera-mcp
+
+# ! Non-root. The query path is read-only (CLAUDE.md §5.6) and the container
+# holds no state, so there is nothing it needs privileges for.
+USER 10001
+ENV TRANSPORT=http \
+    HTTP_ADDR=0.0.0.0:8081
+EXPOSE 8081
+ENTRYPOINT ["/usr/local/bin/vera-mcp"]

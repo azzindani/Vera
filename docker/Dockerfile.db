@@ -1,0 +1,38 @@
+# Postgres + pgvector + RUM.
+#
+# ! RUM is built from source because no published image carries it. Without it
+# the engine still runs — SearchOps::has_rum() probes and falls back to ts_rank
+# — but the text arm costs p50 750ms instead of 404ms, and that arm is the
+# single most expensive part of a search.
+#
+# Building it inside a running container works and is what the first
+# measurements used, but it dies with the container: `docker compose down`
+# takes the extension with it and migration 0003 then fails on CREATE
+# EXTENSION. This makes it part of the image instead.
+#
+#   docker compose build db && docker compose up -d
+
+ARG PG_MAJOR=16
+FROM pgvector/pgvector:pg${PG_MAJOR} AS rum-builder
+ARG PG_MAJOR
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential postgresql-server-dev-${PG_MAJOR} curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+# Pinned to a commit, ✗ master: an extension that silently changes its distance
+# function changes every ranking this corpus produces.
+ARG RUM_REF=1.3.15
+RUN curl -sSL "https://github.com/postgrespro/rum/archive/refs/tags/${RUM_REF}.tar.gz" \
+      -o /tmp/rum.tar.gz \
+ && tar xzf /tmp/rum.tar.gz -C /tmp \
+ && cd "/tmp/rum-${RUM_REF}" \
+ && make USE_PGXS=1 \
+ && make USE_PGXS=1 install
+
+FROM pgvector/pgvector:pg${PG_MAJOR}
+ARG PG_MAJOR
+# Only the built artifacts travel; the compiler stays behind.
+COPY --from=rum-builder /usr/lib/postgresql/${PG_MAJOR}/lib/rum.so \
+                        /usr/lib/postgresql/${PG_MAJOR}/lib/
+COPY --from=rum-builder /usr/share/postgresql/${PG_MAJOR}/extension/rum* \
+                        /usr/share/postgresql/${PG_MAJOR}/extension/

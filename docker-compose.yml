@@ -17,7 +17,12 @@ name: vera
 
 services:
   db:
-    image: pgvector/pgvector:pg16
+    # ! Built, ✗ pulled: this image is pgvector plus RUM, which no published
+    # image carries. See docker/Dockerfile.db for why that matters.
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.db
+    image: vera-db:pg16-rum
     container_name: vera-db
     environment:
       POSTGRES_USER: vera
@@ -88,6 +93,47 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    restart: unless-stopped
+
+  engine:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.engine
+    image: vera-engine:dev
+    container_name: vera-mcp
+    environment:
+      DATABASE_URL: "host=db port=5432 dbname=vera2 user=vera password=vera"
+      EMBED_ENDPOINT: "http://embed:80"
+      BM25_VOCAB: "/vocab/spike-02.bm25.json"
+      TRANSPORT: http
+      HTTP_ADDR: "0.0.0.0:8081"
+      # ! Peak RAM is fixed cost + MAX_CONCURRENCY x per-request ceiling
+      # (CLAUDE.md §5.4). Raising this raises the memory limit the VPS overlay
+      # sets; the two are one decision, ✗ two.
+      MAX_CONCURRENCY: "4"
+      QUEUE_WAIT_MS: "2000"
+    volumes:
+      # ! Sparse vectors are indexed by vocabulary POSITION. Serving a corpus
+      # against another run's vocabulary compares unrelated dimensions and
+      # returns plausible nonsense rather than failing, so the vocab is mounted
+      # beside the corpus it was built from.
+      - ./.test/runs:/vocab:ro
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+      embed:
+        condition: service_started
+    healthcheck:
+      # ! /health, ✗ a TCP probe. The engine binds its port before it loads
+      # centroids and runs the startup canary, so a socket that accepts proves
+      # only that the process started, not that it will answer.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
 volumes:

@@ -12,6 +12,9 @@ serde = { version = "1", features = ["derive"] }
 # contract's "success first" ordering silently stops holding.
 serde_json = { version = "1", features = ["preserve_order"] }
 thiserror = "2"
+# HTTP transport. `axum` only — no tower-http, no tracing stack: this
+# server has five endpoints and a 2 vCPU budget to defend.
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
 contract = { version = "0.0.1", path = "../contract" }
 embed = { version = "0.0.1", path = "../embed" }
 engine = { version = "0.0.1", path = "../engine" }
