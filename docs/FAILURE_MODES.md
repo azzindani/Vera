@@ -167,6 +167,33 @@ copy-on-write with an atomic version swap, a query pinning one version for its l
 
 ---
 
+## 11. A signal the contract promises and never sends
+
+The output contract exists so an agent can act on more than the results themselves.
+Four of its fields do not carry the information they claim, and every one of them fails
+*quietly* — the agent reads a plausible value and draws a wrong conclusion.
+
+| Field | Promised | Actual |
+|---|---|---|
+| `truncated` (search) | the result set was cut | always `false`; `TOP_K` drops candidates silently |
+| `token_estimate` | measured response size | hardcoded 60 / 120 on `list_domains` and `explain_routing` |
+| `detected_domain: null` | the corpus does not cover this | *also* returned when the domain matched and fusion simply found nothing |
+| `explain_routing.detected_domain` | what the gate decided | the corpus id, unconditionally — it never runs the gate |
+
+The third is the sharpest: an agent told `detected_domain: null` will stop asking. It
+cannot distinguish "wrong knowledge base" from "right knowledge base, no match", and
+the response can even carry `exact_matches` beside a null domain.
+
+The fourth makes the transparency tool disagree with the tool it explains. Asked about
+a query `search_knowledge` would refuse, `explain_routing` reports a matched domain —
+so the one tool built to make routing falsifiable cannot falsify the gate.
+
+**Not stopped.** All four are recorded, none is fixed. They are grouped here because
+they share a cause: a field was added to the contract before the code that fills it,
+and nothing failed in between.
+
+---
+
 ## Review rule
 
 A change to routing, the candidate caps, the provider, the queue, or the cluster-update

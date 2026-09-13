@@ -74,6 +74,9 @@ one.
   "confidence": "high",        // high | medium | low | none — §4
   "progress": ["embedded query (1024 dims)", "probed 5 of 177 clusters", "..."],
   "token_estimate": 412,
+  // ! Always false. Nothing in the search path ever sets it — result count is
+  // bounded by TOP_K without reporting that anything was dropped. read_chunk
+  // has its own working `truncated`; this one is a promise, ✗ a signal.
   "truncated": false,
   "hint": null                 // present only when there is something to act on
 }
@@ -126,6 +129,15 @@ verify without re-searching.
 `exact_matches` is reported separately so the agent can see when a hit came from the
 global identifier path rather than semantic routing. Those are the high-trust "this
 regulation exists and here it is" results.
+
+! **Two different outcomes share this response today.** `SearchResponse::no_matching_domain`
+is returned both when the domain gate refuses *and* when fusion produced no candidates
+at all — a query whose terms are entirely out of vocabulary, say. The second case sets
+`detected_domain: null`, `clusters_probed: 0` and a hint reading "query matched no known
+knowledge base", none of which is true: the domain matched and clusters were probed.
+It can even carry non-empty `exact_matches` beside a null domain, which is
+self-contradictory. "The corpus does not cover this" and "this corpus covers it but
+nothing matched" are different answers and an agent should be able to tell them apart.
 
 **No matching domain returns `success: true`.** Empty `results`, `detected_domain:
 null`, `confidence: "none"`, and a hint saying the query did not match this knowledge

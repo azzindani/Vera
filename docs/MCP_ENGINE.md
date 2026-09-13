@@ -60,16 +60,25 @@ it actually needs. `max_chars` may lower the server's cap, never raise it. Sets
 ```
 get_provenance(ids: list[str]) -> dict
 ```
-`source_url` and locator (page / section / clause) per id — the verification bundle a
-human clicks through. Capped at `MAX_PROVENANCE_IDS`.
+`source_url` and locator per id — the verification bundle a human clicks through.
+Capped at `MAX_PROVENANCE_IDS`. The locator is section-only on this corpus; see
+`OUTPUT_CONTRACT.md` §3.
 
 ### `explain_routing`
 ```
 explain_routing(query: str) -> dict
 ```
-The routing decision without the search: detected domain, which centroids were
-nearest, their scores, and any identifiers extracted. This is what makes routing
-falsifiable rather than a claim.
+The routing decision without the search: which centroids were nearest, their scores,
+and any identifiers extracted. This is what makes routing falsifiable rather than a
+claim.
+
+! **It does not run the domain gate.** `Pipeline::explain` sets
+`domain: self.meta.id` unconditionally, so `explain_routing` reports a matched domain
+for a query `search_knowledge` would refuse — the two tools disagree about the same
+query. The gate needs retrieved evidence for its lexical half (`CONFIGURATION.md` §6)
+and `explain` deliberately skips retrieval, so reporting the gate here means either
+running the arms or reporting the centroid half alone and saying so. Today it reports
+neither and implies both.
 
 ---
 
@@ -87,10 +96,19 @@ holding.
 | `hint` | on failure | what to do about it |
 | `progress` | always | step log: embed / route / scan / fuse |
 | `token_estimate` | always | so the agent can budget its own context |
-| `truncated` | bounded reads | explicit on `read_chunk` and capped sets |
+| `truncated` | bounded reads | explicit on `read_chunk` |
 
 The upstream write-tool fields — snapshot, dry_run, restore — do not apply. The query
 path never writes.
+
+! `token_estimate` is **hardcoded** on `list_domains` (60) and `explain_routing` (120).
+`SearchResponse::estimate_tokens` measures the real serialized length and `read_chunk`
+uses `body.len() / 4`; those two measure nothing. A constant defeats the field's only
+purpose.
+
+! `truncated` works on `read_chunk` and is **always `false` on `search_knowledge`** —
+nothing in the search path sets it, so a result set cut to `TOP_K` reports no sign that
+anything was dropped.
 
 ---
 
