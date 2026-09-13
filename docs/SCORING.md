@@ -90,7 +90,7 @@ rarely the answer to a question about obligations; an article usually is, and
 
 ```
 coverage = share of the query's content terms the chunk contains
-if coverage < RELEVANCE_FLOOR (0.4):  drop the candidate entirely
+if coverage < RELEVANCE_FLOOR (0.3):  drop the candidate entirely
 ```
 
 Without this, authority weighting ranks the most prestigious document in the
@@ -119,26 +119,71 @@ rank 1, and in the fit **5.5% of delivered results came from beyond pool rank
 comfortable score whether or not it matches anything — which is exactly why
 "it is in the pool" is not evidence of relevance.
 
-### What it is worth
+### The bound is the rule; the floor is one way to serve it
 
-Measured by `dev_tools/eval/fit_factors.py` against the text arm:
+The table above generalises into the rule this section actually enforces:
 
-| | Recall@5 |
+> **`1 + Σwᵢ` must stay inside the pool's own relevance spread.**
+
+Both halves are measured, and both move. The spread is a property of the pool —
+the fused pool spans **2.56× median** (min 1.31×, max 2.62×) over the 40 cases —
+and the bound is a property of the weights. `SCORING.md` is not free to pick
+weights without checking the first number.
+
+What happens when it does is measurable. The best fit obtained without the
+constraint — `authority=1.0 structural=0.25 completeness=1.0 topical=0.5`,
+bound **3.75×** — out-spans the pool in **40 of 40 cases**, and in situ:
+
+| | Recall@5 | Recall@10 | MRR |
+|---|---|---|---|
+| unconstrained, bound 3.75× | **56.8%** | 56.8% | 0.382 |
+| shipped, bound 2.00× | 54.5% | **59.1%** | **0.454** |
+
+```bash
+python dev_tools/eval/e2e_sweep.py       # the table above
+python dev_tools/eval/fit_factors.py     # the spread, and what the cap costs
+```
+
+The unconstrained fit has the best Recall@5 measured on this corpus and is the
+worse retriever: Recall@10 equal to Recall@5 means positions six through ten
+contribute nothing, and MRR barely clears factors-off (0.360). It promotes a few
+metadata-favoured chunks into the top five and scrambles the rest. **A
+single-threshold metric cannot see this**, which is why the bound lives in
+`factors::tests::the_shipped_weights_stay_inside_the_pool_spread` and not in a
+reviewer's judgement.
+
+### What the floor is worth
+
+! The +12.5 points this section used to claim for the floor were measured
+against the **text arm**, reranked alone. The engine does not rank the text arm.
+It ranks an RRF pool that already contains BM25 — a better lexical filter than
+counting content terms — and on that pool the floor earns nothing on its own:
+
+| floor | Recall@5, fused pool |
 |---|---|
-| no floor, no factors | 40.0% |
-| **floor alone** | **52.5%** |
-| best in-sample, floor + weights | 65.0% |
-| **leave-one-out** | **57.5%** |
+| 0.0 · 0.2 · **0.3** | 55.0% |
+| 0.4 | 52.5% |
+| 0.5 | 50.0% |
 
-! **The floor is worth more than every weight combined** — +12.5 points against
-+5.0 for the best single factor.
+Refitting it against `bm25::evidence` — IDF-weighted, the better instrument, and
+the experiment this document named when 0.4 shipped — does not change the shape:
+every positive floor still costs, and the best is still the smallest.
+
+It ships at **0.3** rather than 0.0 because it is free there and every
+top-scoring bounded configuration uses it. It is a safety rule that currently
+has nothing to catch, kept at the largest value that costs nothing.
+
+! A threshold fitted against one arm is not a threshold for a different pool.
+`fit_factors.py --pool fused` is the default for exactly this reason.
 
 ! It also explains a factor that used to earn its keep and no longer does.
 Before the floor existed, `completeness` fitted to 0.25; longer chunks contain
-more query terms, so it was serving as a crude relevance proxy. With a real
-floor it earns nothing and ships at 0.0. A factor that is silently doing another
-factor's job is the failure mode of fitting weights separately, which is why
-floor and weights are now fitted **jointly**.
+more query terms, so it was serving as a crude relevance proxy. It earns nothing
+once relevance is handled properly and ships at 0.0 — and it climbs straight
+back to 1.0 in any fit that does not bound `Σw`, which is the clearest single
+piece of evidence that the bound above is load-bearing. A factor silently doing
+another factor's job is the failure mode of fitting weights separately, which is
+why floor and weights are fitted **jointly**.
 
 ### A named regulation is exempt
 
@@ -165,10 +210,12 @@ never silent.
   trace cannot be audited.
 
 ! The floor measures **unweighted term overlap**, not `bm25::evidence`. Evidence
-is the better primitive and is what the domain gate uses — but the 0.4 was
-fitted against overlap and the two live on different scales. Swapping it in
-without refitting would apply a threshold nothing measured. Refitting against
-evidence is the obvious next experiment.
+is the better primitive and is what the domain gate uses, so this document named
+refitting against it as the next experiment. That experiment has now run
+(`fit_factors.py --floor-measure evidence`): on the fused pool the IDF-weighted
+floor behaves the same way — 0.0 to 0.2 free, everything above it costs, 0.4
+costs 15 points — so there is nothing to swap in. The floor is not held back by
+its instrument; it is held back by BM25 already being in the pool.
 
 ---
 
@@ -447,19 +494,24 @@ example; no result from this corpus can carry one.
 |---|---|
 | arms | dense (weight 0.0), sparse, text |
 | fusion | RRF over ranks |
-| **relevance floor** | **0.4 of the query's content terms · drops candidates, reported in `progress`** |
-| **factors** | **authority 1.0 · structural 0.5 · topical 0.25 · completeness 0.0 · temporal 0.0** |
+| **relevance floor** | **0.3 of the query's content terms · drops candidates, reported in `progress`** |
+| **factors** | **authority 0.5 · structural 0.25 · topical 0.25 · completeness 0.0 · temporal 0.0** |
+| **prior bound** | **2.00×, against a pool spanning 2.56× median** |
+| arm tie-breaks | each arm over-reads 3× and settles ties on id (`store::search::settle`) |
 | weights | one global set, ✗ per query type (§4) |
 | viewpoints / consensus | ✗ |
 | exact identifiers | retrieved globally, fused normally |
 | confidence | heuristic over score spread |
 | effort | single round, always |
 | pool | 60 fused candidates, no expansion |
-| Recall@5 | **50.0%** |
+| Recall@5 / Recall@10 / MRR | **54.5% / 59.1% / 0.454** |
 
-! **50.0% is the engine's last measured Recall@5 and predates this layer.**
-Floor and factors were fitted offline against the text arm (+17.5 points
-leave-one-out, `fit_factors.py`); what they are worth *through the fused engine*
-needs an `e2e.py` run, which needs the embedder. Until that runs, the honest
-statement is that the layer is built, pinned to the Python that fitted it by a
-cross-language test, and **unmeasured in situ**.
+Measured in situ, three identical runs, against **50.0% / 52.3% / 0.360** for
+the same binary with `factor_weights` zeroed.
+
+! What the layer was worth could not be measured at all until the arms stopped
+returning different rows for the same query. Two identical evaluations scored
+52.3% and 54.5% before `store::search::settle` existed — the same 2.3 points
+that separate several of the configurations compared here. `EVAL.md` §4 carries
+that story; the rule it leaves behind is that **a comparison on 40 cases is only
+worth making against an engine that returns the same answer twice.**

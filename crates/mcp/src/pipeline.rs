@@ -1270,33 +1270,30 @@ mod live {
         // ! With the floor OFF the layer is pure ordering, and that must stay
         // true: a weight that silently dropped a candidate would make a recall
         // change impossible to attribute to either half of the layer.
+        //
+        // ! `candidate_pool == top_k` is what makes the claim testable, ✗ a
+        // convenience. A response only carries `top_k`, so against a wider pool
+        // reordering legitimately changes WHICH candidates clear the cut — that
+        // is ranking working, not filtering, and an earlier version of this
+        // test read the difference as a failure. Pinning the pool to the answer
+        // fixes membership at fusion and leaves order as the only free variable.
         let p = pipeline(open_cfg()).await;
+        let pinned = |w: contract::FactorWeights| contract::SearchOptions {
+            factor_weights: Some(w),
+            top_k: Some(10),
+            candidate_pool: Some(10),
+            ..contract::SearchOptions::default()
+        };
         let ordering_only = contract::FactorWeights {
             relevance_floor: 0.0,
-            authority: 1.0,
-            structural: 0.5,
-            temporal: 0.0,
-            completeness: 0.0,
-            topical: 0.25,
+            ..weights_to_contract(&engine::Weights::FITTED)
         };
         let base = p
-            .search_with(
-                "bangunan gedung",
-                &contract::SearchOptions {
-                    factor_weights: Some(no_factors()),
-                    ..contract::SearchOptions::default()
-                },
-            )
+            .search_with("bangunan gedung", &pinned(no_factors()))
             .await
             .expect("search");
         let scored = p
-            .search_with(
-                "bangunan gedung",
-                &contract::SearchOptions {
-                    factor_weights: Some(ordering_only),
-                    ..contract::SearchOptions::default()
-                },
-            )
+            .search_with("bangunan gedung", &pinned(ordering_only))
             .await
             .expect("search");
         assert_eq!(
@@ -1373,6 +1370,42 @@ mod live {
             scores.windows(2).all(|w| w[0] >= w[1]),
             "fused order must be monotonic when factors are off: {scores:?}"
         );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn the_same_query_returns_the_same_answer() {
+        // ! CLAUDE.md §2 calls this a deterministic retrieval function, and it
+        // was not one. `ORDER BY <distance> LIMIT k` hands back an arbitrary
+        // member of any tie group straddling the limit, so 7 of 44 eval
+        // queries moved between runs of ONE process and two identical
+        // evaluations of one binary scored 52.3% and 54.5%.
+        //
+        // ! Asserted on the ORDER, ✗ on the set. Membership was stable in most
+        // of the observed cases; what moved was which of two tied candidates
+        // came first, and that is enough to change every RRF rank downstream.
+        let p = pipeline(open_cfg()).await;
+        for q in ["bangunan gedung", "jalan", "izin lingkungan", "retribusi"] {
+            let first: Vec<String> = p
+                .search_with(q, &contract::SearchOptions::default())
+                .await
+                .expect("search")
+                .results
+                .into_iter()
+                .map(|r| r.id)
+                .collect();
+            for round in 1..4 {
+                let again: Vec<String> = p
+                    .search_with(q, &contract::SearchOptions::default())
+                    .await
+                    .expect("search")
+                    .results
+                    .into_iter()
+                    .map(|r| r.id)
+                    .collect();
+                assert_eq!(first, again, "{q:?} moved on round {round}");
+            }
+        }
     }
 
     #[tokio::test]

@@ -22,6 +22,13 @@ Against a local binary over stdio:
 VERA_EXE=./target/release/vera-mcp python dev_tools/eval/e2e.py
 ```
 
+To compare scoring configurations against each other, one process, weights
+varied per request:
+
+```bash
+python dev_tools/eval/e2e_sweep.py
+```
+
 ! `e2e.py` scores **through the shipped binary**. This is not a convenience — an
 offline harness that reimplements routing and fusion is measuring itself. The previous
 harness (`run.py`) fused with equal weights of its own and reported 50.0% for a server
@@ -82,17 +89,49 @@ clustering or `CLUSTERS_PROBED`.
 
 ## 4. Current results
 
-Through the deployed server, target hardware profile:
+Through the real server, 44 retrievable cases, `dense=0 sparse=1 text=1`:
+
+| | | |
+|---|---|---|
+| | factors off | **shipped** |
+| Recall@5 | 50.0% | **54.5%** |
+| Recall@10 | 52.3% | **59.1%** |
+| MRR | 0.360 | **0.454** |
 
 | | |
 |---|---|
-| Recall@5 | **50.0%** (44 retrievable cases) |
-| MRR | 0.360 |
 | Domain gate | 6/6 out-of-domain refused, 0/44 false refusals |
-| Latency p50 / p95 | 1,059 ms / 1,638 ms |
+| Latency p50 / p90 | 691 ms / 1,046 ms |
 
-Identical under the 2 vCPU / 4 GB memory limits and without them — the constraints cost
-latency, not quality.
+Both columns come from **one binary** (`e2e_sweep.py`), with `factor_weights`
+varied per request, so the difference is the scoring layer and nothing else —
+rebuilding between configurations would vary the binary too. Identical under the
+2 vCPU / 4 GB memory limits and without them — the constraints cost latency, not
+quality.
+
+### These numbers were not reproducible until they were
+
+! Every result above is the mean of nothing: it is **one run, repeated three
+times, identical**. That is worth stating because it was not true before
+`2026-09-13`. `ORDER BY <distance> LIMIT k` returns an arbitrary member of any
+tie group straddling the limit, so **7 of 44 queries returned different results
+across three runs of one server process**, and two identical evaluations of the
+same binary scored 52.3% and 54.5%.
+
+Every comparison made against a corpus this size has to survive that first. A
+2.5-point difference between two configurations, on 40 to 44 cases, is one case
+— which is also the size of the noise the engine was generating on its own.
+
+The fix is in `store::search`: each arm reads `OVERFETCH × k` and breaks ties on
+id in memory (`settle`). Appending `, id` to the SQL instead costs **8×** — it
+defeats the RUM index's early termination and sorts all 286,199 matching rows
+(765 ms → 6,069 ms). Reading deeper costs nothing measurable: 922 ms at
+`LIMIT 20`, 944 ms at `LIMIT 60` in Postgres, and p50 732 ms → 691 ms end to end.
+
+! **The window is narrowed, ✗ closed.** A tie group straddling `OVERFETCH × k`
+is still resolved by the database. At `OVERFETCH = 3` the residual is 0 of 44
+queries over three runs; that is a measurement, not a guarantee, and it should
+be re-run whenever `PER_ARM_K` changes.
 
 Per-arm, measured independently:
 
@@ -154,7 +193,9 @@ Optimisations this harness has **rejected**:
 | drop low-IDF terms from the text query | 14× faster, Recall@5 40.9% → 22.7%. No. |
 | AND-first, OR as fallback | no gain: AND returns zero rows for 42 of 44 queries |
 | `temporal` factor (recency) | nothing at any weight, under any floor. A 1999 statute still governs unless repealed. |
-| `completeness` factor (body length) | +2.5 **before** a relevance floor existed, **0.0 after** — it was serving as a crude relevance proxy, not measuring completeness |
+| `completeness` factor (body length) | +2.5 **before** a relevance floor existed, **0.0 after** — it was serving as a crude relevance proxy, not measuring completeness. It returns at 1.0 in any fit that does not bound `Σw`, which is the clearest evidence the bound is doing work. |
+| an unbounded metadata prior | the best unconstrained fit scores the **highest Recall@5 measured on this corpus (56.8%)** and is the worst answer on the list: Recall@10 is also 56.8% — positions 6–10 find nothing new — and MRR falls to 0.382 against 0.454. Its bound is 3.75× against a pool spanning 2.56×, so metadata decides the order. Recall@5 alone cannot see this; `SCORING.md` §3 is the rule that rejects it. |
+| the relevance floor at 0.4 | fitted against the **text arm**, which the engine does not rank. On the fused pool it costs 2.5 points; refitting it against IDF-weighted `bm25::evidence` does not rescue it. Kept at 0.3, where it is free. |
 | `enacting_body` in the authority score | the column is unusable: `PERATURAN BUPATI` / `MA` (10,395 rows), `PERATURAN DAERAH KABUPATEN` / `RI` (7,770). Extraction artefacts, not enacting bodies. |
 | fine-grained regulation hierarchy | **unmeasurable at n=40.** The legally-correct ordering and an inverted one score identically (57.5% / 47.5% LOO), and a coarse national-vs-local split does at least as well. |
 | TurboQuant / TurboVec vector compression | wrong bottleneck: the dense arm is 53 ms of a 1,059 ms query and returns 0.0%. Compressing it 16× buys ~1% of latency on the one arm that contributes nothing. |
@@ -170,15 +211,25 @@ Both looked obviously good on paper. That is what the harness is for.
 - Periodically in production: a routing-recall drop is the trigger for re-clustering —
   drift detected by measurement, not guessed by calendar.
 
-! **The harness renumbers surviving candidates after the floor; the engine does
-not.** `score_pool` recomputes `1/(k + rank)` over the filtered list, so a
-candidate that was 30th and is now 2nd scores as 2nd. The engine keeps the fused
-score RRF produced. Measured across 6,250 configurations: in-sample best is
-identical (65.0%), leave-one-out differs by one case (57.5% vs 55.0%), and at
-the shipped configuration **the two agree on 40 of 40 cases**. Recorded rather
-than fixed — changing either side would invalidate the fit for no measured gain.
+### What the fitting harness has to match, and why
+
+`fit_factors.py` reranks a pool it builds itself, so every difference between
+that pool and the engine's fits weights against something nobody serves. Four
+such differences have been found, all of them silent — the harness produced a
+number either way:
+
+| divergence | how it ended |
+|---|---|
+| fitted the **text arm**, engine ranks the **fused** pool | `--pool fused` is now the default. This is the one that mattered: it is why the floor was 0.4. |
+| harness **renumbered** survivors `1/(k + rank)`, engine keeps the fused score | fixed — the pool's own score is carried through. It had been measured as agreeing 40/40 at the then-shipped config, which is agreement by luck, not by rule. |
+| harness's `HIERARCHY` table was the **inverted** one | fixed, and pinned: `factors::tests::hierarchy_matches_the_engine` parses the Python table and asserts it against `tier()`. |
+| harness took SQL `LIMIT` at face value | fixed — it mirrors `OVERFETCH` and `settle`. |
+
+! A cross-language lookup table needs a test that the two copies agree, not a
+comment saying they should. The hierarchy diverged for two commits without
+moving any number.
 
 ! **38 of the 50 labels have not been reviewed by a domain expert.** Whether a clause
 genuinely *answers* a question is a lawyer's judgement, not a retrieval engineer's, and
 a wrong label is worse than no label: it silently moves every dial this document gates.
-Treat 50.0% as a number measured against labels of known-imperfect provenance.
+Treat 54.5% as a number measured against labels of known-imperfect provenance.

@@ -20,31 +20,69 @@
 //!
 //! # What these weights are worth
 //!
-//! Fitted offline by `dev_tools/eval/fit_factors.py`, reranking the text arm
-//! over a 60-candidate pool on the 40 article-labelled eval cases:
+//! Measured through the real server by `dev_tools/eval/e2e.py` — one binary,
+//! the weights varied per request, so every row is the product, ✗ an arm
+//! (`docs/EVAL.md` §1). 44 cases:
 //!
-//! | | Recall@5 |
+//! | | Recall@5 | Recall@10 | MRR |
+//! |---|---|---|---|
+//! | factors off | 50.0% | 52.3% | 0.360 |
+//! | **[`Weights::FITTED`]** | **54.5%** | **59.1%** | **0.454** |
+//!
+//! Fitted by `fit_factors.py --pool fused` over 3,125 configurations:
+//! leave-one-out **55.0%**, in-sample 60.0%. Quoting the in-sample number
+//! would be claiming one never measured out of sample (invariant 15).
+//!
+//! ! The fit cannot pin these five numbers down. **23 configurations tie** at
+//! the top in-sample score, and [`Weights::FITTED`] is one of them, chosen
+//! among equals for keeping the annex penalty live — `structural` is what
+//! demotes LAMPIRAN, and 22.5% of the corpus is annex material, which is a
+//! property of the corpus rather than of 40 labelled cases. It also has the
+//! best MRR of the tied set in situ. That is a selection criterion, ✗ an
+//! out-of-sample result.
+//!
+//! # Why the weights are small
+//!
+//! The prior is bounded by `1 + Σwᵢ`, and that bound must stay **inside the
+//! pool's own relevance spread**, or metadata alone can lift the last
+//! candidate in the pool to first — invariant 9's exact failure mode.
+//! Measured over the 40 cases, the fused pool spans `best/worst` of **2.56×
+//! median** (min 1.31×, max 2.62×). `Σw = 1.0` here, so the bound is 2.00×,
+//! inside the spread in 38 of 40 cases.
+//!
+//! The unconstrained best fit is `authority=1.0 structural=0.25
+//! completeness=1.0 topical=0.5` — bound **3.75×, out-spanning the pool in 40
+//! of 40 cases**. In situ it scores the *best* Recall@5 of anything measured,
+//! 56.8%, and it is the worst answer on the list: Recall@10 is also 56.8%, so
+//! positions six through ten find nothing, and **MRR falls to 0.382** against
+//! 0.454 here. It hoists a few metadata-favoured chunks into the top five and
+//! scrambles everything else. Recall@5 on n=40 cannot see that, which is why
+//! the constraint is in the fit and in a test rather than in a comment.
+//!
+//! ! `completeness` is why the constraint is load-bearing rather than
+//! decorative: it fits to 1.0 unconstrained, and it is a relevance proxy
+//! wearing a factor's name — longer chunks contain more query terms. 0.0.
+//!
+//! # The relevance floor is 0.3, ✗ 0.4
+//!
+//! 0.4 was fitted against the **text arm alone**, which is what the fitter
+//! reranked before it could reach an embedder. The engine does not rank the
+//! text arm; it ranks an RRF pool that already contains BM25. On the pool that
+//! actually ships:
+//!
+//! | floor | Recall@5 |
 //! |---|---|
-//! | text arm, no floor, no factors | 40.0% |
-//! | **relevance floor alone** | **52.5%** |
-//! | best in-sample, floor + weights | 65.0% |
-//! | **leave-one-out** | **57.5%** |
+//! | 0.0 · 0.2 · **0.3** | 55.0% |
+//! | 0.4 | 52.5% |
+//! | 0.5 | 50.0% |
 //!
-//! ! The honest number is the leave-one-out one: **+17.5 points**, ✗ +25.
-//! Picking the maximum of 3,125 configurations on 40 cases overfits, and
-//! reporting the in-sample peak would be claiming a number that was never
-//! measured out of sample (invariant 15).
+//! The floor earns nothing on its own here — BM25 is a better lexical filter
+//! than counting content terms, and refitting it against `bm25::evidence`
+//! (the better instrument, named as the next experiment when 0.4 shipped)
+//! does not change that. What it does is stay free up to 0.3 while every
+//! top-scoring bounded configuration uses it, so it is kept where it costs
+//! nothing and dropped from where it cost 2.5 points.
 //!
-//! ! **The floor is worth more than every weight combined** — +12.5 points on
-//! its own against +5.0 for the best single factor. It was missing from the
-//! first version of this module, and `completeness` had silently taken its
-//! place: longer chunks contain more query terms, so it was acting as a crude
-//! relevance proxy. Once a real floor exists it earns nothing and ships at 0.0.
-//!
-//! Two results say the gain is not a lucky peak: **2,939 of 3,125
-//! configurations (94%) beat the baseline**, and leave-one-out chose exactly
-//! [`Weights::FITTED`] in **37 of 40 folds**.
-
 /// The tier of an Indonesian regulation, 1–10. `None` for a type the corpus
 /// does not contain.
 ///
@@ -329,10 +367,13 @@ impl Weights {
     ///
     /// ! `temporal` and `topical` are 0.0 because they were **measured** to add
     /// nothing, ✗ because they were forgotten.
+    /// ! `Σw = 1.0`, so the prior is bounded at 2.00× — inside the fused
+    /// pool's 2.56× median spread. That constraint is part of the fit, ✗ a
+    /// coincidence of it; see the module docs.
     pub const FITTED: Self = Self {
-        relevance_floor: 0.4,
-        authority: 1.0,
-        structural: 0.5,
+        relevance_floor: 0.3,
+        authority: 0.5,
+        structural: 0.25,
         temporal: 0.0,
         completeness: 0.0,
         topical: 0.25,
@@ -626,8 +667,7 @@ mod tests {
     #[test]
     fn the_floor_removes_candidates_rather_than_reordering_them() {
         // ! The floor is the one part of this module that FILTERS. Ordering
-        // alone cannot express "this does not belong in the answer", and the
-        // fit says removal is where most of the gain is (+12.5 of +17.5).
+        // alone cannot express "this does not belong in the answer".
         let mut pool = vec![
             (
                 0.010_f32,
@@ -681,8 +721,8 @@ mod tests {
     }
 
     #[test]
-    fn the_shipped_floor_leaves_room_for_a_partial_match() {
-        // 0.4 was fitted, and the shape it encodes matters: a candidate
+    fn a_floor_leaves_room_for_a_partial_match() {
+        // The shape a floor has to encode, at whatever value: a candidate
         // answering most of a question must survive, because legal answers are
         // rarely phrased in the querier's words. Half the terms is enough.
         let body = "izin usaha pertambangan wajib memenuhi persyaratan";
@@ -692,6 +732,62 @@ mod tests {
             "coverage {} fell below the floor",
             coverage(body, &q)
         );
+    }
+
+    #[test]
+    fn the_shipped_weights_stay_inside_the_pool_spread() {
+        // ! Invariant 9, as arithmetic. The fused pool's relevance spans
+        // 2.57x median (min 1.31x) across the 40 eval cases — measured, see
+        // the module docs. A prior bounded above that can reorder the pool on
+        // metadata alone, which is authority without relevance.
+        //
+        // This is the test that fails if someone raises a weight because
+        // Recall@5 went up: the unconstrained fit does score the same
+        // Recall@5, and its MRR is below factors-off.
+        let w = Weights::FITTED;
+        let total = w.authority + w.structural + w.temporal + w.completeness + w.topical;
+        assert!(
+            1.0 + total <= 2.00 + f32::EPSILON,
+            "prior bound {:.2}x exceeds the 2.00x the fit was constrained to",
+            1.0 + total
+        );
+    }
+
+    #[test]
+    fn the_shipped_floor_stays_where_it_is_free() {
+        // ! 0.4 cost 2.5 points on the pool the engine actually ranks; 0.3
+        // costs nothing and every top-scoring bounded configuration uses it.
+        // The value is fitted against the FUSED pool, ✗ the text arm — using
+        // the old 0.4 would apply a threshold measured on something the
+        // engine does not rank.
+        assert!((Weights::FITTED.relevance_floor - 0.3).abs() < 1e-6);
+    }
+
+    #[test]
+    fn hierarchy_matches_the_engine() {
+        // ! The fitter carries its own copy of this table in Python, and the
+        // two silently diverged once already: 9c50c87 corrected the Rust and
+        // left the Python inverted, so weights were fitted against one
+        // hierarchy and applied against another. Neither number moved.
+        let src = include_str!("../../../dev_tools/eval/fit_factors.py");
+        let body = src
+            .split_once("HIERARCHY = {")
+            .expect("fit_factors.py must define HIERARCHY")
+            .1
+            .split_once('}')
+            .expect("unterminated HIERARCHY")
+            .0;
+        let mut seen = 0;
+        for line in body.lines() {
+            let Some((k, v)) = line.trim().trim_end_matches(',').split_once(':') else {
+                continue;
+            };
+            let name = k.trim().trim_matches('"');
+            let want: u8 = v.trim().parse().expect("tier must be an integer");
+            assert_eq!(tier(name), Some(want), "{name} disagrees with the fitter");
+            seen += 1;
+        }
+        assert_eq!(seen, 10, "the corpus contains ten regulation types");
     }
 
     #[test]
@@ -716,7 +812,7 @@ mod tests {
         // invisible: the engine would still rank, just not the way anything
         // was measured. These three are printed by dev_tools/eval/fit_factors.py
         // for the same inputs, and pin this implementation to the one the
-        // +7.5 points was measured on.
+        // fit was measured on.
         let w = Weights::FITTED;
         let cases: [(Facets<'_>, f32); 3] = [
             (
@@ -727,7 +823,7 @@ mod tests {
                     body_len: 800,
                     ..Facets::default()
                 },
-                1.3,
+                0.65,
             ),
             (
                 Facets {
@@ -738,7 +834,7 @@ mod tests {
                     body_len: 3_000,
                     ..Facets::default()
                 },
-                0.3,
+                0.15,
             ),
             (
                 Facets {
@@ -749,7 +845,7 @@ mod tests {
                     body_len: 250,
                     ..Facets::default()
                 },
-                0.85,
+                0.425,
             ),
         ];
         for (f, expected) in cases {

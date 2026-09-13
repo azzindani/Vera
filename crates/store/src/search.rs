@@ -148,10 +148,10 @@ impl SearchOps {
                  WHERE indexable AND dense IS NOT NULL AND cluster_id = $2
                  ORDER BY dense <=> $1::text::halfvec
                  LIMIT $3",
-                &[&dense_literal(query), &cluster_id, &k],
+                &[&dense_literal(query), &cluster_id, &(k * OVERFETCH)],
             )
             .await?;
-        Ok(rows.iter().map(scored_f64).collect())
+        Ok(settle(rows.iter().map(scored_f64).collect(), k))
     }
 
     /// Sparse BM25 top-k over the whole corpus.
@@ -171,10 +171,10 @@ impl SearchOps {
                  WHERE indexable AND sparse IS NOT NULL
                  ORDER BY sparse <#> $1::text::sparsevec
                  LIMIT $2",
-                &[&literal, &k],
+                &[&literal, &(k * OVERFETCH)],
             )
             .await?;
-        Ok(rows.iter().map(scored_f64).collect())
+        Ok(settle(rows.iter().map(scored_f64).collect(), k))
     }
 
     /// Stemmed lexical top-k via the Indonesian text search configuration.
@@ -223,8 +223,8 @@ impl SearchOps {
              LIMIT $2"
         };
         let c = self.client().await?;
-        let rows = c.query(sql, &[&query, &k]).await?;
-        Ok(rows.iter().map(scored_f32).collect())
+        let rows = c.query(sql, &[&query, &(k * OVERFETCH)]).await?;
+        Ok(settle(rows.iter().map(scored_f32).collect(), k))
     }
 
     /// Global exact-identifier lookup · **bypasses routing entirely**.
@@ -258,7 +258,11 @@ impl SearchOps {
                  WHERE regulation_number = $1
                    AND ($2::int IS NULL OR year = $2)
                    AND ($3::text IS NULL OR regulation_type = $3)
-                 ORDER BY year DESC NULLS LAST, chunk_no
+                 -- ! `id` last, ✗ decoration: chunk_no repeats across the
+                 -- regulations a number+year can match, and a tie here picks a
+                 -- different CLAUSE each run. This result set is small and
+                 -- already filtered, so the sort is free.
+                 ORDER BY year DESC NULLS LAST, chunk_no, id
                  LIMIT $4",
                 &[&regulation_number, &year, &reg_type, &k],
             )
@@ -391,6 +395,41 @@ impl ChunkRow {
     }
 }
 
+/// How much deeper than `k` each arm reads before it settles ties itself.
+///
+/// ! `ORDER BY <distance> LIMIT k` is **not deterministic**. Rows at equal
+/// distance come back in any order, and a tie group straddling the limit
+/// yields a different SET on each run. Measured on spike-02: 7 of the 44 eval
+/// queries returned different results across three runs of ONE server process,
+/// which moved Recall@5 by 2.3 points between two identical evaluations.
+///
+/// The obvious fix — appending `, id` to the ORDER BY — costs **8×**: it
+/// defeats the RUM index's early termination and sorts all 286,199 matching
+/// rows (765ms → 6,069ms, measured with EXPLAIN ANALYZE). Reading deeper does
+/// not, because RUM's cost is in the scan setup rather than the depth (922ms
+/// at LIMIT 20, 944ms at LIMIT 60). So each arm over-reads and [`settle`]
+/// applies the tie-break in memory.
+///
+/// ! This shrinks the window rather than closing it: a tie group straddling
+/// `OVERFETCH × k` is still resolved by the database. `docs/EVAL.md` §4
+/// records the residual, measured rather than assumed.
+const OVERFETCH: i64 = 3;
+// ! Below 1 every arm would silently read LESS than it was asked for, and the
+// recall loss would present as a ranking bug. Checked at compile time, because
+// this is a constant and a runtime assertion over one would never fail.
+const _: () = assert!(OVERFETCH >= 1, "OVERFETCH must never shrink an arm");
+
+/// Order by score, break ties on id, cut to `k`.
+///
+/// ! The same rule `engine::fusion` uses, for the same reason. Both halves
+/// have to obey it: a deterministic fusion over a non-deterministic pool is
+/// still non-deterministic.
+fn settle(mut rows: Vec<Scored>, k: i64) -> Vec<Scored> {
+    rows.sort_by(|a, b| b.score.total_cmp(&a.score).then_with(|| a.id.cmp(&b.id)));
+    rows.truncate(usize::try_from(k).unwrap_or(usize::MAX));
+    rows
+}
+
 #[allow(clippy::cast_possible_truncation)]
 fn scored_f64(r: &Row) -> Scored {
     Scored {
@@ -460,5 +499,62 @@ mod tests {
             ..row
         };
         assert!(with_url.provenance_complete());
+    }
+
+    fn s(id: &str, score: f32) -> Scored {
+        Scored {
+            id: id.into(),
+            score,
+        }
+    }
+
+    #[test]
+    fn settle_breaks_ties_on_id_rather_than_on_arrival_order() {
+        // ! The defect this exists for: `ORDER BY <distance> LIMIT k` returns
+        // tied rows in whatever order the plan produced, and that order is not
+        // stable across runs. Measured on spike-02, 7 of 44 eval queries
+        // returned different results across three runs of one process, moving
+        // Recall@5 by 2.3 points between two identical evaluations.
+        let forward = settle(vec![s("b", 1.0), s("a", 1.0), s("c", 0.5)], 3);
+        let reverse = settle(vec![s("a", 1.0), s("b", 1.0), s("c", 0.5)], 3);
+        let ids: Vec<&str> = forward.iter().map(|x| x.id.as_str()).collect();
+        assert_eq!(ids, ["a", "b", "c"], "ties must order on id");
+        assert_eq!(forward, reverse, "input order must not reach the output");
+    }
+
+    #[test]
+    fn settle_picks_the_same_members_out_of_a_tie_group_at_the_cut() {
+        // The case that changes the ANSWER rather than the order: more rows
+        // tie at the cut than fit through it. Over-reading is what puts the
+        // whole tie group in front of this function; the tie-break is what
+        // makes the choice among them repeatable.
+        let group = |first: &str| {
+            vec![
+                s("keep", 2.0),
+                s(first, 1.0),
+                s("tie-b", 1.0),
+                s("tie-c", 1.0),
+            ]
+        };
+        let a = settle(group("tie-a"), 2);
+        let b = settle(
+            vec![
+                s("tie-c", 1.0),
+                s("tie-b", 1.0),
+                s("keep", 2.0),
+                s("tie-a", 1.0),
+            ],
+            2,
+        );
+        assert_eq!(a, b);
+        assert_eq!(a[1].id, "tie-a", "the lowest id wins the last slot");
+    }
+
+    #[test]
+    fn settle_keeps_the_arms_score_order() {
+        // Tie-breaking must not reorder anything the arm actually separated.
+        let out = settle(vec![s("low", 0.1), s("high", 0.9), s("mid", 0.5)], 3);
+        let ids: Vec<&str> = out.iter().map(|x| x.id.as_str()).collect();
+        assert_eq!(ids, ["high", "mid", "low"]);
     }
 }
