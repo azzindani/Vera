@@ -102,6 +102,36 @@ Per-arm, measured independently:
 | sparse (BM25) | 38.6% |
 | dense | 0.0% — see `EMBEDDING.md` §5 |
 
+### Where the answer is, as opposed to where it ranks
+
+Recall@5 cannot distinguish "never retrieved" from "retrieved and buried", and
+those have different fixes. `pool_depth.py` separates them by running the text
+arm alone to increasing depth:
+
+```bash
+python dev_tools/eval/pool_depth.py
+```
+
+| pool depth | labelled article present | right regulation, wrong clause | regulation absent |
+|---|---|---|---|
+| 5 | 40.0% | 15.0% | 45.0% |
+| 10 | 60.0% | 10.0% | 30.0% |
+| 20 | 70.0% | 15.0% | 15.0% |
+| 60 | **80.0%** | 10.0% | **10.0%** |
+
+! **Retrieval is not the limiting factor; ranking is.** One arm alone has the
+answer in a 60-candidate pool 80% of the time. The engine returns it in the top
+5 half the time. The gap between those two numbers is what `SCORING.md` exists
+to close, and it is larger than the gap any new arm could close.
+
+The middle column is the case for sibling expansion (`SCORING.md` §7): the
+right law was retrieved and the wrong clause of it was returned.
+
+! **Denominator: 40, not 44.** This measures against `answer_articles`, and 4
+of the 5 `exact_ref` cases are labelled with a regulation only — correctly, since
+any chunk of the named regulation is a pass for them. They cannot be sorted into
+article-level buckets, so they are excluded here and included in Recall@5.
+
 ---
 
 ## 5. What the eval decides
@@ -111,6 +141,7 @@ Per-arm, measured independently:
 | fusion weights | Recall@5 / MRR per weight combination — refitted after every re-chunk |
 | `CLUSTERS_PROBED` | the smallest value that holds Recall@5 |
 | candidate caps | Recall@5 against cap-induced misses |
+| `CANDIDATE_POOL` | `pool_depth.py` — the depth at which "regulation absent" stops falling |
 | chunk strategy | Recall@5 across question shapes |
 | domain-gate floors | out-of-domain rejected without rejecting real queries |
 | re-cluster trigger | a drop in routing recall over time |

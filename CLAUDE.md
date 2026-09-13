@@ -61,6 +61,8 @@ LAYER 3  per-cluster scan → load ONE cluster, flat halfvec scan, keep top-k, d
 SCORING  multi-factor     → relevance gate, then authority / temporal / structural /
                             completeness · several viewpoints · consensus sets
                             confidence and triggers more work  [designed, ✗ built]
+EXPAND   on low consensus → siblings of a candidate, admitted by the same
+                            relevance gate, never merged unscored  [designed, ✗ built]
 ```
 
 - **Embedding:** one model, both ends. The **corpus declares** its model, width,

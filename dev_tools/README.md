@@ -91,6 +91,16 @@ bug `e2e.py` exists to catch, and it has caught one: `run.py` reported 50.0% whi
 server delivered 38.6%, because the engine's text weight was 0.0 and nothing was
 measuring the engine.
 
+```bash
+python eval/pool_depth.py            # needs only the database
+```
+
+`pool_depth.py` answers a different question from either: not "did the answer rank?" but
+"was the answer retrieved at all?". It runs the text arm alone straight against Postgres,
+so it needs **no embedder and no GPU**, and it is the cheapest check in the repo —
+useful whenever a change to chunking or the corpus might have moved what is reachable.
+Results in [../docs/EVAL.md](../docs/EVAL.md) §4.
+
 ---
 
 ## Fixtures
