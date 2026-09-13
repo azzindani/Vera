@@ -94,7 +94,8 @@ vera/
 │   ├── engine/                 ← pure logic: routing, RRF fusion, trust
 │   └── mcp/                    ← the binary: settings, transports, tool dispatch
 │
-├── migrations/                 ← schema and indexes
+├── migrations/                 ← post-ingest SQL, applied BY HAND. ✗ the schema:
+│                               dev_tools/pre_embed/schema.sql is the source of truth
 ├── docker/                     ← Dockerfile.engine, Dockerfile.db (pgvector + RUM)
 │
 ├── docs/                       ← how the running system works
@@ -128,7 +129,9 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
    one cluster). Sequential cluster loading is what makes the second term independent of
    probe width.
 5. **Provenance is captured at ingestion and immutable.** Never synthesize a source link
-   at query time; omit what ingestion did not record.
+   at query time; omit what ingestion did not record. Immutability is a database
+   trigger (`migrations/0002_provenance_immutable.sql`), ✗ a convention — and it is only true for a corpus the
+   trigger has been applied to.
 6. **The query path is read-only.** Enforced, not promised: the engine container runs
    with a read-only root filesystem.
 7. **Design for 2 vCPU / 4 GB; let bigger hardware benefit automatically.** Never

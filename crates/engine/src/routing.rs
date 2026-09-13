@@ -1,10 +1,17 @@
-//! Layer-1 domain detection and layer-2 cluster selection.
+//! Layer-2 cluster selection, and an unused layer-1 anchor scheme.
 //!
-//! ! The agent never passes a domain (`CLAUDE.md` §7.13). It is detected here
-//! by anchor match on the query vector, and if nothing clears the threshold the
-//! honest answer is *no domain* — ✗ the closest guess. A confidently wrong
-//! domain is worse than an empty result, because the agent cannot tell it
-//! happened.
+//! ! The agent never passes a domain (`CLAUDE.md` §7.13). If nothing clears the
+//! threshold the honest answer is *no domain* — ✗ the closest guess. A
+//! confidently wrong domain is worse than an empty result, because the agent
+//! cannot tell it happened.
+//!
+//! ! [`select_clusters`] is live. [`detect_domain`], [`route`], [`Route`] and
+//! [`DomainAnchor`] are **not called by the engine**: the shipped domain gate
+//! lives in `pipeline.rs` and pairs nearest-centroid similarity with lexical
+//! IDF-mass, because anchor similarity alone does not separate in-domain from
+//! out-of-domain on this corpus — it tracks language, ✗ subject
+//! (`docs/CONFIGURATION.md` §6). They are kept for the multi-domain case, where
+//! choosing *between* anchors is a different question from gating one.
 //!
 //! Measured on the 182K-row spike: probing 5 of 85 clusters touches 5.9% of the
 //! corpus and retains 95.0% routing recall. The 5% that misses is exactly what

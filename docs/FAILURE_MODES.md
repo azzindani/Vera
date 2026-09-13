@@ -111,10 +111,21 @@ the price of the bound, paid deliberately.
 The whole value is a human verifying through the link and locator. Provenance that is
 wrong, or invented at query time, collapses that.
 
-**Stopped by** capturing provenance at ingestion and storing it immutably with the
-chunk. The engine never synthesizes a link. Where ingestion recorded no URL the field is
-omitted rather than filled with an empty string that would render as a link leading
-nowhere.
+**Stopped by** capturing provenance at ingestion. The engine never synthesizes a link,
+and where ingestion recorded no URL the field is omitted rather than filled with an
+empty string that would render as a link leading nowhere.
+
+! **"Immutably" was a claim, ✗ an enforcement.** The trigger meant to forbid UPDATEs to
+provenance named `locator_page` and `locator_section` — columns this schema does not
+have — so it could never have been applied, and nothing in the repo applies migrations
+anyway. It now guards the real columns (`source_url`, `source_title`, `chapter`,
+`article`) and must be applied by hand:
+
+```bash
+psql "$DATABASE_URL" -f migrations/0002_provenance_immutable.sql
+```
+
+Until it is run against a given corpus, provenance in that corpus is mutable.
 
 ---
 

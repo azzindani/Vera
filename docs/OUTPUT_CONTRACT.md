@@ -43,17 +43,21 @@ one.
       "id": "reg::uu-28-2007::pasal-9::c3",
       "snippet": "Wajib Pajak yang terlambat ...",   // bounded preview, ✗ full text
       "score": 0.871,                                 // fused RRF score
-      "scores": { "dense": 0.83, "bm25": 0.61 },      // why it ranked
+      // ! Two of three arms. The text arm — the best performer at 40.9% — has
+      // no field here, so a result it alone found shows all-zero components.
+      "scores": { "dense": 0.83, "bm25": 0.61 },
       "source": {
         "title": "UU No. 28 Tahun 2007 — Ketentuan Umum Perpajakan",
         "url": "https://...",                         // omitted if ingest recorded none
-        "locator": { "page": 14, "section": "Pasal 9 ayat (3)" }
+        // ! page is reachable only for a corpus ingested with page numbers.
+        // The current one has no page column, so every locator is section-only.
+        "locator": { "section": "Pasal 9 ayat (3)" }
       }
     }
   ],
 
   "citation_block": [
-    { "index": 1, "text": "UU No. 28 Tahun 2007, Pasal 9 ayat (3), p.14 — https://..." }
+    { "index": 1, "text": "UU No. 28 Tahun 2007, Pasal 9 ayat (3) — https://..." }
   ],
 
   "summary_payload": {
@@ -89,6 +93,11 @@ The locator is the whole double-check promise.
 |---|---|---|
 | `page` | `14` | opening the source at that page |
 | `section` | `"Pasal 9 ayat (3)"` | reading that clause |
+
+! `page` is **not populated by the current corpus** — there is no page column in
+the schema and `to_results` sets it `None`. The field stays in the contract
+because a future corpus ingested from paginated sources can fill it; until then
+every locator is section-only, built from `chapter` and `article`.
 
 Rules:
 

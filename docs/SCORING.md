@@ -21,7 +21,8 @@ law and the other implements it locally, and nothing in a text-similarity score
 can tell them apart.
 
 The information needed to rank them is already in the corpus — `regulation_type`,
-`enacting_body`, `year`, `heading_path` — and is thrown away at rank time.
+`enacting_body`, `year`, `chapter`, `article`, `about` — and is thrown away at rank
+time.
 
 **Multi-factor scoring is the correction:** retrieval finds what is *relevant*,
 factors decide what is *authoritative, current, and structurally right*.
@@ -39,8 +40,9 @@ the chunk, computable at ingest and free at query time.
 | `exactness` | `identifier` match | did the query name this regulation? |
 | `authority` | `regulation_type`, `enacting_body` | how binding is this instrument? |
 | `temporal` | `year` | is this current, or superseded? |
-| `structural` | `heading_path`, `article` | is this an operative clause or an annex? |
-| `completeness` | body length, legal-term density | is this a whole provision or a fragment? |
+| `structural` | `chapter`, `article` | is this an operative clause or an annex? |
+| `topical` | `about` | is the instrument *about* what was asked? |
+| `completeness` | `length(body)`, legal-term density | is this a whole provision or a fragment? |
 
 ### authority
 
@@ -55,8 +57,9 @@ authority = (hierarchy / 10) * 0.7 + (enacting_body_level / 5) * 0.3
 ### structural
 
 Vera returns `LAMPIRAN / LAMPIRAN` hits above `Pasal` hits today. An annex is
-rarely the answer to a question about obligations; an article usually is. The
-heading path already records which is which.
+rarely the answer to a question about obligations; an article usually is, and
+`chapter` / `article` already record which is which — `locator_of` in
+`pipeline.rs` reads exactly these two columns to build the citation.
 
 ---
 
@@ -87,6 +90,7 @@ power needs authority. One weight vector cannot serve both.
 | `specific_article` | exactness, relevance |
 | `definitional` | relevance, authority |
 | `sanction` | relevance, structural |
+| `conceptual` | relevance, topical |
 | `authority` | authority, structural |
 | `procedural` | relevance, completeness |
 | `numeric` | exactness, structural |
@@ -162,7 +166,67 @@ is requested by the caller, or Vera picks one.
 
 ---
 
-## 7. What actually ships today
+## 7. What the code does today, and what has to move
+
+Read from the source, ✗ assumed. Each is a concrete blocker or enabler.
+
+### The blocker: the pool is cut before metadata is fetched
+
+`crates/mcp/src/pipeline.rs`:
+
+```rust
+let top: Vec<_> = fused.into_iter().take(self.cfg.top_k).collect();  // ~60 → 10
+let rows = self.ops.chunks_by_id(&ids).await?;                       // metadata for 10
+```
+
+Factors would only re-rank the ten candidates that already won. A chunk at rank
+15 carrying the governing law can never be rescued, which is precisely the case
+the factor model exists for.
+
+! **`take(top_k)` must move after factor scoring**, and `chunks_by_id` must run
+over the whole fused pool. That is the one structural change the design needs;
+everything else is additive.
+
+### Already there
+
+| | |
+|---|---|
+| `bm25::evidence(query, texts)` | matched IDF-mass over query IDF-mass — **this is the §3 relevance gate**, already written, already used by the domain gate |
+| `ChunkRow` | carries `regulation_type`, `regulation_number`, `year`, `chapter`, `article`, `body` |
+| `Fused.contributions` | `(arm, rank)` per candidate — the per-arm input a viewpoint needs |
+| `identifier::extract` | the `exactness` factor's input, with the regulation-tier table |
+
+### Needs adding
+
+- `enacting_body` and `about` are in the schema and **not selected** by
+  `chunks_by_id`. One line each.
+- `ComponentScores` publishes `dense` and `bm25` only — **the text arm, the
+  best performer at 40.9%, is invisible in the output.** Factors will need their
+  own scores published alongside, so this changes anyway.
+
+### Will be replaced
+
+`engine::trust_from` thresholds confidence on absolute RRF scores (`0.030` /
+`0.020`). Those values depend on the arm weights and on `k`, so changing
+`TEXT_WEIGHT` silently redefines what "high confidence" means. Consensus (§5)
+replaces it; until then it is a latent bug, ✗ a design.
+
+### Dead
+
+`engine::routing::{detect_domain, route, DomainAnchor, Route}` are exported and
+never called — the pipeline implements its own gate. `routing.rs` still
+describes domain detection as "anchor match on the query vector", which is not
+what the engine does.
+
+### Not reachable from this corpus
+
+`Locator.page` is hardcoded `None` in `to_results`, and there is **no page
+column in the schema**. `OUTPUT_CONTRACT.md` §2 shows `"page": 14` in its
+example; no result from this corpus can carry one.
+
+---
+
+## 8. What actually ships today
 
 | | |
 |---|---|
