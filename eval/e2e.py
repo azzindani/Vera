@@ -1,8 +1,15 @@
-"""Score the eval set through the real MCP server, over stdio.
+"""Score the eval set through the real MCP server, over stdio or HTTP.
 
     DATABASE_URL=... BM25_VOCAB=... python eval/e2e.py
     TEXT_WEIGHT=0.5 python eval/e2e.py          # sweep a tunable
     VERA_EXE=path/to/mcp.exe python eval/e2e.py
+    VERA_HTTP=http://localhost:8081 python eval/e2e.py   # a running deployment
+
+! The HTTP mode scores the DEPLOYED server — the container, its limits, its
+config — rather than a subprocess started with this shell's environment. Under
+the VPS overlay that is the only way to find out whether the profile in
+docker-compose.vps.yml actually serves, as opposed to whether the arithmetic in
+docs/HARDWARE.md §2 adds up.
 
 ! `run.py` scores the ARMS: it reimplements fusion in Python with equal
 weights. This drives the shipped binary instead — same weights, same gate,
@@ -39,6 +46,40 @@ PASSTHROUGH = (
     "DENSE_WEIGHT", "SPARSE_WEIGHT", "TEXT_WEIGHT",
     "DOMAIN_FLOOR", "DOMAIN_LEXICAL_FLOOR", "CANARY_MIN_COSINE",
 )
+
+
+class HttpServer:
+    """A deployment already running somewhere, spoken to over POST /mcp."""
+
+    def __init__(self, base):
+        self.base = base.rstrip("/")
+        self._n = 0
+        self.call("initialize", {
+            "protocolVersion": "2024-11-05", "capabilities": {},
+            "clientInfo": {"name": "eval-e2e", "version": "0"},
+        })
+
+    def call(self, method, params):
+        import urllib.request
+        self._n += 1
+        body = json.dumps({
+            "jsonrpc": "2.0", "id": self._n, "method": method, "params": params,
+        }).encode()
+        req = urllib.request.Request(
+            f"{self.base}/mcp", data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.load(r)
+
+    def search(self, query):
+        r = self.call("tools/call", {
+            "name": "search_knowledge", "arguments": {"query": query},
+        })
+        return json.loads(r["result"]["content"][0]["text"])
+
+    def close(self):
+        pass
 
 
 class Server:
@@ -89,7 +130,8 @@ class Server:
 
 
 def main():
-    srv = Server()
+    http = os.environ.get("VERA_HTTP")
+    srv = HttpServer(http) if http else Server()
     cur = psycopg.connect(PG).cursor()
     spec = json.loads(
         (Path(__file__).parent / "queries.json").read_text(encoding="utf-8")
@@ -129,7 +171,7 @@ def main():
     def w(key, default):
         return os.environ.get(key, default)
 
-    print(f"through {EXE}")
+    print(f"through {http or EXE}")
     print(f"  weights  dense={w('DENSE_WEIGHT', '0.0')} "
           f"sparse={w('SPARSE_WEIGHT', '1.0')} text={w('TEXT_WEIGHT', '1.0')}")
     print(f"  n={n}   Recall@5 {100 * hit5 / n:.1f}%   "

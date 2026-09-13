@@ -93,6 +93,16 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    healthcheck:
+      # ! Loading and warming the model takes ~40s, and TEI accepts connections
+      # before it can answer one. Without this the engine's startup canary hits
+      # a live socket that refuses work, refuses to serve (correctly —
+      # invariant 3), exits, and restart-loops until the model is warm.
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 60s
     restart: unless-stopped
 
   engine:
@@ -124,7 +134,9 @@ services:
       db:
         condition: service_healthy
       embed:
-        condition: service_started
+        # ! service_healthy, ✗ service_started. A started TEI is not a TEI that
+        # can embed; see its healthcheck above.
+        condition: service_healthy
     healthcheck:
       # ! /health, ✗ a TCP probe. The engine binds its port before it loads
       # centroids and runs the startup canary, so a socket that accepts proves

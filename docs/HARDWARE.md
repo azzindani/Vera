@@ -61,25 +61,41 @@ bound.
 Tested in `crates/mcp/src/main.rs`: `the_ceiling_is_a_ceiling`,
 `waiting_is_bounded_by_the_wait_ceiling`.
 
-### The 4 GB budget — BUDGETED, not yet validated
+### The 4 GB budget — VALIDATED
 
-`docker-compose.vps.yml`:
+`docker-compose.vps.yml`, measured with the full stack up and the eval running
+through the deployed HTTP server:
 
-```
-embed   1280 MB   measured 1060 MB anon + runtime headroom
-db      1792 MB   shared_buffers 512 + work_mem + page cache
-engine   512 MB   measured 102 MB peak + headroom
-------------------
-total   3584 MB   leaving ~512 MB for the OS
-```
+| container | limit | measured | |
+|---|---|---|---|
+| `vera-db` | 1,792 MB | 1,544 MB | 88% |
+| `vera-embed` | 1,280 MB | 1,088 MB | 87% |
+| `vera-mcp` | 512 MB | **8.5 MB** | 1.7% |
+| **total** | **3,584 MB** | **2,640 MB** | leaves ~1.4 GB for the OS |
+
+Quality under the limits is **identical** to unconstrained: Recall@5 50.0%,
+domain gate 6/6, 0/44 false refusals.
+
+! The engine holds 8.5 MB inside a 512 MB limit. The limit exists for the
+concurrency term, not the resident one — see the peak calculation above.
 
 ! `shared_buffers` drops 1500 → 512 MB. On a 4 GB box with a 2.4 GB database,
 page cache beats a large private pool: every arm is a scan, and Postgres
 ring-buffers large sequential reads specifically to avoid evicting
 `shared_buffers` with them.
 
-**Not yet run end-to-end under this overlay.** Until it is, §1 is a target and
-this table is arithmetic.
+! db and embed sit near 88% of their limits. That is deliberate for db — most of
+it is reclaimable page cache — but it means **the embedder has ~190 MB of
+headroom and no elastic component**. A larger embedding model does not fit this
+profile without taking the memory from Postgres.
+
+Reproduce:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+VERA_HTTP=http://localhost:8081 python eval/e2e.py
+docker stats --no-stream vera-db vera-embed vera-mcp
+```
 
 ---
 
@@ -90,7 +106,8 @@ reproduced across three runs at ±3%.
 
 | | p50 | p95 | max |
 |---|---|---|---|
-| `search_knowledge` | **866 ms** | 1,459 ms | 1,701 ms |
+| `search_knowledge` — dev box | **866 ms** | 1,459 ms | 1,701 ms |
+| `search_knowledge` — **2 vCPU / 4 GB** | **1,059 ms** | 1,638 ms | 2,005 ms |
 | refused by domain gate | 357 ms | | |
 | exact identifier (routing bypassed) | 444 ms | | |
 | `explain_routing` | 68 ms | | |
@@ -130,13 +147,24 @@ Without it, add ~350 ms to p50.
 
 ## 4. Concurrency
 
-Measured over HTTP with `MAX_CONCURRENCY=2`, `QUEUE_WAIT_MS=1500`:
+On the dev box, `MAX_CONCURRENCY=2`, `QUEUE_WAIT_MS=1500`:
 
 ```
 2 concurrent  ->  2 served,  0 refused
 8 concurrent  ->  4 served,  4 refused
                   503 at 1,506 ms · retry-after: 1
 ```
+
+On the target profile, deployed, `MAX_CONCURRENCY=4`, `QUEUE_WAIT_MS=2000`:
+
+```
+ 4 concurrent  ->  4 served,  0 refused · served p50 2,089 ms
+12 concurrent  ->  8 served,  4 refused · served p50 2,850 ms
+```
+
+! Latency degrades, the server does not. At 3× its ceiling it still answers two
+thirds of the burst and refuses the rest with a retry — it does not queue them,
+and it does not fall over.
 
 ! Invariant 6 needs a bound on **time** as well as queue depth. A bounded queue
 alone still lets a caller block indefinitely behind a full one.
