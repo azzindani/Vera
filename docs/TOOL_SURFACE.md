@@ -7,7 +7,7 @@ defines the **arguments** — the knobs an agent may turn per request, the ones 
 server keeps, and the reasoning for each side of that line.
 
 > **Status.** §3 (retrieval controls) and §5 (profiles) are **built**. §4 (effort),
-> §6 (expansion and the citation graph) and §7 (consensus) are **designed, not
+> §6's `citations` and §7 (consensus) are **designed, not
 > implemented**. §8 is the ledger.
 
 ---
@@ -176,16 +176,22 @@ evidence.
 
 ---
 
-## 6. Expansion and the citation graph  · designed, ✗ built
+## 6. Expansion and the citation graph  · `siblings` built, `citations` ✗
 
 ```
     expand: ["siblings", "citations"] = [],
 ```
 
-`SCORING.md` §7 measures the case for `siblings` — in 10% of labelled cases the
-engine held the right regulation and returned the wrong clause of it, and the
-`chunks_identifier_idx` that serves the exact-identifier path already answers the
-query (11,750 rows in 24 ms).
+`siblings` is **built and off by default**. `SCORING.md` §7 carries the
+measurement: 83 siblings admitted across 44 queries, one of them a labelled
+answer, +2.3 points of Recall@5 — one case, and this eval cannot separate one
+case from noise. It costs one indexed query per distinct regulation among the
+seeds (`chunks_identifier_idx` is `(regulation_type, regulation_number, year)`,
+exactly the sibling key) and no measurable latency.
+
+! Off by default because it admits chunks **no arm retrieved**, which changes
+what a result means — so it is opt-in and marked `expanded_from` on the wire,
+never folded silently into the ranking.
 
 `citations` is the knowledge-graph axis, and the corpus supports it **today,
 without a re-embed**:
@@ -245,7 +251,7 @@ same. Sharing the pool is what keeps the vote meaningful *and* cheap.
 | `profile` | ✔ `balanced` only; others unfitted, so unlisted |
 | `factor_weights` | ✔ experimental, echoed back |
 | `max_rounds`, `budget_ms` | ✗ blocked on the §4 concurrency conflict |
-| `expand` | ✗ measured and specified, not built |
+| `expand` | ✔ `siblings` built, off by default, +1 case measured · `citations` not built |
 | `viewpoints` | ✗ |
 
 ! **No argument here has been measured through the engine yet.** The factor layer

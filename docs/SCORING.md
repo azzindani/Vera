@@ -5,7 +5,7 @@ How Vera ranks. Retrieval finds candidates; this decides their order.
 > **Status.** §2 (the factors) and §3 (the relevance gate) are **built and
 > shipping** — `crates/engine/src/factors.rs`, fitted by
 > `dev_tools/eval/fit_factors.py`. §4 (per-query-type weights), §5 (viewpoints
-> and consensus), §6 (tiered effort) and §7 (expansion) remain **designed, not
+> and consensus) and §6 (tiered effort) remain **designed, not
 > implemented**. §9 is the ledger of what actually runs.
 
 ---
@@ -310,7 +310,7 @@ is requested by the caller, or Vera picks one.
 
 ---
 
-## 7. Expansion — the pool is not fixed by what retrieval returned
+## 7. Expansion — the pool is not fixed by what retrieval returned  · built, opt-in
 
 Sections 1–6 assume the candidate pool is whatever the three arms produced.
 That assumption has a measurable cost, and the measurement also settles what
@@ -389,13 +389,29 @@ it is a candidate; one that does not is discarded. This is deliberately the
 same primitive the domain gate uses — one definition of "relevant to this
 query" for the whole engine.
 
-### What this is worth, stated honestly
+### What this is worth · measured
 
-Bucket B is 4 cases of 40 at depth 60. Expansion is worth **at most +10 points**,
-it cannot touch bucket C, and its benefit is concentrated in the shapes where
-the answer lives in a different chapter from the question's vocabulary — a
-penalty in `KETENTUAN PIDANA`, a deadline in a procedural article. Sibling
-expansion is a real gain and a secondary one. Ranking is the main event.
+Built. Opt-in via `expand: ["siblings"]`, **off by default**, measured through
+the real server on the 44-case set:
+
+| | Recall@5 | Recall@10 | MRR | siblings admitted | p50 |
+|---|---|---|---|---|---|
+| off | 54.5% | 59.1% | 0.454 | 0 | 757 ms |
+| `["siblings"]` | **56.8%** | 59.1% | 0.456 | 83 | 704 ms |
+
+! **+2.3 points is one case.** Across 44 queries the walk admitted 83 siblings;
+exactly **one** of them was a labelled answer, and it landed in the top five.
+That is clean attribution — the gain is traceable to a specific expanded chunk
+rather than to a shuffle — and it is still one case on a 44-case set, which this
+eval cannot separate from noise (`EVAL.md` §4).
+
+Bucket B is 4 cases of 40 at depth 60, so the ceiling was +10 points and the
+measurement reached a quarter of it. It cannot touch bucket C.
+
+**Off by default** for two reasons. It admits chunks *no arm retrieved*, which
+changes what a result means, and the evidence for turning it on is one case.
+Latency is not one of the reasons: 757 ms → 704 ms is noise, and the walk is one
+indexed query per distinct regulation among the seeds.
 
 ### Borrowed from `06_ID_Legal`, and what was left behind
 

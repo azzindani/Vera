@@ -70,9 +70,26 @@ pub struct SearchResult {
     /// Bounded preview · ✗ the full body. Full text comes from `read_chunk`.
     pub snippet: String,
     /// Fused RRF score.
+    ///
+    /// ! The RETRIEVAL score, ✗ the number the results are ordered by. Ranking
+    /// multiplies it by a metadata prior (`docs/SCORING.md` §2), so a result
+    /// list ordered by rank is deliberately not sorted by this field. Reporting
+    /// the product instead would hide how much of the order is retrieval and
+    /// how much is metadata, which is the one thing a caller auditing a
+    /// ranking needs to separate.
     pub score: f32,
     pub scores: ComponentScores,
     pub source: Source,
+    /// The result this one was expanded from · `docs/SCORING.md` §7.
+    ///
+    /// ! Present only on an expanded chunk. **No arm retrieved it** — it came
+    /// in as a sibling of a candidate that was retrieved, and was admitted by
+    /// the relevance gate rather than by matching the query. A caller that
+    /// treats "the engine found this" and "the engine reasoned its way to
+    /// this" identically is drawing a stronger conclusion than the evidence
+    /// supports, so the distinction is on the wire.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expanded_from: Option<String>,
 }
 
 /// A hit from the global exact-identifier path that bypasses routing.
@@ -264,7 +281,28 @@ mod tests {
                     section: section.map(Into::into),
                 },
             },
+            expanded_from: None,
         }
+    }
+
+    #[test]
+    fn a_retrieved_result_carries_no_expansion_marker() {
+        // ! `expanded_from` is absent, ✗ null, on a retrieved result. A client
+        // reading it as "was this found or reasoned to" should not have to
+        // distinguish null from missing on every single hit.
+        let json = serde_json::to_string(&result("UU 28/2007", Some(14), None)).unwrap();
+        assert!(
+            !json.contains("expanded_from"),
+            "the common case must not pay for the rare one: {json}"
+        );
+    }
+
+    #[test]
+    fn an_expanded_result_says_what_it_was_expanded_from() {
+        let mut r = result("UU 28/2007", Some(14), None);
+        r.expanded_from = Some("c9".into());
+        let json = serde_json::to_string(&r).unwrap();
+        assert!(json.contains(r#""expanded_from":"c9""#), "{json}");
     }
 
     #[test]

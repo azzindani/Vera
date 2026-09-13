@@ -27,6 +27,30 @@ pub struct Scored {
     pub score: f32,
 }
 
+/// Which regulation a candidate belongs to · the key sibling expansion walks.
+///
+/// ! All three parts, ✗ number and year. `chunks_identifier_idx` is
+/// `(regulation_type, regulation_number, year)` and the tier is the leading
+/// column, so this is both the correct key and the fast one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SiblingKey<'a> {
+    pub regulation_type: &'a str,
+    pub regulation_number: &'a str,
+    pub year: Option<i32>,
+}
+
+impl<'a> SiblingKey<'a> {
+    /// `None` when the row does not carry enough identity to walk from.
+    #[must_use]
+    pub fn of(row: &'a ChunkRow) -> Option<Self> {
+        Some(Self {
+            regulation_type: row.regulation_type.as_deref()?,
+            regulation_number: row.regulation_number.as_deref()?,
+            year: row.year,
+        })
+    }
+}
+
 /// A hit from the global exact-identifier path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExactHit {
@@ -225,6 +249,51 @@ impl SearchOps {
         let c = self.client().await?;
         let rows = c.query(sql, &[&query, &(k * OVERFETCH)]).await?;
         Ok(settle(rows.iter().map(scored_f32).collect(), k))
+    }
+
+    /// Other chunks of the same regulation · the sibling expansion of
+    /// `docs/SCORING.md` §7.
+    ///
+    /// ! Keyed on `(regulation_type, regulation_number, year)`, which is
+    /// exactly `chunks_identifier_idx`. Number and year alone are NOT unique
+    /// in this corpus — 60/2014 matches 12 regulations — so dropping the tier
+    /// would pull in siblings from a different law entirely.
+    ///
+    /// ! `exclude` is the pool. A sibling already retrieved is not an
+    /// expansion, and admitting it twice would let one chunk hold two slots.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn siblings(
+        &self,
+        key: &SiblingKey<'_>,
+        exclude: &[String],
+        k: i64,
+    ) -> Result<Vec<ChunkRow>, StoreError> {
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "SELECT id, body, source_title, source_url, chapter, article,
+                        regulation_type, regulation_number, year, about,
+                        truncated_at_source, cluster_id
+                 FROM chunks
+                 WHERE indexable
+                   AND regulation_type = $1
+                   AND regulation_number = $2
+                   AND ($3::int IS NULL OR year = $3)
+                   AND NOT (id = ANY($4))
+                 ORDER BY chunk_no, id
+                 LIMIT $5",
+                &[
+                    &key.regulation_type,
+                    &key.regulation_number,
+                    &key.year,
+                    &exclude,
+                    &k,
+                ],
+            )
+            .await?;
+        Ok(rows.iter().map(ChunkRow::from_row).collect())
     }
 
     /// Global exact-identifier lookup · **bypasses routing entirely**.

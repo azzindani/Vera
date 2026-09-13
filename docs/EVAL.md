@@ -102,6 +102,7 @@ Through the real server, 44 retrievable cases, `dense=0 sparse=1 text=1`:
 |---|---|
 | Domain gate | 6/6 out-of-domain refused, 0/44 false refusals |
 | Latency p50 / p90 | 691 ms / 1,046 ms |
+| `expand: ["siblings"]` | 56.8% / 59.1% / 0.456 — **+1 case**, off by default (`SCORING.md` §7) |
 
 Both columns come from **one binary** (`e2e_sweep.py`), with `factor_weights`
 varied per request, so the difference is the scoring layer and nothing else —

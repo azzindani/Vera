@@ -54,7 +54,11 @@ LAYER 3   │  LEAF search                        │  load ONE cluster, scan it
                             │
                    + global exact-identifier hits (routing bypassed)
                             │
-                   [ factor scoring · viewpoints · consensus ]   ← designed, ✗ built
+                   factor scoring (relevance floor → metadata prior)
+                            │
+                   sibling expansion, opt-in     ← `expand: ["siblings"]`
+                            │
+                   [ viewpoints · consensus ]    ← designed, ✗ built
                             │
                    top-k results + provenance  →  agent summarizes
 ```

@@ -58,11 +58,13 @@ LAYER 3  per-cluster scan → load ONE cluster, flat halfvec scan, keep top-k, d
                           ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM)
                           ⊕ global exact-identifier path (routing bypassed)
                           → RRF over RANKS → candidate pool
-SCORING  multi-factor     → relevance gate, then authority / temporal / structural /
-                            completeness · several viewpoints · consensus sets
-                            confidence and triggers more work  [designed, ✗ built]
-EXPAND   on low consensus → siblings of a candidate, admitted by the same
-                            relevance gate, never merged unscored  [designed, ✗ built]
+SCORING  multi-factor     → relevance floor, then authority / structural / topical,
+                            the prior bounded inside the pool's own spread  [built]
+                          · viewpoints · consensus sets confidence and triggers
+                            more work  [designed, ✗ built]
+EXPAND   opt-in           → siblings of a candidate, admitted by the same
+                            relevance gate, never merged unscored  [built, off by
+                            default]
 ```
 
 - **Embedding:** one model, both ends. The **corpus declares** its model, width,

@@ -63,6 +63,14 @@ pub struct Config {
     pub domain_lexical_floor: f32,
     /// How many sparse hits the lexical evidence is pooled over.
     pub gate_sample: usize,
+    /// How many top-ranked candidates sibling expansion walks from.
+    ///
+    /// ! Seeds, ✗ the whole pool. Expanding 60 candidates at up to 1,313
+    /// chunks each is a different query; expanding the few that ranked is the
+    /// bet that the right clause sits beside a chunk that already ranked.
+    pub expand_seeds: usize,
+    /// Sibling rows read per seed, before admission.
+    pub expand_per_seed: i64,
     /// Relative influence of each metadata factor (`docs/SCORING.md` §2).
     ///
     /// ! `Weights::OFF` is exactly the identity on the fused order, so this
@@ -122,6 +130,12 @@ impl Default for Config {
             domain_floor: 0.45,
             domain_lexical_floor: 0.40,
             gate_sample: 5,
+            // ! p50 is 22 chunks per regulation and p95 is 210, so 5 seeds x 40
+            // is the common case whole and the tail bounded. Measured cost of
+            // the widest possible walk — siblings of 10 seeds drawn from the 10
+            // largest regulations — is 11,750 rows in 24 ms (`SCORING.md` §7).
+            expand_seeds: 5,
+            expand_per_seed: 40,
             // Fitted, ✗ chosen: dev_tools/eval/fit_factors.py, +7.5 points
             // leave-one-out over the text arm.
             factor_weights: engine::Weights::FITTED,
@@ -149,6 +163,25 @@ fn log_canary(chunk_id: &str, got: f32) {
 /// A struct rather than eight positional arguments: at that width the compiler
 /// stops catching a transposed pair, and two `usize` fields next to each other
 /// is exactly the shape that silently swaps.
+/// One candidate on its way to being ranked.
+///
+/// ! Exists because an expanded sibling has **no `Fused`** — no arm retrieved
+/// it, so there is no rank to derive a score from. Pairing `(&Fused, &Row)`
+/// made that unrepresentable, which is the right default and the wrong one
+/// once expansion is admitted.
+struct Candidate<'a> {
+    /// ! `Cow`, ✗ a reference. A retrieved candidate borrows the row already
+    /// fetched for the pool; an expanded one owns a row that was fetched
+    /// afterwards and has nowhere older to live. Two vectors with two
+    /// lifetimes is the same thing spelled worse.
+    row: std::borrow::Cow<'a, store::ChunkRow>,
+    /// The retrieval score the factor prior multiplies. For a retrieved
+    /// candidate this is RRF's; for a sibling see `admit_siblings`.
+    relevance: f32,
+    /// `Some(seed id)` when this chunk was expanded rather than retrieved.
+    expanded_from: Option<String>,
+}
+
 struct Assembly<'a> {
     query: &'a str,
     probed: usize,
@@ -442,20 +475,13 @@ impl Pipeline {
         progress.push(format!("fused to {} candidates", pool.len()));
 
         if pool.is_empty() {
-            // ! The gate already passed to get here, so the domain DID match
-            // and only retrieval came back empty. Reporting this as
-            // `no_matching_domain` told the agent the corpus does not cover
-            // the subject — the one answer that makes it stop asking.
-            let mut empty = SearchResponse::no_match_in_domain(
+            return Ok(self.nothing_matched(
                 query,
-                self.meta.id.clone(),
                 top_cluster,
                 probed.len(),
+                exact_matches,
                 progress,
-            );
-            empty.exact_matches = exact_matches;
-            empty.token_estimate = empty.estimate_tokens();
-            return Ok(empty);
+            ));
         }
 
         let ids: Vec<String> = pool.iter().map(|f| f.id.clone()).collect();
@@ -463,20 +489,30 @@ impl Pipeline {
 
         // Pair each candidate with its metadata, preserving fused order. A
         // candidate whose row is missing is dropped rather than ranked blind.
-        let mut ranked: Vec<(&engine::Fused, &store::ChunkRow)> = pool
+        let mut ranked: Vec<Candidate<'_>> = pool
             .iter()
-            .filter_map(|f| rows.iter().find(|r| r.id == f.id).map(|row| (f, row)))
+            .filter_map(|f| {
+                rows.iter().find(|r| r.id == f.id).map(|row| Candidate {
+                    row: std::borrow::Cow::Borrowed(row),
+                    relevance: f.score,
+                    expanded_from: None,
+                })
+            })
             .collect();
 
         // ! The floor is skipped for a named regulation, exactly as the
         // domain gate is. See `apply_factors`.
-        Self::apply_factors(
-            &mut ranked,
-            query,
-            &applied,
-            exact_matches.is_empty(),
-            &mut progress,
-        );
+        let apply_floor = exact_matches.is_empty();
+        Self::apply_factors(&mut ranked, query, &applied, apply_floor, &mut progress);
+
+        // ! Expansion runs AFTER ranking, ✗ before. Its seeds are the
+        // candidates that actually ranked; walking the whole pool would be a
+        // different and much larger query (`SCORING.md` §7).
+        if applied.expand.contains(&contract::Expansion::Siblings) {
+            self.expand_pool(query, &mut ranked, &applied, apply_floor, &mut progress)
+                .await?;
+        }
+
         // ! Counted BEFORE the cut. `truncated` is the only signal a caller
         // has that raising `top_k` would return something it has not seen, and
         // after `truncate` the number that would have said so is gone.
@@ -532,6 +568,142 @@ impl Pipeline {
         Ok((dense, sparse, text))
     }
 
+    /// Admit siblings into the pool, then rank the whole thing again.
+    ///
+    /// ! Re-ranked as ONE pool. An expanded chunk earns its place against the
+    /// same weights as a retrieved one, or it does not get one — appending it
+    /// below the retrieved results would make expansion cosmetic.
+    async fn expand_pool(
+        &self,
+        query: &str,
+        ranked: &mut Vec<Candidate<'_>>,
+        applied: &contract::AppliedOptions,
+        apply_floor: bool,
+        progress: &mut Vec<String>,
+    ) -> Result<(), PipelineError> {
+        let floor = self.cfg.factor_weights.relevance_floor;
+        let admitted = self.admit_siblings(query, ranked, floor, progress).await?;
+        if admitted.is_empty() {
+            return Ok(());
+        }
+        ranked.extend(admitted);
+        Self::apply_factors(ranked, query, applied, apply_floor, progress);
+        Ok(())
+    }
+
+    /// Pull in other chunks of the regulations that ranked, and admit the ones
+    /// that are relevant on their own evidence.
+    ///
+    /// `docs/SCORING.md` §7. In 10% of labelled cases the engine held the right
+    /// regulation and returned the wrong clause of it; the right clause was
+    /// never a candidate, so no amount of re-weighting reaches it.
+    ///
+    /// ! Admitted, ✗ merged. A sibling arrives with **no retrieval score** —
+    /// nothing matched it — and the score it is given here is derived from two
+    /// measured quantities and nothing else:
+    ///
+    /// ```text
+    /// relevance(sibling) = seed.relevance × (evidence(sibling) / evidence(seed))
+    /// ```
+    ///
+    /// capped at the best relevance in the pool. A sibling that accounts for
+    /// the query's IDF mass as well as its seed did inherits the seed's
+    /// standing; one that accounts for half of it gets half. It **may outrank
+    /// its seed** — that is the entire point, since the seed is the wrong
+    /// clause — but it may not outrank the best thing retrieval actually
+    /// found, because it was not found.
+    ///
+    /// ! Admission is the §3 relevance gate reused, on `bm25::evidence`: one
+    /// definition of "relevant to this query" for the whole engine.
+    async fn admit_siblings(
+        &self,
+        query: &str,
+        ranked: &[Candidate<'_>],
+        floor: f32,
+        progress: &mut Vec<String>,
+    ) -> Result<Vec<Candidate<'static>>, PipelineError> {
+        let seen: Vec<String> = ranked.iter().map(|c| c.row.id.clone()).collect();
+        let ceiling = ranked.iter().map(|c| c.relevance).fold(0.0_f32, f32::max);
+
+        // Seeds, de-duplicated by regulation: two chunks of one law walk to the
+        // same siblings, and doing it twice costs twice and admits duplicates.
+        let mut walked: Vec<store::SiblingKey<'_>> = Vec::new();
+        let mut seeds: Vec<(store::SiblingKey<'_>, String, f32, f32)> = Vec::new();
+        for c in ranked.iter().take(self.cfg.expand_seeds) {
+            let Some(key) = store::SiblingKey::of(&c.row) else {
+                continue;
+            };
+            if walked.contains(&key) {
+                continue;
+            }
+            walked.push(key);
+            let evidence = self
+                .vectorizer
+                .evidence(query, std::slice::from_ref(&c.row.body));
+            // ! A seed accounting for none of the query cannot scale anything —
+            // the ratio is undefined — so it does not get to sponsor siblings.
+            if evidence > 0.0 {
+                seeds.push((key, c.row.id.clone(), evidence, c.relevance));
+            }
+        }
+
+        let mut admitted = Vec::new();
+        let mut read = 0;
+        for (key, seed_id, seed_evidence, seed_relevance) in seeds {
+            let found = self
+                .ops
+                .siblings(&key, &seen, self.cfg.expand_per_seed)
+                .await?;
+            read += found.len();
+            for row in found {
+                let evidence = self
+                    .vectorizer
+                    .evidence(query, std::slice::from_ref(&row.body));
+                if evidence < floor {
+                    continue;
+                }
+                let relevance = (seed_relevance * (evidence / seed_evidence)).min(ceiling);
+                admitted.push(Candidate {
+                    row: std::borrow::Cow::Owned(row),
+                    relevance,
+                    expanded_from: Some(seed_id.clone()),
+                });
+            }
+        }
+        progress.push(format!(
+            "expansion: read {read} siblings of {} regulations, admitted {} at evidence >= {floor:.2}",
+            walked.len(),
+            admitted.len()
+        ));
+        Ok(admitted)
+    }
+
+    /// The domain matched and retrieval came back empty.
+    ///
+    /// ! ✗ `no_matching_domain`. The gate has already passed by the time this
+    /// is reachable, so reporting a null domain would tell the agent the
+    /// corpus does not cover the subject — the one answer that makes it stop
+    /// asking (`FAILURE_MODES.md` §11).
+    fn nothing_matched(
+        &self,
+        query: &str,
+        top_cluster: f32,
+        probed: usize,
+        exact_matches: Vec<ExactMatch>,
+        progress: Vec<String>,
+    ) -> SearchResponse {
+        let mut empty = SearchResponse::no_match_in_domain(
+            query,
+            self.meta.id.clone(),
+            top_cluster,
+            probed,
+            progress,
+        );
+        empty.exact_matches = exact_matches;
+        empty.token_estimate = empty.estimate_tokens();
+        empty
+    }
+
     /// Arm weights for a requested mode.
     ///
     /// ! Mode selects arms by ZEROING weights, ✗ by skipping retrieval. RRF
@@ -569,13 +741,13 @@ impl Pipeline {
     /// A promotion is recorded in `progress` — a reordering the caller cannot
     /// see is one they cannot check.
     fn apply_factors(
-        ranked: &mut Vec<(&engine::Fused, &store::ChunkRow)>,
+        ranked: &mut Vec<Candidate<'_>>,
         query: &str,
         applied: &contract::AppliedOptions,
         apply_floor: bool,
         progress: &mut Vec<String>,
     ) {
-        let before = ranked.first().map(|(f, _)| f.id.clone());
+        let before = ranked.first().map(|c| c.row.id.clone());
         // ! `content_terms`, ✗ `bm25::tokenize`. The relevance floor was fitted
         // against the former — words longer than three characters with function
         // words removed — and the two tokenisers disagree on short words, so
@@ -587,7 +759,7 @@ impl Pipeline {
         let mut scored: Vec<(f32, engine::Facets<'_>, usize)> = ranked
             .iter()
             .enumerate()
-            .map(|(i, (f, row))| (f.score, Self::facets_of(row), i))
+            .map(|(i, c)| (c.relevance, Self::facets_of(&c.row), i))
             .collect();
         let mut weights = weights_from_contract(&applied.factor_weights);
         if !apply_floor {
@@ -597,7 +769,9 @@ impl Pipeline {
         engine::rescore(&mut scored, &weights, &term_refs);
 
         let kept = scored.len();
-        *ranked = scored.iter().map(|(_, _, i)| ranked[*i]).collect();
+        let order: Vec<usize> = scored.iter().map(|(_, _, i)| *i).collect();
+        let mut taken: Vec<Option<Candidate<'_>>> = ranked.drain(..).map(Some).collect();
+        *ranked = order.into_iter().filter_map(|i| taken[i].take()).collect();
 
         let dropped = scored_len_before.saturating_sub(kept);
         if dropped > 0 {
@@ -605,10 +779,10 @@ impl Pipeline {
                 "relevance floor dropped {dropped} of {scored_len_before} candidates"
             ));
         }
-        if let (Some(was), Some((now, _))) = (before, ranked.first())
-            && now.id != was
+        if let (Some(was), Some(now)) = (before, ranked.first())
+            && now.row.id != was
         {
-            progress.push(format!("factors promoted {} over {was}", now.id));
+            progress.push(format!("factors promoted {} over {was}", now.row.id));
         }
     }
 
@@ -744,7 +918,7 @@ impl Pipeline {
     /// a snippet for every candidate and throw most of them away.
     fn to_results(
         &self,
-        ranked: &[(&engine::Fused, &store::ChunkRow)],
+        ranked: &[Candidate<'_>],
         dense: &[store::Scored],
         sparse: &[store::Scored],
     ) -> Vec<SearchResult> {
@@ -753,23 +927,27 @@ impl Pipeline {
         };
         ranked
             .iter()
-            .map(|(f, row)| SearchResult {
-                id: row.id.clone(),
-                snippet: snippet(&row.body, self.cfg.snippet_chars),
-                score: f.score,
-                scores: ComponentScores {
-                    dense: score_in(dense, &row.id),
-                    bm25: score_in(sparse, &row.id),
-                },
-                source: Source {
-                    title: row.source_title.clone(),
-                    // ! Straight from ingest. Never synthesised (invariant 8).
-                    url: row.source_url.clone(),
-                    locator: Locator {
-                        page: None,
-                        section: locator_of(row),
+            .map(|c| {
+                let row = &c.row;
+                SearchResult {
+                    id: row.id.clone(),
+                    snippet: snippet(&row.body, self.cfg.snippet_chars),
+                    score: c.relevance,
+                    scores: ComponentScores {
+                        dense: score_in(dense, &row.id),
+                        bm25: score_in(sparse, &row.id),
                     },
-                },
+                    source: Source {
+                        title: row.source_title.clone(),
+                        // ! Straight from ingest. Never synthesised (invariant 8).
+                        url: row.source_url.clone(),
+                        locator: Locator {
+                            page: None,
+                            section: locator_of(row),
+                        },
+                    },
+                    expanded_from: c.expanded_from.clone(),
+                }
             })
             .collect()
     }
@@ -1567,6 +1745,149 @@ mod live {
         assert!(r.gate_bypassed, "a named regulation skips the gate");
         assert!(!r.would_refuse);
         assert!(r.domain.is_some());
+    }
+
+    /// ! A NARROW pool, deliberately. The fixture holds 32 indexable chunks
+    /// and at most 4 per regulation, so the default 60-candidate pool contains
+    /// the entire corpus — every sibling is already retrieved, `exclude`
+    /// removes all of them, and expansion is unexercisable. Narrowing the pool
+    /// is what puts chunks outside it for the walk to find.
+    ///
+    /// `candidate_pool` is floored at `top_k` by `resolve`, so both move.
+    fn siblings() -> contract::SearchOptions {
+        contract::SearchOptions {
+            expand: Some(vec![contract::Expansion::Siblings]),
+            top_k: Some(3),
+            candidate_pool: Some(3),
+            ..contract::SearchOptions::default()
+        }
+    }
+
+    fn narrow() -> contract::SearchOptions {
+        contract::SearchOptions {
+            expand: None,
+            ..siblings()
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn expansion_is_off_unless_asked_for() {
+        // ! An expansion admits chunks NO ARM RETRIEVED. Doing that silently
+        // would change what "the engine found this" means for every caller
+        // that never opted in.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with("bangunan gedung", &contract::SearchOptions::default())
+            .await
+            .expect("search");
+        assert!(
+            r.results.iter().all(|x| x.expanded_from.is_none()),
+            "nothing may be expanded without `expand`"
+        );
+        assert!(
+            !r.progress.iter().any(|l| l.contains("expansion")),
+            "and the walk must not run: {:?}",
+            r.progress
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn an_expanded_chunk_says_which_result_it_came_from() {
+        // ! The provenance is the point. A sibling was admitted on its own
+        // evidence, not retrieved, and a caller weighing it as a hit is
+        // drawing a stronger conclusion than the evidence supports.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with("bangunan gedung", &siblings())
+            .await
+            .expect("search");
+        assert!(
+            r.progress.iter().any(|l| l.contains("expansion")),
+            "the walk must report what it read and admitted: {:?}",
+            r.progress
+        );
+        let ids: Vec<&str> = r.results.iter().map(|x| x.id.as_str()).collect();
+        for x in &r.results {
+            if let Some(seed) = &x.expanded_from {
+                assert_ne!(seed, &x.id, "a chunk cannot be its own seed");
+                assert!(
+                    ids.iter().filter(|i| **i == x.id).nth(1).is_none(),
+                    "an expanded chunk must not also appear as a retrieved one"
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn expansion_actually_admits_something_on_the_fixture() {
+        // ! Without this the three tests around it pass vacuously: every
+        // assertion about expanded chunks holds trivially when none exist.
+        let p = pipeline(open_cfg()).await;
+        let mut seen = 0;
+        for q in ["bangunan gedung", "jalan", "retribusi", "izin lingkungan"] {
+            let r = p.search_with(q, &siblings()).await.expect("search");
+            seen += r
+                .results
+                .iter()
+                .filter(|x| x.expanded_from.is_some())
+                .count();
+        }
+        assert!(seen > 0, "the walk admitted nothing across four queries");
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn expansion_only_ever_adds_candidates() {
+        // ! Expansion widens the pool; it must not cost a retrieved result its
+        // place by some accounting slip. Ranking may reorder freely, but every
+        // id the un-expanded search returned must still be somewhere in the
+        // expanded pool's answer or have been outranked by a real candidate.
+        let p = pipeline(open_cfg()).await;
+        let plain = p
+            .search_with("bangunan gedung", &narrow())
+            .await
+            .expect("search");
+        let grown = p
+            .search_with("bangunan gedung", &siblings())
+            .await
+            .expect("search");
+        assert!(
+            grown.results.len() >= plain.results.len(),
+            "expansion returned fewer results: {} -> {}",
+            plain.results.len(),
+            grown.results.len()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn an_expanded_chunk_belongs_to_a_regulation_that_ranked() {
+        // ! The walk is keyed on (type, number, year), all three. Number and
+        // year alone match 12 regulations on the live corpus, so a two-part key
+        // would pull in clauses of a different law and label them siblings.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with("bangunan gedung", &siblings())
+            .await
+            .expect("search");
+        let seeds: Vec<&str> = r
+            .results
+            .iter()
+            .filter(|x| x.expanded_from.is_none())
+            .map(|x| x.id.as_str())
+            .collect();
+        for x in &r.results {
+            if let Some(seed) = &x.expanded_from {
+                assert!(
+                    seeds.contains(&seed.as_str()) || r.results.iter().any(|o| &o.id == seed),
+                    "{} claims a seed that is not in the answer: {seed}",
+                    x.id
+                );
+            }
+        }
     }
 
     #[tokio::test]

@@ -94,9 +94,21 @@ pub struct FactorWeights {
     pub topical: f32,
 }
 
+/// Which neighbours may be pulled in beside what retrieval found.
+///
+/// ! An expansion admits chunks **no arm retrieved**. That is a different kind
+/// of result, so it is opt-in and marked on the wire (`SearchResult::
+/// expanded_from`), ✗ folded silently into the ranking.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Expansion {
+    /// Other chunks of the same regulation · `docs/SCORING.md` §7.
+    Siblings,
+}
+
 /// What the caller asked for. Every field optional; `None` means "use the
 /// measured default".
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SearchOptions {
     pub mode: Option<Mode>,
@@ -108,6 +120,8 @@ pub struct SearchOptions {
     pub candidate_pool: Option<usize>,
     pub profile: Option<Profile>,
     pub factor_weights: Option<FactorWeights>,
+    /// Empty by default · see [`Expansion`].
+    pub expand: Option<Vec<Expansion>>,
 }
 
 /// The server's ceilings · what a caller may narrow toward.
@@ -129,6 +143,7 @@ pub struct AppliedOptions {
     pub candidate_pool: usize,
     pub profile: Profile,
     pub factor_weights: FactorWeights,
+    pub expand: Vec<Expansion>,
     /// Set when the caller supplied raw `factor_weights` rather than a profile.
     pub experimental: bool,
     /// Every place the request was narrowed to a server ceiling, in the caller's
@@ -192,6 +207,10 @@ impl SearchOptions {
         let factor_weights = self.factor_weights.unwrap_or(match profile {
             Profile::Balanced => default_weights,
         });
+        // ! De-duplicated. Asking for the same expansion twice must cost what
+        // asking once costs; a repeated entry would run the walk again.
+        let mut expand = self.expand.clone().unwrap_or_default();
+        expand.dedup();
 
         AppliedOptions {
             mode: self.mode.unwrap_or_default(),
@@ -199,6 +218,7 @@ impl SearchOptions {
             candidate_pool,
             profile,
             factor_weights,
+            expand,
             experimental,
             clamped,
         }

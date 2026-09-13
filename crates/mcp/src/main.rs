@@ -157,6 +157,10 @@ impl Settings {
                 // results than asked for, which validate() rejects.
                 candidate_pool: parsed("CANDIDATE_POOL", "positive integer", d.candidate_pool)?,
                 snippet_chars: parsed("SNIPPET_CHARS", "positive integer", d.snippet_chars)?,
+                // Invariant 12: read from the environment, ✗ hardcoded. Both
+                // bound how much a single `expand` walk may read.
+                expand_seeds: parsed("EXPAND_SEEDS", "positive integer", d.expand_seeds)?,
+                expand_per_seed: parsed("EXPAND_PER_SEED", "positive integer", d.expand_per_seed)?,
                 // ! Arm weights are properties of the CORPUS, not of the engine,
                 // and a corpus is re-chunked far more often than the engine is
                 // rebuilt. Refitting must not require a release.

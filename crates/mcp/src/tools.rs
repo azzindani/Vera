@@ -72,6 +72,11 @@ pub fn definitions() -> Vec<Value> {
                         "enum": ["balanced"],
                         "description": "Fitted ranking intent. Pick intent, not numbers."
                     },
+                    "expand": {
+                        "type": "array",
+                        "items": { "type": "string", "enum": ["siblings"] },
+                        "description": "Pull in neighbours of the results. `siblings` admits other clauses of the same regulation when they are relevant on their own; they are marked `expanded_from` because no arm retrieved them. Costs one extra query per distinct regulation among the top results."
+                    },
                     "factor_weights": {
                         "type": "object",
                         "description": "EXPERIMENTAL. Raw factor weights, unfitted. Prefer `profile`. The effective weights are echoed in `applied`.",
@@ -295,6 +300,7 @@ mod tests {
             "mode",
             "top_k",
             "candidate_pool",
+            "expand",
             "profile",
             "factor_weights",
         ] {

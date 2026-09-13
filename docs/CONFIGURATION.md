@@ -81,6 +81,8 @@ safe.
 | `PER_CLUSTER_K` | `20` | candidates kept per cluster per arm |
 | `PER_ARM_K` | `20` | candidates each global arm contributes |
 | `TOP_K` | `10` | results returned |
+| `EXPAND_SEEDS` | `5` | Top-ranked candidates sibling expansion walks from, de-duplicated by regulation. Only consulted when a caller passes `expand: ["siblings"]`. Seeds, ✗ the whole pool: expanding 60 candidates at up to 1,313 chunks each is a different query. |
+| `EXPAND_PER_SEED` | `40` | Sibling rows read per seed, before the relevance gate admits any. p50 is 22 chunks per regulation and p95 is 210, so this takes the common case whole and bounds the tail. Measured cost of the widest possible walk — 10 seeds from the 10 largest regulations — is 11,750 rows in 24 ms. |
 | `CANDIDATE_POOL` | `60` | candidates carried into scoring. **Metadata is fetched for this many, not for `TOP_K`** — a candidate whose metadata was never loaded cannot be reordered. Must be ≥ `TOP_K`; a smaller pool would silently cap the reply. 60 is where the "regulation absent" bucket stops falling (`SCORING.md` §7). |
 | `SNIPPET_CHARS` | `280` | preview length per result |
 
