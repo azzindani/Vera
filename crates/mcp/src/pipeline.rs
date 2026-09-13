@@ -28,6 +28,18 @@ pub struct Config {
     pub per_cluster_k: i64,
     pub per_arm_k: i64,
     pub top_k: usize,
+    /// How many fused candidates carry through to scoring.
+    ///
+    /// ! Metadata is fetched for this many, ✗ for `top_k`. Ranking on
+    /// anything beyond text similarity needs the candidate's `regulation_type`,
+    /// `year`, `chapter` and `article`, and a candidate whose metadata was
+    /// never loaded cannot be reordered — so cutting to `top_k` before the
+    /// fetch would mean factors could only ever re-rank the results that
+    /// already won (`docs/SCORING.md` §8).
+    ///
+    /// Bounds the fetch too: the fused union is at most `3 × per_arm_k`, and
+    /// this caps it independently of that.
+    pub candidate_pool: usize,
     pub snippet_chars: usize,
     pub dense_weight: f32,
     pub sparse_weight: f32,
@@ -60,6 +72,7 @@ impl Default for Config {
             per_cluster_k: 20,
             per_arm_k: 20,
             top_k: 10,
+            candidate_pool: 60,
             snippet_chars: 280,
             // ! Measured, ✗ chosen — and re-measured after every re-chunk,
             // because these are properties of the CORPUS, not of the engine.
@@ -281,46 +294,12 @@ impl Pipeline {
 
         let exact_matches = self.exact_arm(query, &mut progress).await?;
 
-        // -- the domain gate (invariant 13) ------------------------------
-        //
-        // ! Gated on the evidence actually retrieved, ✗ on a judgement about
-        // the query. The corpus is asked whether it holds anything that
-        // accounts for the question, which is the only question that matters.
-        //
-        // ! Identifier queries are NEVER gated. Invariant 4 says a named
-        // regulation must not be lost, and it outranks this check: a bare
-        // "PP 26 tahun 2009" carries almost no semantic or lexical signal and
-        // would be rejected here on both halves.
         let top_cluster = probed.first().map_or(0.0, |(_, s)| *s);
-        if exact_matches.is_empty() {
-            let sample: Vec<String> = sparse
-                .iter()
-                .take(self.cfg.gate_sample)
-                .map(|s| s.id.clone())
-                .collect();
-            let bodies: Vec<String> = self
-                .ops
-                .chunks_by_id(&sample)
-                .await?
-                .into_iter()
-                .map(|r| r.body)
-                .collect();
-            let lexical = self.vectorizer.evidence(query, &bodies);
-            progress.push(format!(
-                "domain gate: lexical {lexical:.3} (floor {:.2}), centroid {top_cluster:.3} (floor {:.2})",
-                self.cfg.domain_lexical_floor, self.cfg.domain_floor
-            ));
-            if lexical < self.cfg.domain_lexical_floor || top_cluster < self.cfg.domain_floor {
-                let mut empty = SearchResponse::no_matching_domain(query, progress);
-                // One literal · a `\` + newline only folds cleanly with LF
-                // endings, and this message is read by a person.
-                empty.hint = Some(format!(
-                    "this corpus does not appear to cover the question · the best matching documents account for only {pct:.0}% of its distinctive terms · check list_domains for what this engine covers",
-                    pct = lexical * 100.0
-                ));
-                empty.token_estimate = empty.estimate_tokens();
-                return Ok(empty);
-            }
+        if let Some(refused) = self
+            .domain_gate(query, &sparse, &exact_matches, top_cluster, &mut progress)
+            .await?
+        {
+            return Ok(refused);
         }
 
         let dense_ids: Vec<String> = dense.iter().map(|s| s.id.clone()).collect();
@@ -347,18 +326,40 @@ impl Pipeline {
             ],
             DEFAULT_K,
         );
-        let top: Vec<_> = fused.into_iter().take(self.cfg.top_k).collect();
-        progress.push(format!("fused to {} results", top.len()));
+        // ! The pool, ✗ the answer. Cutting to `top_k` here is what made the
+        // metadata fetch below useless for ranking: a candidate at rank 15
+        // carrying the governing law could never be promoted, because nothing
+        // about it was ever loaded. The cut moves after scoring.
+        let pool: Vec<_> = fused.into_iter().take(self.cfg.candidate_pool).collect();
+        progress.push(format!("fused to {} candidates", pool.len()));
 
-        if top.is_empty() {
+        if pool.is_empty() {
             let mut empty = SearchResponse::no_matching_domain(query, progress);
             empty.exact_matches = exact_matches;
             return Ok(empty);
         }
 
-        let ids: Vec<String> = top.iter().map(|f| f.id.clone()).collect();
+        let ids: Vec<String> = pool.iter().map(|f| f.id.clone()).collect();
         let rows = self.ops.chunks_by_id(&ids).await?;
-        let results = self.to_results(&top, &rows, &dense, &sparse);
+
+        // Pair each candidate with its metadata, preserving fused order. A
+        // candidate whose row is missing is dropped rather than ranked blind.
+        let mut ranked: Vec<(&engine::Fused, &store::ChunkRow)> = pool
+            .iter()
+            .filter_map(|f| rows.iter().find(|r| r.id == f.id).map(|row| (f, row)))
+            .collect();
+
+        // >>> Factor scoring reorders `ranked` here (`docs/SCORING.md`). Every
+        // >>> candidate now has its metadata loaded, which is the whole point
+        // >>> of fetching the pool rather than the answer.
+
+        ranked.truncate(self.cfg.top_k);
+        progress.push(format!(
+            "returning {} of {} candidates",
+            ranked.len(),
+            pool.len()
+        ));
+        let results = self.to_results(&ranked, &dense, &sparse);
 
         Ok(self.assemble(
             query,
@@ -368,6 +369,59 @@ impl Pipeline {
             exact_matches,
             progress,
         ))
+    }
+
+    /// The domain gate · does this corpus hold anything that accounts for the
+    /// question? `Some(response)` is a refusal.
+    ///
+    /// ! Gated on the evidence actually retrieved, ✗ on a judgement about the
+    /// query. The corpus is asked whether it holds anything that accounts for
+    /// the question, which is the only question that matters.
+    ///
+    /// ! Identifier queries are NEVER gated. Invariant 4 says a named
+    /// regulation must not be lost, and it outranks this check: a bare
+    /// "PP 26 tahun 2009" carries almost no semantic or lexical signal and
+    /// would be rejected here on both halves.
+    async fn domain_gate(
+        &self,
+        query: &str,
+        sparse: &[store::Scored],
+        exact_matches: &[ExactMatch],
+        top_cluster: f32,
+        progress: &mut Vec<String>,
+    ) -> Result<Option<SearchResponse>, PipelineError> {
+        if !exact_matches.is_empty() {
+            return Ok(None);
+        }
+        let sample: Vec<String> = sparse
+            .iter()
+            .take(self.cfg.gate_sample)
+            .map(|s| s.id.clone())
+            .collect();
+        let bodies: Vec<String> = self
+            .ops
+            .chunks_by_id(&sample)
+            .await?
+            .into_iter()
+            .map(|r| r.body)
+            .collect();
+        let lexical = self.vectorizer.evidence(query, &bodies);
+        progress.push(format!(
+            "domain gate: lexical {lexical:.3} (floor {:.2}), centroid {top_cluster:.3} (floor {:.2})",
+            self.cfg.domain_lexical_floor, self.cfg.domain_floor
+        ));
+        if lexical >= self.cfg.domain_lexical_floor && top_cluster >= self.cfg.domain_floor {
+            return Ok(None);
+        }
+        let mut empty = SearchResponse::no_matching_domain(query, std::mem::take(progress));
+        // One literal · a `\` + newline only folds cleanly with LF endings,
+        // and this message is read by a person.
+        empty.hint = Some(format!(
+            "this corpus does not appear to cover the question · the best matching documents account for only {pct:.0}% of its distinctive terms · check list_domains for what this engine covers",
+            pct = lexical * 100.0
+        ));
+        empty.token_estimate = empty.estimate_tokens();
+        Ok(Some(empty))
     }
 
     /// Scan the probed clusters **one at a time**.
@@ -425,18 +479,22 @@ impl Pipeline {
         Ok(out)
     }
 
+    /// Render the surviving candidates as the wire contract.
+    ///
+    /// ! Takes candidates already paired with their metadata and already cut
+    /// to `top_k`. Building a `SearchResult` for the whole pool would compute
+    /// a snippet for every candidate and throw most of them away.
     fn to_results(
         &self,
-        top: &[engine::Fused],
-        rows: &[store::ChunkRow],
+        ranked: &[(&engine::Fused, &store::ChunkRow)],
         dense: &[store::Scored],
         sparse: &[store::Scored],
     ) -> Vec<SearchResult> {
         let score_in = |arm: &[store::Scored], id: &str| {
             arm.iter().find(|s| s.id == id).map_or(0.0, |s| s.score)
         };
-        top.iter()
-            .filter_map(|f| rows.iter().find(|r| r.id == f.id).map(|row| (f, row)))
+        ranked
+            .iter()
             .map(|(f, row)| SearchResult {
                 id: row.id.clone(),
                 snippet: snippet(&row.body, self.cfg.snippet_chars),

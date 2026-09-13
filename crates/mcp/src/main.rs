@@ -154,6 +154,10 @@ impl Settings {
                 per_cluster_k: parsed("PER_CLUSTER_K", "positive integer", d.per_cluster_k)?,
                 per_arm_k: parsed("PER_ARM_K", "positive integer", d.per_arm_k)?,
                 top_k: parsed("TOP_K", "positive integer", d.top_k)?,
+                // ! Metadata is fetched for this many candidates, not for
+                // TOP_K. Raising TOP_K above it silently returns fewer
+                // results than asked for, which validate() rejects.
+                candidate_pool: parsed("CANDIDATE_POOL", "positive integer", d.candidate_pool)?,
                 snippet_chars: parsed("SNIPPET_CHARS", "positive integer", d.snippet_chars)?,
                 // ! Arm weights are properties of the CORPUS, not of the engine,
                 // and a corpus is re-chunked far more often than the engine is
@@ -189,6 +193,7 @@ impl Settings {
             ("MAX_PROVENANCE_IDS", self.max_provenance_ids),
             ("CLUSTERS_PROBED", self.pipeline.clusters_probed),
             ("TOP_K", self.pipeline.top_k),
+            ("CANDIDATE_POOL", self.pipeline.candidate_pool),
             ("SNIPPET_CHARS", self.pipeline.snippet_chars),
             ("GATE_SAMPLE", self.pipeline.gate_sample),
         ];
@@ -200,6 +205,16 @@ impl Settings {
                     kind: "positive integer",
                 });
             }
+        }
+        // ! A pool smaller than the answer caps the reply below TOP_K without
+        // saying so: the engine would return `candidate_pool` results and
+        // report nothing unusual.
+        if self.pipeline.candidate_pool < self.pipeline.top_k {
+            return Err(ConfigError::Invalid {
+                key: "CANDIDATE_POOL",
+                value: self.pipeline.candidate_pool.to_string(),
+                kind: "pool at least as large as TOP_K",
+            });
         }
         // ! All three weights at zero fuses nothing and returns nothing, which
         // looks exactly like a corpus with no matches.
@@ -678,6 +693,41 @@ mod tests {
         s.max_concurrency = 0;
         let e = s.validate().unwrap_err();
         assert!(e.to_string().contains("MAX_CONCURRENCY"), "{e}");
+    }
+
+    #[test]
+    fn a_pool_smaller_than_the_answer_is_refused() {
+        // ! It parses, and it would serve: the engine would return
+        // CANDIDATE_POOL results while TOP_K said 10, and report nothing
+        // unusual about the short reply.
+        let mut s = settings();
+        s.pipeline.top_k = 10;
+        s.pipeline.candidate_pool = 5;
+        let e = s.validate().unwrap_err();
+        assert!(e.to_string().contains("CANDIDATE_POOL"), "{e}");
+    }
+
+    #[test]
+    fn a_pool_equal_to_the_answer_is_allowed() {
+        // Degenerate but coherent: no room for scoring to promote anything,
+        // which is a choice an operator may make.
+        let mut s = settings();
+        s.pipeline.top_k = 10;
+        s.pipeline.candidate_pool = 10;
+        assert!(s.validate().is_ok());
+    }
+
+    #[test]
+    fn the_default_pool_leaves_room_to_reorder() {
+        // ! The point of the pool. If these were equal by default, factor
+        // scoring could only ever re-rank the results that already won.
+        let d = Config::default();
+        assert!(
+            d.candidate_pool > d.top_k,
+            "pool {} must exceed top_k {}",
+            d.candidate_pool,
+            d.top_k
+        );
     }
 
     #[test]
