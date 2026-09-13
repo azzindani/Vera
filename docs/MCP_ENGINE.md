@@ -134,6 +134,11 @@ Two bounds, and both are necessary. The semaphore caps what executes; the wait c
 caps how long anything may queue. A bounded queue alone still lets a caller block
 indefinitely behind a full one, so the bound has to be on **time** as well as depth.
 
+! **A third bound is missing.** Nothing limits how long an admitted request may *run* —
+there is no `statement_timeout` on the pool and no deadline around the arms. A query
+that takes minutes holds its permit for minutes; four of those wedge the server.
+`FAILURE_MODES.md` §12, with the 48-second query that proves it is reachable.
+
 Measured on the target profile, `MAX_CONCURRENCY=4`:
 
 ```

@@ -114,8 +114,11 @@ impl CorpusMeta {
 ///
 /// ! `max_size` is the database half of the concurrency budget
 /// (`docs/MCP_ENGINE.md` §4). Postgres connections each carry `work_mem`, so an
-/// unbounded pool is an OOM vector on the 8 GB target just as surely as an
+/// unbounded pool is an OOM vector on the 4 GB target just as surely as an
 /// unbounded request queue is.
+///
+/// ! No `statement_timeout` is set here, so a slow query holds its permit for
+/// as long as it runs (`docs/FAILURE_MODES.md` §12).
 ///
 /// `NoTls` because the engine and the database share a host or a private
 /// network in every deployment described in `docs/HARDWARE.md`. Exposing Postgres

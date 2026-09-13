@@ -194,6 +194,38 @@ and nothing failed in between.
 
 ---
 
+## 12. A slow query holds its permit forever
+
+`QUEUE_WAIT_MS` bounds how long a request may **wait**. Nothing bounds how long one may
+**run**.
+
+```
+admission   QUEUE_WAIT_MS = 2000 ms      bounded
+embed       reqwest timeout = 30 s       bounded
+every SQL query                          UNBOUNDED
+```
+
+No `statement_timeout` is set by the engine, by `docker-compose.yml`, or by the VPS
+overlay. A query that takes minutes holds its semaphore permit for minutes. Four of
+those and the server is wedged: `permits_available: 0` indefinitely, and every
+subsequent caller is refused after two seconds.
+
+! **Reachable, ✗ hypothetical.** The text arm ORs every lexeme of its input; a query
+built from a whole chunk body matched 98.7% of the corpus and took **48 seconds**,
+measured. `ts_rank` cannot be served from an index, so all 351K matches are scored and
+sorted. A long enough user query walks toward the same plan.
+
+`OPERATIONS.md` §2 already tells an operator that `permits_available: 0` with nothing
+completing means wedged — so the state is diagnosable, and nothing prevents it.
+
+**Not stopped.** The fix is a `statement_timeout` on the pool's connections, which
+turns an unbounded hang into a bounded error the existing envelope already reports.
+That also makes the third bound in the concurrency story real: today "bounded queue,
+bounded wait, bounded memory" is missing bounded *duration*, and duration is what the
+tiered-effort design in `SCORING.md` §6 proposes to spend deliberately.
+
+---
+
 ## Review rule
 
 A change to routing, the candidate caps, the provider, the queue, or the cluster-update

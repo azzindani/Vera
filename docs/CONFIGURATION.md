@@ -122,6 +122,24 @@ quietly skips it. `halfvec` storage puts an exact round-trip near 0.999 rather t
 1.0 — that gap is fp16 rounding, not drift, and a genuinely different model scores
 far below the floor.
 
+### Vocabulary coverage — measured, and not a problem
+
+The BM25 vocabulary keeps the 20,000 **most frequent** terms, which sounds backwards:
+frequency selects for the least discriminative words and drops the rare ones that
+identify a document. Measured against the 44 in-domain eval queries it costs almost
+nothing — **9 of 422 query terms are out of vocabulary, 2.1%** — and the queries
+carrying OOV terms are not the queries that miss: four of the six worst rank in the
+top four.
+
+! Worth knowing anyway, because the pattern is systematic. Every OOV term is a
+conversational question-word — `bisakah`, `bolehkah`, "can it", "is it allowed" — which
+by construction never appears in regulation text. An unknown term is charged
+`unknown_idf`, the **maximum IDF in the vocabulary** (9.98 against a median of 8.75),
+so a naturally-phrased question puts the largest possible weight in the gate's
+denominator on words that could never be matched. On the current set that causes 0/44
+false refusals, so it is a sharp edge, ✗ a live bug. It would bite first on a corpus
+with a narrower vocabulary or a gate floor raised much above 0.40.
+
 Both halves of the domain gate are load-bearing, measured on the 50-case eval set
 with identifier queries exempt (invariant 4): together they reject 6 of 6
 out-of-domain queries and 0 of 39 real ones. Centroid similarity alone cannot reject
