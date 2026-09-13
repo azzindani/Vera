@@ -382,18 +382,7 @@ impl Pipeline {
         let sparse_ids: Vec<String> = sparse.iter().map(|s| s.id.clone()).collect();
         let text_ids: Vec<String> = text.iter().map(|s| s.id.clone()).collect();
 
-        // ! Mode selects arms by ZEROING weights, ✗ by skipping retrieval. RRF
-        // already treats a zero-weight arm as absent (`fusion.rs`), so one code
-        // path serves every mode and there is no second fusion to keep in step.
-        let (w_dense, w_sparse, w_text) = match applied.mode {
-            contract::Mode::Hybrid => (
-                self.cfg.dense_weight,
-                self.cfg.sparse_weight,
-                self.cfg.text_weight,
-            ),
-            contract::Mode::Keyword => (0.0, self.cfg.sparse_weight, self.cfg.text_weight),
-            contract::Mode::Semantic => (self.cfg.dense_weight.max(1.0), 0.0, 0.0),
-        };
+        let (w_dense, w_sparse, w_text) = self.arm_weights(applied.mode);
         let fused = reciprocal_rank_fusion(
             &[
                 Arm {
@@ -437,7 +426,15 @@ impl Pipeline {
             .filter_map(|f| rows.iter().find(|r| r.id == f.id).map(|row| (f, row)))
             .collect();
 
-        Self::apply_factors(&mut ranked, query, &applied, &mut progress);
+        // ! The floor is skipped for a named regulation, exactly as the
+        // domain gate is. See `apply_factors`.
+        Self::apply_factors(
+            &mut ranked,
+            query,
+            &applied,
+            exact_matches.is_empty(),
+            &mut progress,
+        );
         ranked.truncate(applied.top_k);
         progress.push(format!(
             "returning {} of {} candidates",
@@ -457,7 +454,34 @@ impl Pipeline {
         }))
     }
 
+    /// Arm weights for a requested mode.
+    ///
+    /// ! Mode selects arms by ZEROING weights, ✗ by skipping retrieval. RRF
+    /// already treats a zero-weight arm as absent (`fusion.rs`), so one code
+    /// path serves every mode and there is no second fusion to keep in step.
+    fn arm_weights(&self, mode: contract::Mode) -> (f32, f32, f32) {
+        match mode {
+            contract::Mode::Hybrid => (
+                self.cfg.dense_weight,
+                self.cfg.sparse_weight,
+                self.cfg.text_weight,
+            ),
+            contract::Mode::Keyword => (0.0, self.cfg.sparse_weight, self.cfg.text_weight),
+            contract::Mode::Semantic => (self.cfg.dense_weight.max(1.0), 0.0, 0.0),
+        }
+    }
+
     /// Reorder a pool on its metadata (`docs/SCORING.md` §2).
+    ///
+    /// ! `apply_floor` is false when the query named a regulation, and the
+    /// floor is then skipped entirely — the same exemption the domain gate
+    /// makes, for the same reason. "PP 26 tahun 2009" reduces to the content
+    /// terms `{tahun, 2009}`, which the clause bodies do not contain, so the
+    /// floor would drop the whole pool. Measured on the fixture: **19 of 21
+    /// candidates dropped, `results` collapsing from ten to two.** Invariant 4
+    /// survived — `exact_matches` is a separate channel — but a result list
+    /// that quietly empties for the queries users are most confident about is
+    /// its own defect. An identifier IS the relevance signal.
     ///
     /// ! The relevance gate of §3 is **structural here, ✗ a threshold**: the
     /// prior MULTIPLIES the fused score, so a candidate no arm ranked has
@@ -470,6 +494,7 @@ impl Pipeline {
         ranked: &mut Vec<(&engine::Fused, &store::ChunkRow)>,
         query: &str,
         applied: &contract::AppliedOptions,
+        apply_floor: bool,
         progress: &mut Vec<String>,
     ) {
         let before = ranked.first().map(|(f, _)| f.id.clone());
@@ -486,7 +511,11 @@ impl Pipeline {
             .enumerate()
             .map(|(i, (f, row))| (f.score, Self::facets_of(row), i))
             .collect();
-        let weights = weights_from_contract(&applied.factor_weights);
+        let mut weights = weights_from_contract(&applied.factor_weights);
+        if !apply_floor {
+            weights.relevance_floor = 0.0;
+            progress.push("relevance floor skipped · the query names a regulation".into());
+        }
         engine::rescore(&mut scored, &weights, &term_refs);
 
         let kept = scored.len();
@@ -516,11 +545,7 @@ impl Pipeline {
             article: row.article.as_deref(),
             chapter: row.chapter.as_deref(),
             year: row.year,
-            // ! `about` is in the schema and not selected by `chunks_by_id`,
-            // so the topical factor sees nothing — and it now carries weight
-            // 0.25, so this is a live gap rather than a harmless one. The one
-            // line to close it is in `SearchOps::chunks_by_id`.
-            about: None,
+            about: row.about.as_deref(),
             body: Some(&row.body),
             body_len: row.body.len(),
         }
@@ -881,6 +906,7 @@ mod tests {
             regulation_type: None,
             regulation_number: None,
             year: None,
+            about: None,
             truncated_at_source: false,
             cluster_id: None,
         }
@@ -1365,6 +1391,44 @@ mod live {
         assert!(
             !r.exact_matches.is_empty(),
             "identifier path returned nothing · progress: {:?}",
+            r.progress
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn an_identifier_query_still_returns_a_usable_result_list() {
+        // ! An identifier query carries almost no CONTENT terms -- "PP 26 tahun
+        // 2009" reduces to {tahun, 2009}, and the clause bodies contain
+        // neither. The relevance floor would therefore drop the entire pool and
+        // fall back to a single candidate, so the caller would get one result
+        // where a normal query gets ten.
+        //
+        // Invariant 4 is not violated -- `exact_matches` is a separate channel
+        // and carries the named regulation regardless -- but a `results` list
+        // that silently collapses for exactly the queries users are most
+        // confident about is its own defect.
+        let p = pipeline(Config::default()).await;
+        let r = p
+            .search_with(
+                "PERATURAN PEMERINTAH 26 tahun 2009",
+                &contract::SearchOptions::default(),
+            )
+            .await
+            .expect("search");
+        assert!(!r.exact_matches.is_empty(), "invariant 4");
+        assert!(
+            r.progress
+                .iter()
+                .any(|l| l.contains("relevance floor skipped")),
+            "the exemption must be stated, not silent: {:?}",
+            r.progress
+        );
+        // Before the exemption this returned 2 of a possible 10.
+        assert!(
+            r.results.len() >= 5,
+            "the floor collapsed the result list: {} results · {:?}",
+            r.results.len(),
             r.progress
         );
     }

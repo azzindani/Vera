@@ -191,10 +191,13 @@ pub fn topical(f: &Facets<'_>, query_terms: &[&str]) -> f32 {
     if query_terms.is_empty() {
         return 0.0;
     }
-    let about = f.about.unwrap_or_default().to_lowercase();
+    // ! Whole terms, ✗ substrings. `about.contains("pajak")` is also true of
+    // "PERPAJAKAN", and this weight was fitted against a token-set intersection
+    // that says false. A looser rule inflates a score the fit never measured.
+    let about = content_terms(f.about.unwrap_or_default());
     let matched = query_terms
         .iter()
-        .filter(|t| about.contains(&t.to_lowercase()))
+        .filter(|t| about.iter().any(|a| a == *t))
         .count();
     #[allow(clippy::cast_precision_loss)]
     {
@@ -776,5 +779,33 @@ mod tests {
         assert!((topical(&f, &["energi"]) - 1.0).abs() < f32::EPSILON);
         assert!((topical(&f, &["energi", "pajak"]) - 0.5).abs() < f32::EPSILON);
         assert!((topical(&f, &[]) - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn topical_matches_whole_terms_not_substrings() {
+        // ! `about.contains("pajak")` is true of "PERPAJAKAN", and the weight
+        // was fitted against a token-set intersection that says false. A looser
+        // rule here inflates a score nothing measured.
+        let f = Facets {
+            about: Some("KETENTUAN UMUM PERPAJAKAN"),
+            ..Facets::default()
+        };
+        assert!(
+            (topical(&f, &["pajak"]) - 0.0).abs() < f32::EPSILON,
+            "substring match leaked in: {}",
+            topical(&f, &["pajak"])
+        );
+        assert!((topical(&f, &["perpajakan"]) - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn topical_ignores_a_subject_line_the_corpus_never_recorded() {
+        // Weight 0.25 and a NULL column would otherwise be indistinguishable
+        // from weight 0.0 — which is exactly the bug that hid here for a while.
+        let f = Facets {
+            about: None,
+            ..Facets::default()
+        };
+        assert!((topical(&f, &["energi"]) - 0.0).abs() < f32::EPSILON);
     }
 }

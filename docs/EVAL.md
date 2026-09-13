@@ -170,6 +170,14 @@ Both looked obviously good on paper. That is what the harness is for.
 - Periodically in production: a routing-recall drop is the trigger for re-clustering —
   drift detected by measurement, not guessed by calendar.
 
+! **The harness renumbers surviving candidates after the floor; the engine does
+not.** `score_pool` recomputes `1/(k + rank)` over the filtered list, so a
+candidate that was 30th and is now 2nd scores as 2nd. The engine keeps the fused
+score RRF produced. Measured across 6,250 configurations: in-sample best is
+identical (65.0%), leave-one-out differs by one case (57.5% vs 55.0%), and at
+the shipped configuration **the two agree on 40 of 40 cases**. Recorded rather
+than fixed — changing either side would invalidate the fit for no measured gain.
+
 ! **38 of the 50 labels have not been reviewed by a domain expert.** Whether a clause
 genuinely *answers* a question is a lawyer's judgement, not a retrieval engineer's, and
 a wrong label is worse than no label: it silently moves every dial this document gates.

@@ -140,6 +140,21 @@ floor it earns nothing and ships at 0.0. A factor that is silently doing another
 factor's job is the failure mode of fitting weights separately, which is why
 floor and weights are now fitted **jointly**.
 
+### A named regulation is exempt
+
+! The floor is **skipped entirely when the query names a regulation** — the same
+exemption the domain gate makes, for the same reason.
+
+`"PP 26 tahun 2009"` reduces to the content terms `{tahun, 2009}`, and the
+clause bodies contain neither. Measured on the fixture corpus, the floor
+**dropped 19 of 21 candidates and the result list collapsed from ten to two**.
+Invariant 4 survived — `exact_matches` is a separate channel and still carried
+the regulation — but a result list that quietly empties for the queries users
+are most confident about is its own defect.
+
+An identifier *is* the relevance signal. The exemption is stated in `progress`,
+never silent.
+
 ### Two rules the floor must obey
 
 - **It never empties the answer.** "This corpus cannot answer the question" is
@@ -389,10 +404,13 @@ everything else is additive.
 
 ### Needs adding
 
-- `enacting_body` and `about` are in the schema and **not selected** by
-  `chunks_by_id`. One line each. Until then the `topical` factor sees `None`
-  for every candidate — harmless while it carries weight 0.0, and the first
-  thing to fix before re-fitting it.
+- ~~`about` is not selected by `chunks_by_id`~~ — **fixed.** It was a live bug,
+  not a latent one: `topical` ships at weight 0.25 and was fitted against real
+  subject lines, while the engine evaluated it against `NULL` for every
+  candidate. A weight that cannot act is indistinguishable from a weight of
+  zero, and only a test that asserts on the *input* catches it.
+- `enacting_body` is still not selected, and should stay that way — the column
+  is unusable (§2).
 - `ComponentScores` publishes `dense` and `bm25` only — **the text arm, the
   best performer at 40.9%, is invisible in the output.** Factors will need their
   own scores published alongside, so this changes anyway.

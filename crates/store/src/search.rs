@@ -330,8 +330,12 @@ impl SearchOps {
         let c = self.client().await?;
         let rows = c
             .query(
+                // ! `about` is selected because the topical factor needs it
+                // (`docs/SCORING.md` §2) and ships at weight 0.25. Omitting it
+                // made that weight silently inert: the factor was fitted
+                // against real subject lines and evaluated against NULL.
                 "SELECT id, body, source_title, source_url, chapter, article,
-                        regulation_type, regulation_number, year,
+                        regulation_type, regulation_number, year, about,
                         truncated_at_source, cluster_id
                  FROM chunks WHERE id = ANY($1)",
                 &[&ids],
@@ -356,6 +360,8 @@ pub struct ChunkRow {
     pub regulation_type: Option<String>,
     pub regulation_number: Option<String>,
     pub year: Option<i32>,
+    /// What the instrument is about · the topical factor's input.
+    pub about: Option<String>,
     pub truncated_at_source: bool,
     pub cluster_id: Option<i32>,
 }
@@ -372,8 +378,9 @@ impl ChunkRow {
             regulation_type: r.get(6),
             regulation_number: r.get(7),
             year: r.get(8),
-            truncated_at_source: r.get(9),
-            cluster_id: r.get(10),
+            about: r.get(9),
+            truncated_at_source: r.get(10),
+            cluster_id: r.get(11),
         }
     }
 
@@ -443,6 +450,7 @@ mod tests {
             regulation_type: Some("UNDANG-UNDANG".into()),
             regulation_number: Some("28".into()),
             year: Some(2007),
+            about: Some("PAJAK DAERAH DAN RETRIBUSI DAERAH".into()),
             truncated_at_source: false,
             cluster_id: Some(3),
         };
