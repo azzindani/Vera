@@ -10,11 +10,13 @@
 //! `docs/OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
 
 pub mod contract;
+pub mod options;
 
 pub use contract::{
     Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
     Source, SummaryPayload, citation_block,
 };
+pub use options::{AppliedOptions, Ceilings, FactorWeights, Mode, Profile, SearchOptions};
 
 /// A stored chunk: body plus the provenance captured at ingest.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

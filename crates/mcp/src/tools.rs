@@ -46,10 +46,50 @@ pub fn definitions() -> Vec<Value> {
                     "query": {
                         "type": "string",
                         "description": "Natural-language question or regulation reference."
+                    },
+                    // ! Every option below NARROWS. A value above the server's
+                    // ceiling is clamped and the clamp is reported in
+                    // `applied.clamped` (`docs/TOOL_SURFACE.md` §2).
+                    "mode": {
+                        "type": "string",
+                        "enum": ["hybrid", "keyword", "semantic"],
+                        "description": "Which arms run. hybrid (default) fuses all three; keyword is sparse+text; semantic is the dense arm alone and scores 0.0% on this corpus."
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Results returned. The server's ceiling still applies."
+                    },
+                    "candidate_pool": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Candidates ranked before the cut. Wider finds more and costs more; the server's ceiling still applies."
+                    },
+                    "profile": {
+                        "type": "string",
+                        // ! Only fitted profiles are listed. An unfitted profile
+                        // is a raw weight vector with a friendly name.
+                        "enum": ["balanced"],
+                        "description": "Fitted ranking intent. Pick intent, not numbers."
+                    },
+                    "factor_weights": {
+                        "type": "object",
+                        "description": "EXPERIMENTAL. Raw factor weights, unfitted. Prefer `profile`. The effective weights are echoed in `applied`.",
+                        "properties": {
+                            "authority": { "type": "number" },
+                            "structural": { "type": "number" },
+                            "temporal": { "type": "number" },
+                            "completeness": { "type": "number" },
+                            "topical": { "type": "number" }
+                        },
+                        "required": [
+                            "authority", "structural", "temporal", "completeness", "topical"
+                        ],
+                        "additionalProperties": false
                     }
                 },
                 "required": ["query"],
-                // ! No `domain`. See the module note.
+                // ! Still no `domain`. See the module note.
                 "additionalProperties": false
             },
             "annotations": {
@@ -163,10 +203,12 @@ mod tests {
     }
 
     #[test]
-    fn search_knowledge_accepts_a_query_and_nothing_else() {
-        // ! Invariant 13, as a schema assertion. If `domain` ever appears here,
-        // the agent can assert a knowledge base and the engine's own detection
-        // stops being authoritative.
+    fn search_knowledge_never_accepts_a_domain() {
+        // ! Invariant 13, as a schema assertion. The tool now takes several
+        // options (`docs/TOOL_SURFACE.md`), and this is the one that must never
+        // join them: an agent that can assert a knowledge base makes the
+        // engine's own detection non-authoritative, and nothing in the output
+        // would reveal it happened.
         let s = &tool("search_knowledge")["inputSchema"];
         assert_eq!(s["additionalProperties"], json!(false));
         assert!(
@@ -175,6 +217,51 @@ mod tests {
         );
         assert_eq!(s["required"], json!(["query"]));
         assert!(s["properties"].get("query").is_some());
+    }
+
+    #[test]
+    fn every_search_option_is_optional() {
+        // A caller passing only `query` must get the measured defaults, so
+        // nothing but `query` may ever become required.
+        let s = &tool("search_knowledge")["inputSchema"];
+        assert_eq!(s["required"], json!(["query"]));
+        for opt in [
+            "mode",
+            "top_k",
+            "candidate_pool",
+            "profile",
+            "factor_weights",
+        ] {
+            assert!(s["properties"].get(opt).is_some(), "{opt} missing");
+        }
+    }
+
+    #[test]
+    fn only_fitted_profiles_are_offered() {
+        // ! An unfitted profile is a raw weight vector with a friendly name.
+        // Listing one invites an agent to select an intent nothing measured.
+        let s = &tool("search_knowledge")["inputSchema"];
+        assert_eq!(s["properties"]["profile"]["enum"], json!(["balanced"]));
+    }
+
+    #[test]
+    fn the_non_contributing_mode_is_labelled_in_its_own_description() {
+        // Dense scores 0.0% on this corpus. An agent reading only the schema
+        // must still learn that before choosing it.
+        let s = &tool("search_knowledge")["inputSchema"];
+        let d = s["properties"]["mode"]["description"]
+            .as_str()
+            .unwrap_or("");
+        assert!(d.contains("0.0%"), "semantic must declare itself: {d}");
+    }
+
+    #[test]
+    fn raw_weights_are_marked_experimental_in_the_schema() {
+        let s = &tool("search_knowledge")["inputSchema"];
+        let d = s["properties"]["factor_weights"]["description"]
+            .as_str()
+            .unwrap_or("");
+        assert!(d.contains("EXPERIMENTAL"), "{d}");
     }
 
     #[test]

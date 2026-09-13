@@ -145,6 +145,46 @@ fn log_canary(chunk_id: &str, got: f32) {
     eprintln!("[vera] canary ok · chunk {chunk_id} round-trip cosine {got:.5}");
 }
 
+/// Everything `assemble` needs to build the response.
+///
+/// A struct rather than eight positional arguments: at that width the compiler
+/// stops catching a transposed pair, and two `usize` fields next to each other
+/// is exactly the shape that silently swaps.
+struct Assembly<'a> {
+    query: &'a str,
+    probed: usize,
+    top_cluster: f32,
+    results: Vec<SearchResult>,
+    exact_matches: Vec<ExactMatch>,
+    progress: Vec<String>,
+    applied: contract::AppliedOptions,
+}
+
+/// `engine::Weights` -> the wire shape. Two types on purpose: `engine` holds
+/// zero sibling dependencies, so it cannot name a `contract` type, and the wire
+/// format is a compatibility surface that must be free to diverge from the
+/// internal one.
+fn weights_to_contract(w: &engine::Weights) -> contract::FactorWeights {
+    contract::FactorWeights {
+        authority: w.authority,
+        structural: w.structural,
+        temporal: w.temporal,
+        completeness: w.completeness,
+        topical: w.topical,
+    }
+}
+
+/// The inverse. Caller-supplied weights arrive here.
+fn weights_from_contract(w: &contract::FactorWeights) -> engine::Weights {
+    engine::Weights {
+        authority: w.authority,
+        structural: w.structural,
+        temporal: w.temporal,
+        completeness: w.completeness,
+        topical: w.topical,
+    }
+}
+
 impl Pipeline {
     /// Wire the pipeline and verify the corpus agrees with the engine.
     ///
@@ -268,12 +308,38 @@ impl Pipeline {
         })
     }
 
-    /// The workhorse.
+    /// The server's ceilings · what a caller may narrow toward, never past.
+    fn ceilings(&self) -> contract::Ceilings {
+        contract::Ceilings {
+            top_k: self.cfg.top_k,
+            candidate_pool: self.cfg.candidate_pool,
+        }
+    }
+
+    /// The workhorse · search under caller-supplied options
+    /// (`docs/TOOL_SURFACE.md`).
+    ///
+    /// ! Options **narrow**, never widen. `resolve` clamps every numeric field
+    /// to the configured ceiling and records each clamp, so a caller that asks
+    /// for 500 results and receives 10 can see why without reading the
+    /// server's configuration. `SearchOptions::default()` is exactly the
+    /// behaviour `EVAL.md` scored.
     ///
     /// # Errors
     /// Embedding or database failure.
-    pub async fn search(&self, query: &str) -> Result<SearchResponse, PipelineError> {
+    pub async fn search_with(
+        &self,
+        query: &str,
+        opts: &contract::SearchOptions,
+    ) -> Result<SearchResponse, PipelineError> {
+        let applied = opts.resolve(
+            self.ceilings(),
+            weights_to_contract(&self.cfg.factor_weights),
+        );
         let mut progress = Vec::new();
+        for line in &applied.clamped {
+            progress.push(format!("clamped: {line}"));
+        }
 
         let qvec = self.embed_query(query).await?;
         progress.push(format!("embedded query ({} dims)", qvec.len()));
@@ -314,22 +380,34 @@ impl Pipeline {
         let sparse_ids: Vec<String> = sparse.iter().map(|s| s.id.clone()).collect();
         let text_ids: Vec<String> = text.iter().map(|s| s.id.clone()).collect();
 
+        // ! Mode selects arms by ZEROING weights, ✗ by skipping retrieval. RRF
+        // already treats a zero-weight arm as absent (`fusion.rs`), so one code
+        // path serves every mode and there is no second fusion to keep in step.
+        let (w_dense, w_sparse, w_text) = match applied.mode {
+            contract::Mode::Hybrid => (
+                self.cfg.dense_weight,
+                self.cfg.sparse_weight,
+                self.cfg.text_weight,
+            ),
+            contract::Mode::Keyword => (0.0, self.cfg.sparse_weight, self.cfg.text_weight),
+            contract::Mode::Semantic => (self.cfg.dense_weight.max(1.0), 0.0, 0.0),
+        };
         let fused = reciprocal_rank_fusion(
             &[
                 Arm {
                     name: "dense",
                     ids: &dense_ids,
-                    weight: self.cfg.dense_weight,
+                    weight: w_dense,
                 },
                 Arm {
                     name: "sparse",
                     ids: &sparse_ids,
-                    weight: self.cfg.sparse_weight,
+                    weight: w_sparse,
                 },
                 Arm {
                     name: "text",
                     ids: &text_ids,
-                    weight: self.cfg.text_weight,
+                    weight: w_text,
                 },
             ],
             DEFAULT_K,
@@ -338,7 +416,7 @@ impl Pipeline {
         // metadata fetch below useless for ranking: a candidate at rank 15
         // carrying the governing law could never be promoted, because nothing
         // about it was ever loaded. The cut moves after scoring.
-        let pool: Vec<_> = fused.into_iter().take(self.cfg.candidate_pool).collect();
+        let pool: Vec<_> = fused.into_iter().take(applied.candidate_pool).collect();
         progress.push(format!("fused to {} candidates", pool.len()));
 
         if pool.is_empty() {
@@ -357,32 +435,8 @@ impl Pipeline {
             .filter_map(|f| rows.iter().find(|r| r.id == f.id).map(|row| (f, row)))
             .collect();
 
-        // Factor scoring (`docs/SCORING.md` §2). Every candidate has its
-        // metadata loaded by now, which is the whole point of fetching the pool
-        // rather than the answer.
-        //
-        // ! The relevance gate of §3 is structural here, ✗ a threshold: the
-        // prior MULTIPLIES the fused score, so a candidate no arm ranked has
-        // nothing for its pedigree to multiply. Pool membership is the floor.
-        let before = ranked.first().map(|(f, _)| f.id.clone());
-        let terms = bm25::tokenize(query);
-        let term_refs: Vec<&str> = terms.iter().map(String::as_str).collect();
-        let mut scored: Vec<(f32, engine::Facets<'_>, usize)> = ranked
-            .iter()
-            .enumerate()
-            .map(|(i, (f, row))| (f.score, Self::facets_of(row), i))
-            .collect();
-        engine::rescore(&mut scored, &self.cfg.factor_weights, &term_refs);
-        let reordered: Vec<_> = scored.iter().map(|(_, _, i)| ranked[*i]).collect();
-        ranked = reordered;
-        if let Some(was) = before {
-            let now = &ranked[0].0.id;
-            if *now != was {
-                progress.push(format!("factors promoted {now} over {was}"));
-            }
-        }
-
-        ranked.truncate(self.cfg.top_k);
+        Self::apply_factors(&mut ranked, query, &applied, &mut progress);
+        ranked.truncate(applied.top_k);
         progress.push(format!(
             "returning {} of {} candidates",
             ranked.len(),
@@ -390,14 +444,51 @@ impl Pipeline {
         ));
         let results = self.to_results(&ranked, &dense, &sparse);
 
-        Ok(self.assemble(
+        Ok(self.assemble(Assembly {
             query,
-            probed.len(),
+            probed: probed.len(),
             top_cluster,
             results,
             exact_matches,
             progress,
-        ))
+            applied,
+        }))
+    }
+
+    /// Reorder a pool on its metadata (`docs/SCORING.md` §2).
+    ///
+    /// ! The relevance gate of §3 is **structural here, ✗ a threshold**: the
+    /// prior MULTIPLIES the fused score, so a candidate no arm ranked has
+    /// nothing for its pedigree to multiply. Pool membership is the floor, and
+    /// every member earned it from an arm.
+    ///
+    /// A promotion is recorded in `progress` — a reordering the caller cannot
+    /// see is one they cannot check.
+    fn apply_factors(
+        ranked: &mut Vec<(&engine::Fused, &store::ChunkRow)>,
+        query: &str,
+        applied: &contract::AppliedOptions,
+        progress: &mut Vec<String>,
+    ) {
+        let before = ranked.first().map(|(f, _)| f.id.clone());
+        let terms = bm25::tokenize(query);
+        let term_refs: Vec<&str> = terms.iter().map(String::as_str).collect();
+
+        let mut scored: Vec<(f32, engine::Facets<'_>, usize)> = ranked
+            .iter()
+            .enumerate()
+            .map(|(i, (f, row))| (f.score, Self::facets_of(row), i))
+            .collect();
+        let weights = weights_from_contract(&applied.factor_weights);
+        engine::rescore(&mut scored, &weights, &term_refs);
+
+        *ranked = scored.iter().map(|(_, _, i)| ranked[*i]).collect();
+
+        if let (Some(was), Some((now, _))) = (before, ranked.first())
+            && now.id != was
+        {
+            progress.push(format!("factors promoted {} over {was}", now.id));
+        }
     }
 
     /// Map a stored row onto the scoring facets.
@@ -565,15 +656,16 @@ impl Pipeline {
             .collect()
     }
 
-    fn assemble(
-        &self,
-        query: &str,
-        probed: usize,
-        top_cluster: f32,
-        results: Vec<SearchResult>,
-        exact_matches: Vec<ExactMatch>,
-        progress: Vec<String>,
-    ) -> SearchResponse {
+    fn assemble(&self, parts: Assembly<'_>) -> SearchResponse {
+        let Assembly {
+            query,
+            probed,
+            top_cluster,
+            results,
+            exact_matches,
+            progress,
+            applied,
+        } = parts;
         let citations: Vec<Citation> = citation_block(&results);
         let incomplete = results.iter().filter(|r| r.source.url.is_none()).count();
         let summary_payload = SummaryPayload {
@@ -594,6 +686,21 @@ impl Pipeline {
         };
         let weak = top_cluster < self.cfg.domain_floor;
         let mut notes: Vec<String> = Vec::new();
+        // ! The caller asked for an arm this corpus measures at 0.0%. Serve it
+        // and say so -- silently returning weak results from a mode we know is
+        // empty would be the dishonest option (`TOOL_SURFACE.md` §3).
+        if applied.mode.is_measured_empty() {
+            notes.push(
+                "mode=semantic uses the dense arm alone, which scores 0.0% Recall@5 on                  this corpus and ships at weight 0.0 · use hybrid or keyword for results                  that reflect what was measured"
+                    .into(),
+            );
+        }
+        if applied.experimental {
+            notes.push(
+                "experimental: factor_weights were supplied by the caller rather than                  fitted · the effective weights are in `applied` so this ranking can be                  reproduced"
+                    .into(),
+            );
+        }
         if weak {
             notes.push(format!(
                 "weak domain match ({top_cluster:.3}) · the corpus may not cover \
@@ -640,6 +747,7 @@ impl Pipeline {
             progress,
             token_estimate: 0,
             truncated: false,
+            applied: Some(applied),
             hint,
         };
         resp.token_estimate = resp.estimate_tokens();

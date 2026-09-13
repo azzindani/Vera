@@ -37,10 +37,22 @@ this engine covers.
 
 ### `search_knowledge`
 ```
-search_knowledge(query: str) -> dict
+search_knowledge(
+    query: str,
+    mode: "hybrid" | "keyword" | "semantic" = "hybrid",
+    top_k: int = <TOP_K>,
+    candidate_pool: int = <CANDIDATE_POOL>,
+    profile: "balanced" = "balanced",
+    factor_weights: dict = <fitted>,   # experimental
+) -> dict
 ```
-**Takes a query and nothing else.** The schema sets `additionalProperties: false` and
-there is no `domain` parameter: an agent that could assert a domain could assert one
+Arguments and the reasoning behind each are in `TOOL_SURFACE.md`. Three rules:
+every option is optional and defaults to the measured value; every option
+**narrows** a server limit and never widens one; and whatever was used comes back
+in `applied`, so a ranking can be reproduced.
+
+**There is no `domain` parameter, and there never will be.** The schema sets
+`additionalProperties: false`: an agent that could assert a domain could assert one
 that does not exist, or the wrong one, and nothing in the output would reveal it
 happened. Domain is detected inside the engine.
 

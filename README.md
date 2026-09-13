@@ -88,6 +88,7 @@ dev_tools/       offline, operator-side: embedding, clustering, eval, fixtures
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | the three routing layers, the three arms, why there is no ANN index |
 | [docs/MCP_ENGINE.md](docs/MCP_ENGINE.md) | tool surface, request path, concurrency, the OOM guarantee |
+| [docs/TOOL_SURFACE.md](docs/TOOL_SURFACE.md) | what an agent may steer per request, and what the engine keeps |
 | [docs/SCORING.md](docs/SCORING.md) | the multi-factor model, viewpoints, consensus, tiered effort, pool expansion |
 | [docs/OUTPUT_CONTRACT.md](docs/OUTPUT_CONTRACT.md) | response schema, provenance, confidence |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | every environment variable and what it costs |

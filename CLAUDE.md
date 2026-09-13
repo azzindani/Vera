@@ -101,7 +101,7 @@ vera/
 ├── docker/                     ← Dockerfile.engine, Dockerfile.db (pgvector + RUM)
 │
 ├── docs/                       ← how the running system works
-│   ├── ARCHITECTURE.md  MCP_ENGINE.md  OUTPUT_CONTRACT.md
+│   ├── ARCHITECTURE.md  MCP_ENGINE.md  OUTPUT_CONTRACT.md  TOOL_SURFACE.md
 │   ├── CONFIGURATION.md  OPERATIONS.md  HARDWARE.md  SCORING.md
 │   ├── EMBEDDING.md  EVAL.md  FAILURE_MODES.md  STANDARDS_COMPLIANCE.md
 │
@@ -150,7 +150,7 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
 
 ## 6. Tool surface (agent-facing, read-only, ≤ 8 tools)
 
-Schemas in `docs/MCP_ENGINE.md`. The read-only analog of the upstream
+Schemas in `docs/MCP_ENGINE.md`; per-request arguments in `docs/TOOL_SURFACE.md`. The read-only analog of the upstream
 LOCATE→INSPECT→PATCH→VERIFY loop is **ROUTE → SEARCH → READ → VERIFY**.
 
 | Tool | Role | Returns |

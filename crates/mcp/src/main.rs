@@ -532,6 +532,17 @@ fn list_domains(pipe: &Pipeline) -> Value {
     })
 }
 
+/// Pull the option fields out of the tool's argument object.
+///
+/// ! `query` is removed first. It belongs to the tool, ✗ to the options, and
+/// `SearchOptions` denies unknown fields so leaving it in would reject every
+/// well-formed call.
+fn parse_options(args: &Value) -> Result<contract::SearchOptions, serde_json::Error> {
+    let mut obj = args.as_object().cloned().unwrap_or_default();
+    obj.remove("query");
+    serde_json::from_value(Value::Object(obj))
+}
+
 async fn search_knowledge(pipe: &Pipeline, args: &Value) -> Value {
     let Some(q) = args.get("query").and_then(Value::as_str) else {
         return tools::error(
@@ -547,7 +558,21 @@ async fn search_knowledge(pipe: &Pipeline, args: &Value) -> Value {
             "describe what you are looking for, or name a regulation",
         );
     }
-    match pipe.search(q).await {
+    // ! Options are parsed from the SAME object as `query`, and an unknown key
+    // is an error rather than a silently ignored default (`deny_unknown_fields`
+    // on SearchOptions). An agent that misspells a knob and is served the
+    // default has been given a wrong answer wearing a correct one's clothes.
+    let opts = match parse_options(args) {
+        Ok(o) => o,
+        Err(e) => {
+            return tools::error(
+                "search_knowledge",
+                &format!("invalid options · {e}"),
+                "see the inputSchema · every option is optional and narrows the server's own limit",
+            );
+        }
+    };
+    match pipe.search_with(q, &opts).await {
         Ok(r) => serde_json::to_value(r).unwrap_or_else(|e| {
             tools::error("search_knowledge", &e.to_string(), "retry the query")
         }),

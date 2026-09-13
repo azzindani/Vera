@@ -118,6 +118,13 @@ pub struct SearchResponse {
     pub progress: Vec<String>,
     pub token_estimate: usize,
     pub truncated: bool,
+    /// What the engine actually used · `docs/TOOL_SURFACE.md` §2.
+    ///
+    /// ! Present even when the caller passed no options. "The defaults were
+    /// used" is itself the reproducibility record, and a field that appears
+    /// only sometimes is one a client learns to ignore.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub applied: Option<crate::options::AppliedOptions>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
 }
@@ -144,6 +151,9 @@ impl SearchResponse {
             progress,
             token_estimate: 0,
             truncated: false,
+            // A refusal has no ranking to reproduce; the caller's options are
+            // attached by the pipeline when there is one.
+            applied: None,
             hint: Some(
                 "query matched no known knowledge base · widen the query, or check \
                  list_domains for what this engine covers"
