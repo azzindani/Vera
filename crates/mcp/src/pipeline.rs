@@ -61,22 +61,33 @@ impl Default for Config {
             per_arm_k: 20,
             top_k: 10,
             snippet_chars: 280,
-            // ! Measured, ✗ chosen. On the labeled query set in `eval/`, with
-            // this corpus and this model:
+            // ! Measured, ✗ chosen — and re-measured after every re-chunk,
+            // because these are properties of the CORPUS, not of the engine.
             //
-            //   sparse      40.0% Recall@5   MRR 0.301
-            //   RRF(all)    30.0%            MRR 0.188
-            //   dense        0.0%            MRR 0.000
-            //   text         0.0%            MRR 0.007
+            // Through the real server on spike-02, 44 retrievable cases:
             //
-            // Equal weights let two arms that find nothing outvote the one that
-            // works, demoting correct answers (q003 rank 4 → 11, q007 11 → 32).
-            // So they are off until they earn their place: re-embedding with
-            // contextual headers is the open candidate for dense
-            // (`EVAL.md` §4). Override with DENSE_WEIGHT / TEXT_WEIGHT.
+            //   dense=0 sparse=1 text=0    38.6% Recall@5   MRR 0.344
+            //   dense=0 sparse=1 text=1    50.0%            MRR 0.360
+            //   dense=1 sparse=1 text=1    50.0%            MRR 0.360
+            //
+            // ! The previous values (text 0.0) were fitted on spike-01, where
+            // the text arm scored 0.0% because the corpus was unchunked and a
+            // whole 32,000-character article was one tsvector. Chunking took
+            // that arm to 40.9% on its own — the best of the three — and the
+            // weights were never refitted, so the engine shipped at 38.6%
+            // while the eval reported 50.0%. Stale weights are silent: every
+            // arm still runs, the results still look reasonable.
+            //
+            // Recall@5 is flat for any text weight in 0.3..=1.0, and MRR wanders
+            // 0.360..=0.383 with no trend, so that spread is noise on n=44.
+            // Equal weight is the RRF paper's default and claims no precision
+            // the measurement cannot support.
+            //
+            // dense stays 0.0: it adds nothing at any weight (row 3 above), and
+            // re-embedding with contextual headers is the open candidate.
             dense_weight: 0.0,
             sparse_weight: 1.0,
-            text_weight: 0.0,
+            text_weight: 1.0,
             canary_min_cosine: 0.98,
             // ! Measured on the 50-case set in eval/, not chosen. With
             // identifier queries exempt (invariant 4), this pair rejects 6 of

@@ -58,6 +58,13 @@ fn config_from_env(clusters_probed: usize) -> Config {
         canary_min_cosine: f32_from("CANARY_MIN_COSINE", d.canary_min_cosine),
         domain_floor: f32_from("DOMAIN_FLOOR", d.domain_floor),
         domain_lexical_floor: f32_from("DOMAIN_LEXICAL_FLOOR", d.domain_lexical_floor),
+        // ! These were documented as overridable for three releases while
+        // `..d` quietly discarded them, which is invariant 12 violated in the
+        // one place it is most expensive: arm weights are corpus-specific, and
+        // a corpus is re-chunked far more often than the engine is rebuilt.
+        dense_weight: f32_from("DENSE_WEIGHT", d.dense_weight),
+        sparse_weight: f32_from("SPARSE_WEIGHT", d.sparse_weight),
+        text_weight: f32_from("TEXT_WEIGHT", d.text_weight),
         ..d
     }
 }
