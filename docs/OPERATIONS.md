@@ -106,6 +106,22 @@ Two of them change **what the server returns** and must be re-measured, not gues
 - `CLUSTERS_PROBED` — recall against latency.
 - the three fusion weights — properties of the corpus, refitted after every re-chunk.
 
+`CLUSTER_BATCH` is the exception: it changes latency and peak RAM but **not** what the
+server returns, because windowing changes how many clusters one statement covers, never
+which ones are probed. Re-measure memory when you change it, ✗ recall — and change the
+container's memory limit in the same edit (`ARCHITECTURE.md` §4).
+
+! That neutrality is a property of the code, not of the idea. One `LIMIT` cannot be
+per-partition, so a window of `m` clusters has to ask for `m × PER_CLUSTER_K` or it
+returns a fraction of what those clusters yield separately — a memory dial quietly
+becoming a recall dial. At the shipped defaults it would not show, because `PER_ARM_K`
+equals `PER_CLUSTER_K` and both spellings truncate to the same rows; it appears as soon
+as someone raises `PER_ARM_K`. So it is asserted rather than assumed:
+
+```bash
+cargo test -p store -- --ignored batching_clusters_does_not_change_which_rows_win
+```
+
 Run `dev_tools/eval/e2e.py` against the running server before and after. It scores
 through the shipped binary, which is the only way to know what the *server* does — an
 offline harness that reimplements fusion measures itself.

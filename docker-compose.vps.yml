@@ -15,9 +15,19 @@
 #
 #   embed   1280 MB   model weights measured at 1060 MB anon, + runtime
 #   db      1792 MB   shared_buffers 512 + work_mem + the rest as page cache
-#   engine   512 MB   8.5 MB resident + 4 concurrent x 23.4 MB worst in-flight
+#   engine   512 MB   ~13 MB measured. Vastly oversized, deliberately: see below
 #   ----------------
 #   total   3584 MB   leaving ~512 MB for the OS
+#
+# ! The engine line used to read "8.5 MB + 4 concurrent x 23.4 MB = 102 MB". That
+# was arithmetic and was never measured. Measured peak RSS is 14/12/14 MB across
+# CLUSTER_BATCH 1/2/5 -- flat, because the engine never holds a cluster; Postgres
+# does the scan and returns ranked ids (docs/HARDWARE.md §2).
+#
+# The 512 MB stays anyway. It costs nothing on a box this size, and the headroom
+# is what a bad day is for. The honest statement is that it is a ceiling, ✗ a
+# fitted budget -- and that the memory this profile actually has to get right is
+# Postgres's, which is where every scanned page lives.
 #
 # ! shared_buffers drops 1500 -> 512 MB. On a 4 GB box with a 2.4 GB database,
 # page cache beats a big private buffer pool: every arm is a scan, and scans are

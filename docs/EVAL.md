@@ -297,6 +297,11 @@ article-level buckets, so they are excluded here and included in Recall@5.
 | domain-gate floors | out-of-domain rejected without rejecting real queries |
 | re-cluster trigger | a drop in routing recall over time |
 
+! `CLUSTER_BATCH` is deliberately absent. It is a memory-for-latency trade that must
+not move recall at all, so this harness is the wrong instrument: it is decided by
+`cluster_batch_sweep.py` against the hardware budget, and the eval's only role is as a
+**regression check** — a change in Recall@5 across settings is a bug, ✗ a tuning result.
+
 Optimisations this harness has **rejected**:
 
 | Tried | Result |

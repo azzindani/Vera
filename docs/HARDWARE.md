@@ -74,22 +74,39 @@ memory that must be resident and `file` is cache the kernel can reclaim.
 
 ### Per-request working set
 
-Clusters are scanned **one at a time** (`CLAUDE.md` §7.5), so a request holds one
-cluster's vectors, never five:
+**Measured, 2026-09-19 — and it refuted what this section used to say.**
+Engine peak RSS, from the container's own `memory.peak`, at three settings:
+
+| `CLUSTER_BATCH` | 1 | 2 | 5 |
+|---|---|---|---|
+| peak engine RSS | 14 MB | 12 MB | 14 MB |
+
+**~13 MB, flat.** It does not move with the batch, and batch=5 would have had to
+hold five clusters — some 21 MB more — if the old formula were right.
+
+! The previous text here read **"Peak engine RAM = 8.3 MB + (MAX_CONCURRENCY ×
+23.4 MB)", giving 102 MB at the defaults. That number was never measured**, and
+it is ~7× the real one. It put a cluster-sized working set inside the engine,
+which is not where it lives.
+
+The engine never receives a vector. The arms return `(id, score)` rows capped by
+`LIMIT k × OVERFETCH`, so Postgres does the scan and hands back a few hundred
+short rows. This is the cluster cost, and it is **Postgres's**, ✗ the engine's:
 
 ```
 cluster size    median 2,030 rows    max 11,448 rows
 x 1024 dims x 2 bytes (halfvec)
-                median   4.2 MB      worst  23.4 MB
+                median   4.2 MB      worst  23.4 MB    ← in the DATABASE
 ```
 
-**Peak engine RAM = 8.3 MB + (MAX_CONCURRENCY × 23.4 MB).**
-At the default 4: **102 MB**. Both terms are bounded, so the total is.
+What the engine holds is enumerable: 177 centroids held hot (177 × 1024 × f32 ≈
+725 KB), the candidate pool's metadata, and the snippets being returned. None is
+a function of `n`, which is why the resident set is flat.
 
-! This is the whole OOM guarantee, and it is the reason for the sequential scan.
-One `WHERE cluster_id = ANY($1)` is 3× faster (81 ms vs 268 ms, §3) and makes
-peak RAM a function of `clusters_probed`. The speed is the price paid for the
-bound.
+! The **database** side is unmeasured per setting. `memory.peak` is cumulative
+from container start and this one had served a full day, so an honest figure
+needs a db restart per row. Postgres's bound is configured (`shared_buffers`,
+`work_mem`, the container limit) rather than demonstrated.
 
 Tested in `crates/mcp/src/main.rs`: `the_ceiling_is_a_ceiling`,
 `waiting_is_bounded_by_the_wait_ceiling`.
@@ -153,17 +170,31 @@ reproduced across three runs at ±3%.
 | `read_chunk`, `list_domains` | ~0 ms | | |
 | startup (centroids + canary) | 146–938 ms | | |
 
+! **These belong to the 1,792 MB Postgres profile** (`docker-compose.vps.yml`,
+`shared_buffers=512MB`), where the database mostly fits its cache. They do **not**
+describe the sub-1 GB profile.
+
+On a **1 GB** Postgres cap with `shared_buffers=320MB`, the same 44 queries measure
+**p50 5,908 ms · p95 7,664 ms** (§6a) — 5.6× slower. The database is 1,801 MB (§5)
+against a 1 GB cap, so every arm pages from disk and no amount of tuning closes it.
+Only a smaller database would: `EMBEDDING.md` §5e is the 347 MB on the table.
+
+! Both figures are real; neither is "the" latency. Quote the profile with the
+number, or the number means nothing.
+
 ### Where it goes
 
 | stage | p50 | share |
 |---|---|---|
 | tsv · OR semantics (RUM) | 404 ms | 47% |
-| dense · 5 clusters, sequential | 268 ms | 31% |
+| dense · 5 clusters, `CLUSTER_BATCH=1` | 268 ms | 31% |
 | sparse · global scan | 165 ms | 19% |
 | embed query | 85 ms | 10% |
 
 **Routing works.** Dense over the whole corpus is 637 ms; over 5 probed clusters,
-81 ms — 8×. Sequential loading costs 268 ms against 81 ms combined; see §2.
+81 ms — 8×. Windowing at the default of 1 costs 268 ms against 81 ms for a single
+statement over the same five, and raising `CLUSTER_BATCH` recovers **182 ms of
+it end to end** (§6a) at no measurable cost in engine memory.
 
 **The text arm dominates.** OR semantics matches a median of 219,792 rows (62% of
 the corpus) because a natural question ANDed together matches nothing — measured
@@ -220,16 +251,65 @@ concurrency claim here was unfalsifiable before the HTTP transport existed.
 
 ## 5. Disk
 
+Re-measured 2026-09-19, after the re-embed and a `VACUUM (FULL, ANALYZE)`:
+
 ```
-database        2,417 MB    chunks 1,069 · RUM 134 · GIN 121 · TOAST the rest
+database        1,801 MB    chunks 1,749 = heap 552 · TOAST 1,042 · indexes 154
 model weights   1,200 MB
 engine binary       5.3 MB
 ------------------------
-                ~3.6 GB
+                ~3.0 GB
 ```
 
-RUM costs 134 MB and 25 s to build — 2 MB larger than the GIN index it sits
-beside. Both are kept: GIN serves the `@@` match and the fallback ranking.
+Where the table's bytes are, by column (logical size, TOAST included):
+
+| | size | |
+|---|---|---|
+| `dense` | 696 MB | 1024 × halfvec. Mostly TOAST: 2,048 B exceeds the inline threshold |
+| `tsv` | 228 MB | generated, `STORED` |
+| `body` | 139 MB | the text itself |
+| `sparse` | 115 MB | BM25 `sparsevec` |
+| `chunks_tsv_rum` | 137 MB | the only index that costs anything |
+
+! **A bulk `UPDATE` bloats the indexes too, and `VACUUM FULL` is not optional
+after one.** Re-embedding rewrote every `dense` value; the table went to 3,246 MB
+and RUM alone to **349 MB**. The rewrite took them to 1,749 MB and **137 MB** — RUM
+2.5× smaller for having been rebuilt. The 134 MB this section used to quote was
+right for a fresh index and had silently stopped being true.
+
+! `chunks_tsv_idx` (GIN) is **not** in these figures: it was dropped on this box,
+for the reason in the note below. The shipped schema still creates it. It last
+measured 110 MB on the bloated table; a freshly built one would be smaller and has
+not been measured.
+
+! The database still does **not** fit a sub-1 GB Postgres profile — 1,801 MB against
+it — so every arm pages from disk. That is what sets latency on that profile
+(§3), and no amount of vacuuming changes it; only a narrower `dense` would, which
+is what `EMBEDDING.md` §5e is about.
+
+RUM costs 137 MB and 25 s to build. Both it and GIN are kept, but ✗ for the reason
+this section used to give.
+
+! Where RUM is installed, GIN serves **nothing**. Measured on the live corpus:
+`chunks_tsv_rum` 368 scans, `chunks_tsv_idx` **0**, counters never reset
+(`pg_stat_user_indexes`). RUM answers the `@@` match as well as the ordering, so
+the earlier claim that GIN carried the match was wrong.
+
+Its actual job is the one `migrations/0003_rum_text_index.sql` describes: RUM is
+an optional extension not present in stock Postgres, `SearchOps::has_rum` probes
+for it, and a deployment without it falls back to `ts_rank` — which needs GIN.
+So GIN is insurance, ✗ a working index, and that is why the schema keeps it
+(`dev_tools/pre_embed/schema.sql`, generated from Ravel).
+
+An operator who has confirmed RUM is installed can reclaim it on that box alone:
+
+```sql
+DROP INDEX chunks_tsv_idx;   -- recreate: CREATE INDEX chunks_tsv_idx ON chunks USING GIN (tsv);
+```
+
+! Box-local, ✗ a schema change. Removing it upstream would delete the fallback
+for every deployment that never built RUM, and the schema is Ravel's to define
+in any case (`README.md`).
 
 ---
 
@@ -239,7 +319,7 @@ What grows with the corpus, and what does not:
 
 | | scales with n | why |
 |---|---|---|
-| engine RAM | **no** | one cluster at a time, and clusters are held near 2,000 rows |
+| engine RAM | **no** | `CLUSTER_BATCH` clusters at a time, and clusters are held near 2,000 rows whatever `n` is |
 | dense arm latency | **no** | routing probes 5 clusters regardless of corpus size |
 | sparse arm latency | yes | global scan |
 | text arm latency | yes | global scan |
@@ -249,6 +329,56 @@ What grows with the corpus, and what does not:
 ~28× today's row count; RUM bought roughly a 2× head start, not immunity. The
 fix when it arrives is the one already applied to dense — partition it — at a
 recall cost that has not been measured.
+
+The dense row is the design's central claim and deserves the argument spelled
+out. Cluster count is `max(2, n // rows_per_cluster)`, target 2,000
+(`dev_tools/cluster_maint/kmeans.py:117`), so `k` grows with `n` and cluster
+*size* does not. A corpus ten times larger yields ten times as many clusters of
+roughly the same size; the probe still visits five of them. Ten times the corpus
+is ten times the disk, the same resident set, and the same dense latency. This
+is precisely what a global ANN index cannot offer: an HNSW graph is one
+structure over all `n` rows and has to be resident to beat a scan, which is why
+`ARCHITECTURE.md` §3 refuses one.
+
+! Measured at 355,621 chunks, ✗ at 10 M. Two things are measured here — that `k`
+tracks `n` by construction, and that dense latency tracks probe width rather
+than corpus size (§3). What is **not** measured is whether the size skew holds:
+the target is 2,000 rows and the largest cluster is 11,448, and the worst-case
+budget above is built from that 5.6× ratio rather than from the mean. If a
+larger corpus clusters less evenly, the ratio grows and the bound grows with it.
+`dev_tools/cluster_maint/routing_recall.py` is what would surface it.
+
+---
+
+## 6a. What `CLUSTER_BATCH` costs and buys
+
+44 eval queries × 2 repeats per setting, through the deployed server, each setting
+in a freshly restarted container (`python dev_tools/eval/cluster_batch_sweep.py`):
+
+| `CLUSTER_BATCH` | p50 | p95 | vs. batch=1 | peak engine RSS |
+|---|---|---|---|---|
+| **1** (default) | 5,908 ms | 7,664 ms | — | 14 MB |
+| 2 | 5,909 ms | 7,965 ms | +7 ms | 12 MB |
+| 5 | 5,720 ms | 7,225 ms | **−182 ms** | 14 MB |
+
+**It buys 182 ms and costs nothing measurable.** The saving matches the 187 ms the
+arm-level figures predict (81 ms batched against 268 ms sequential, §3), so the
+latency half of the model holds. The memory half does not: see §2.
+
+! **−182 ms is 3.1% of a 5,908 ms request.** On this profile the knob is close to
+irrelevant — the request is dominated by the global text and sparse arms paging
+from a database that does not fit its cache. It would matter proportionally more
+on a box where the database fits, which is exactly where the memory it was
+supposed to cost would have been affordable anyway.
+
+! batch=2 is +7 ms, i.e. indistinguishable from batch=1. There is no gradient to
+tune along here; the useful settings are 1 and `≥ CLUSTERS_PROBED`.
+
+! Measured at concurrency 1. The `MAX_CONCURRENCY` multiplier is untested — but
+the `CLUSTER_BATCH` multiplier needs no concurrency to appear, and did not.
+
+! These absolute latencies belong to the **sub-1 GB Postgres profile**, ✗ the
+profile in §3. See §3's own note.
 
 ---
 

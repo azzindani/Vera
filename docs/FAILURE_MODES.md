@@ -98,11 +98,22 @@ Loading all probed clusters at once makes peak memory scale with `CLUSTERS_PROBE
 dial an operator would reasonably raise for recall, with no visible connection to an
 OOM two weeks later.
 
-**Stopped by** sequential loading: load one cluster, scan, keep top-k, drop, load next.
-Per-request working set is one cluster regardless of probe width.
+**Stopped by** the engine never holding a cluster at all. Arms return `(id, score)`
+rows under a `LIMIT`; Postgres does the scanning. Engine peak RSS is ~13 MB and is
+flat across `CLUSTER_BATCH` 1/2/5 (`HARDWARE.md` §6a), so probe width cannot drag it
+anywhere.
 
-! It costs 187 ms per request (268 ms against 81 ms for a single batched query). That is
-the price of the bound, paid deliberately.
+! **This failure mode was mis-attributed, and the fix was real for the wrong reason.**
+The concern was that loading all probed clusters at once would put `CLUSTERS_PROBED ×
+one cluster` in the engine. It would not — the engine receives addresses, never
+vectors. The coupling that does exist is between probe width and how many pages
+**Postgres** touches, which is bounded by its own configuration and is not something
+an engine dial can overrun.
+
+! What survives unchanged: `CLUSTER_BATCH=1` costs 187 ms at the arm level (268 ms
+against 81 ms), and raising it recovers 182 ms end to end. That is a latency trade
+with no measured memory cost — so on this axis there is no longer a trade at all,
+only a default that is conservative for reasons §4 no longer supports.
 
 ---
 

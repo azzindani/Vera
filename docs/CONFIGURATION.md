@@ -39,19 +39,32 @@ queue, so `QUEUE_WAIT_MS` has no effect there.
 ## 3. Concurrency — the OOM guarantee
 
 ```
-Peak RAM = fixed cost + (MAX_CONCURRENCY × one cluster)
+engine   ~13 MB, flat   measured 14/12/14 MB at CLUSTER_BATCH 1/2/5
+postgres bounded by shared_buffers + work_mem + its container limit
 ```
+
+The engine never materialises the corpus — arms return `(id, score)` under a `LIMIT`
+— so nothing here is a memory dial for it. `HARDWARE.md` §2 and §6a.
 
 | Variable | Default | Notes |
 |---|---|---|
 | `MAX_CONCURRENCY` | `4` | the hard ceiling on in-flight requests |
+| `CLUSTER_BATCH` | `1` | clusters per statement. A **latency** dial (−182 ms at 5), ✗ a memory one — see §4 and the note below |
 | `QUEUE_WAIT_MS` | `2000` | how long a call may wait for a slot before being refused |
 | `STATEMENT_TIMEOUT_MS` | `15000` | how long a query may **run** before Postgres cancels it; `0` disables |
 
-! `MAX_CONCURRENCY` and the container's memory limit are **one decision, not two**.
-Raising it raises peak RAM linearly; the worst measured cluster is 23.4 MB.
-`0` is rejected at startup — it parses fine and would produce a server that reports
-healthy and refuses every request.
+! **Neither `MAX_CONCURRENCY` nor `CLUSTER_BATCH` measurably moves engine RAM.** An
+earlier version of this file said they multiplied into a 102 MB budget; that was
+arithmetic and the measurement refutes it (`ARCHITECTURE.md` §4). `MAX_CONCURRENCY`
+remains a bound on in-flight work and on load reaching Postgres — which is the
+process that actually holds the pages.
+
+! Both are still rejected at `0` at startup. They parse fine and would produce a
+server that reports healthy and returns nothing.
+
+! `CLUSTERS_PROBED` costs latency and recall, not memory — which is true for a
+simpler reason than this file used to give: nothing the engine probes is resident in
+the engine at all.
 
 ! `QUEUE_WAIT_MS` is the half of invariant 6 that people forget. A bounded queue
 alone still lets a caller block indefinitely behind a full one; the bound has to be
@@ -77,7 +90,8 @@ safe.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `CLUSTERS_PROBED` | `5` | layer-2 probe width. Recall vs latency — **not** vs RAM, because clusters load one at a time. |
+| `CLUSTERS_PROBED` | `5` | layer-2 probe width. Recall vs latency — **not** vs RAM, because clusters load `CLUSTER_BATCH` at a time and this is not that number. |
+| `CLUSTER_BATCH` | `1` | How many probed clusters are resident at once. The second term of the OOM guarantee: `peak RAM = fixed + (MAX_CONCURRENCY × CLUSTER_BATCH × one cluster)`, worst case 23.4 MB per cluster measured. `1` reproduces the original one-at-a-time scan and is the 2 vCPU / 4 GB number; higher buys back the 187 ms that separate statements cost. **Raise the container's memory limit with it** — they are one decision (`ARCHITECTURE.md` §4). |
 | `PER_CLUSTER_K` | `20` | candidates kept per cluster per arm |
 | `PER_ARM_K` | `20` | candidates each global arm contributes |
 | `TOP_K` | `10` | results returned |

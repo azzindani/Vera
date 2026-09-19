@@ -92,6 +92,16 @@ server delivered 38.6%, because the engine's text weight was 0.0 and nothing was
 measuring the engine.
 
 ```bash
+VERA_HTTP=http://localhost:8081 python eval/cluster_batch_sweep.py
+```
+
+`cluster_batch_sweep.py` measures the one knob the eval cannot decide. It restarts the
+engine at each `CLUSTER_BATCH`, clones the container's own image, env, mounts and limits
+so it measures the deployment rather than a hand-written `docker run`, and reports p50 /
+p95 against the cgroup's `memory.peak`. It leaves the engine on the last setting, so it
+is for a test box, ✗ one serving traffic.
+
+```bash
 python eval/pool_depth.py            # needs only the database
 ```
 

@@ -34,6 +34,8 @@ returns nothing rather than guessing.
 | Recall@5 | **56.8%** through the deployed server, `DENSE_WEIGHT=2.0` |
 | Routing | probing 5 of 177 clusters touches **2.8%** of the corpus for **93%** of flat-scan quality |
 | Memory, full stack | **2,640 MB** measured against a 3,584 MB budget |
+| Recall at 512 dims | **identical** to 1024 at @5/@10/@50, better at @20 — 347 MB reclaimable, designed ✗ built (`docs/EMBEDDING.md` §5e) |
+| Engine RAM | **~13 MB, flat** — measured 14/12/14 MB across `CLUSTER_BATCH` 1/2/5; independent of probe width and of corpus size |
 | Domain gate | 4/6 out-of-domain refused, **0/44 false refusals** |
 | Concurrency | 12 concurrent → 8 served, 4 refused with `503` + `Retry-After` |
 
@@ -75,7 +77,8 @@ process cannot safely guess. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 - **Engine** — stateless Rust MCP server, stdio and HTTP transports. 8.5 MB resident.
 - **Store** — PostgreSQL + pgvector (`halfvec` dense, `sparsevec` BM25) + RUM for the
-  text arm. No global ANN index: routing does the pruning.
+  text arm. No global ANN index: routing does the pruning, and an ANN graph would have
+  to be resident over all `n` rows — reintroducing the term this design removes.
 - **Embedding** — one model, both ends. The corpus declares its vector space and the
   engine refuses to serve a provider that does not reproduce it.
 - **Fusion** — Reciprocal Rank Fusion over ranks. No reranker, no model in the loop.

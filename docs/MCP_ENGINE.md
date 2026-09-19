@@ -11,7 +11,7 @@ Five things, and nothing else:
 
 1. Embed the query, in the corpus's own vector space.
 2. Gate on domain, then route to layer-2 clusters.
-3. Search: sequential per-cluster dense scan, global sparse, global text, and the
+3. Search: windowed per-cluster dense scan, global sparse, global text, and the
    global exact-identifier path.
 4. Fuse with RRF over ranks.
 5. Return structured, cited evidence.
@@ -168,7 +168,7 @@ incoming request
 embed (network I/O)
    │
    ▼
-route + sequential cluster scan   ← this is what contends on 2 cores
+route + windowed cluster scan     ← this is what contends on 2 cores
    │
    ▼
 fuse → return
@@ -209,21 +209,40 @@ to test is a guarantee nobody tests.
 
 ## 5. The OOM guarantee
 
-```
-Peak RAM = fixed cost + (MAX_CONCURRENCY × per-request ceiling)
+**Engine peak RSS is ~13 MB and flat** — 14 / 12 / 14 MB measured at `CLUSTER_BATCH`
+1 / 2 / 5 (`HARDWARE.md` §6a). It does not scale with the batch, with
+`CLUSTERS_PROBED`, or with the corpus.
+
+The guarantee is structural, ✗ budgeted: **the engine never materialises the corpus.**
+Every arm returns ranked addresses under a `LIMIT` —
+
+```sql
+SELECT id, 1.0 - (dense <=> $1::text::halfvec) AS sim ... LIMIT k × OVERFETCH
 ```
 
-Sequential cluster loading fixes the per-request ceiling at one cluster, independent of
-`CLUSTERS_PROBED`. Measured on the current corpus:
+— so a few hundred `(id, f64)` pairs cross the wire and Postgres does the scanning.
+What the engine holds is the 177 hot centroids (~725 KB), the candidate pool's
+metadata and the outgoing snippets. None is a function of `n`.
+
+The cluster-sized cost is real but lives in the **database**:
 
 ```
 cluster size    median 2,030 rows    max 11,448 rows
 × 1024 dims × 2 bytes (halfvec)
-                median   4.2 MB      worst  23.4 MB
+                median   4.2 MB      worst  23.4 MB   ← Postgres, ✗ the engine
 ```
 
-At the default ceiling of 4: **8.5 MB + 4 × 23.4 MB ≈ 102 MB**. The container is given
-512 MB. The limit exists for the concurrency term, not the resident one.
+! This section previously read `fixed + (MAX_CONCURRENCY × one cluster) ≈ 102 MB`.
+That was arithmetic and was never measured; the real figure is ~7× smaller. The
+512 MB the container is given is now enormous headroom rather than a fitted budget.
+
+! `MAX_CONCURRENCY=0` and `CLUSTER_BATCH=0` are both refused at startup rather than
+clamped (`crates/mcp/src/main.rs`, `a_batch_of_zero_clusters_is_refused`). A
+zero-width window would scan nothing and return an empty dense arm without an error,
+which reads as a corpus that simply has no match.
+
+! The `MAX_CONCURRENCY` multiplier is **untested** — the sweep ran at concurrency 1.
+It is a bound on in-flight requests regardless, and §4 is about why it must exist.
 
 Full measured budget for the whole stack in `HARDWARE.md` §2.
 

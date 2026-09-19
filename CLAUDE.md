@@ -54,7 +54,7 @@ Full detail in `docs/ARCHITECTURE.md`.
 ```
 LAYER 1  domain gate     → centroid similarity + lexical evidence; serve or refuse
 LAYER 2  k-means clusters → pick the 5 nearest centroids (held hot in the engine)
-LAYER 3  per-cluster scan → load ONE cluster, flat halfvec scan, keep top-k, drop
+LAYER 3  per-cluster scan → load CLUSTER_BATCH (default 1), flat halfvec scan, drop
                           ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM)
                           ⊕ global exact-identifier path (routing bypassed)
                           → RRF over RANKS → candidate pool
@@ -129,9 +129,12 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
    canary re-embeds a stored chunk and refuses to serve if the space does not reproduce.
 3. **Routing accelerates; the global arms guarantee.** Semantic routing may miss, so the
    sparse and text arms scan globally and an exact identifier bypasses routing entirely.
-4. **OOM is impossible by construction.** Peak RAM = fixed cost + (concurrency ceiling ×
-   one cluster). Sequential cluster loading is what makes the second term independent of
-   probe width.
+4. **OOM is impossible by construction, and the reason is measured.** The engine's
+   resident set is **~13 MB, flat** (14/12/14 MB at `CLUSTER_BATCH` 1/2/5) because it
+   never materialises the corpus: every arm returns `(id, score)` rows under a `LIMIT`,
+   so Postgres does the scanning. The cluster-sized working set is the **database's**,
+   bounded by its own configuration. `n` enters neither, because `k ∝ n` keeps cluster
+   size near constant. `docs/ARCHITECTURE.md` §4.
 5. **Provenance is captured at ingestion and immutable.** Never synthesize a source link
    at query time; omit what ingestion did not record. Immutability is a database
    trigger (`migrations/0002_provenance_immutable.sql`), ✗ a convention — and it is only true for a corpus the
@@ -177,8 +180,11 @@ and on failure `error` + `hint`.
 2. **Never compile in a model, dimension, or instruction.** The corpus declares them.
 3. **Never serve if the startup canary fails.**
 4. **Never let exact-identifier search be gated by cluster routing.**
-5. **Never load all probed clusters into memory at once.** Sequential only — this is the
-   OOM guarantee.
+5. **Never return a vector from an arm, and never scan a cluster in the engine.** This
+   is what actually holds the resident set flat — measured, ✗ argued. Arms return ranked
+   addresses under a `LIMIT`; the scan belongs to Postgres. `CLUSTER_BATCH` windows the
+   loop (default 1) and is a **latency** knob: it must stay configuration, since
+   hardcoding it would violate §7.12, but do not attach a memory claim to it.
 6. **Never use an unbounded request queue.** Bounded + backpressure + wait-timeout, and
    the wait ceiling is on *time*, not just depth.
 7. **Never fall back to an unvalidated embedding provider.**
