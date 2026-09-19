@@ -1,11 +1,24 @@
 //! The read-only query surface: three retrieval arms plus the routing bypass.
 //!
-//! ! Clusters are scanned **one at a time** (`CLAUDE.md` §7.5). One query per
-//! cluster, keeping only that cluster's top-k, so the per-request working set
-//! is one cluster regardless of how many are probed. A single
-//! `WHERE cluster_id = ANY($1)` would be faster and would make peak RAM a
-//! function of `clusters_probed` — which is precisely the OOM guarantee this
-//! design trades that speed for.
+//! ! **Nothing here returns a vector**, and that — ✗ any loop shape — is why the
+//! engine's resident set is flat. Every arm selects `(id, score)` under a
+//! `LIMIT`, so Postgres performs the scan and a few hundred short rows cross the
+//! wire. Measured engine peak RSS is 14 / 12 / 14 MB at `CLUSTER_BATCH` 1 / 2 / 5
+//! (`docs/HARDWARE.md` §6a). Adding a column that returns `dense` would undo the
+//! guarantee that the loop below is often credited with.
+//!
+//! ! Clusters are scanned in **batches of `CLUSTER_BATCH`** (`CLAUDE.md` §7.5).
+//! This is a **latency** knob: one statement over five clusters is 3× faster than
+//! five statements (81 ms against 268 ms), worth −182 ms end to end. It is
+//! configuration rather than a constant because hardcoding it would hardcode a
+//! limit, which §7.12 forbids — ✗ because it trades memory for speed. It does
+//! not; that was arithmetic this module used to assert and the measurement
+//! refuted.
+//!
+//! ! The cluster-sized working set is real and belongs to **Postgres** — median
+//! 4.2 MB, worst 23.4 MB of pages per cluster — bounded by `shared_buffers`,
+//! `work_mem` and the database container's limit. No setting in this crate
+//! governs it.
 
 use deadpool_postgres::Pool;
 use tokio_postgres::Row;
@@ -150,11 +163,47 @@ impl SearchOps {
             .collect())
     }
 
-    /// Dense top-k **within one cluster**.
+    /// Dense top-k within **one batch of clusters**.
     ///
-    /// ! Deliberately single-cluster. See the module note: this signature is
-    /// the OOM guarantee, and widening it to take a slice of cluster ids would
-    /// quietly dissolve it.
+    /// ! The caller decides the batch size. Passing every probed cluster in one
+    /// call is **allowed and measured safe** for this process — engine RSS does
+    /// not move with the window — but it widens the statement Postgres plans,
+    /// and that side is unmeasured. The pipeline chunks by `CLUSTER_BATCH` so
+    /// the width stays a stated choice rather than a consequence of
+    /// `clusters_probed`.
+    ///
+    /// ! `k` is a budget for the WHOLE window, ✗ per cluster, because one
+    /// `LIMIT` cannot be per-partition. A caller batching `m` clusters must
+    /// therefore ask for `m × k` or the window silently returns a fraction of
+    /// what the same clusters yield one at a time — batching would quietly
+    /// change results, which is the one thing it must not do.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn dense_in_clusters(
+        &self,
+        cluster_ids: &[i32],
+        query: &[f32],
+        k: i64,
+    ) -> Result<Vec<Scored>, StoreError> {
+        if cluster_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "SELECT id, 1.0 - (dense <=> $1::text::halfvec) AS sim
+                 FROM chunks
+                 WHERE indexable AND dense IS NOT NULL AND cluster_id = ANY($2)
+                 ORDER BY dense <=> $1::text::halfvec
+                 LIMIT $3",
+                &[&dense_literal(query), &cluster_ids, &(k * OVERFETCH)],
+            )
+            .await?;
+        Ok(settle(rows.iter().map(scored_f64).collect(), k))
+    }
+
+    /// One cluster · the `CLUSTER_BATCH=1` case, kept for callers that mean it.
     ///
     /// # Errors
     /// Database failure.
@@ -164,18 +213,7 @@ impl SearchOps {
         query: &[f32],
         k: i64,
     ) -> Result<Vec<Scored>, StoreError> {
-        let c = self.client().await?;
-        let rows = c
-            .query(
-                "SELECT id, 1.0 - (dense <=> $1::text::halfvec) AS sim
-                 FROM chunks
-                 WHERE indexable AND dense IS NOT NULL AND cluster_id = $2
-                 ORDER BY dense <=> $1::text::halfvec
-                 LIMIT $3",
-                &[&dense_literal(query), &cluster_id, &(k * OVERFETCH)],
-            )
-            .await?;
-        Ok(settle(rows.iter().map(scored_f64).collect(), k))
+        self.dense_in_clusters(&[cluster_id], query, k).await
     }
 
     /// Sparse BM25 top-k over the whole corpus.

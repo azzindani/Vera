@@ -25,6 +25,15 @@ use crate::identifier;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub clusters_probed: usize,
+    /// How many probed clusters go into one statement.
+    ///
+    /// ! A **latency** dial, ✗ a memory one. Measured engine peak RSS is flat
+    /// across 1/2/5 (14/12/14 MB) because the store returns ranked ids, never
+    /// vectors; `5` is worth −182 ms p50 and `2` is worth nothing.
+    /// `ARCHITECTURE.md` §4 records what this was previously claimed to do and
+    /// why the measurement refuted it. `1` is the default because every
+    /// published number was taken at it.
+    pub cluster_batch: usize,
     pub per_cluster_k: i64,
     pub per_arm_k: i64,
     pub top_k: usize,
@@ -82,6 +91,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             clusters_probed: 5,
+            cluster_batch: 1,
             per_cluster_k: 20,
             per_arm_k: 20,
             top_k: 10,
@@ -856,23 +866,40 @@ impl Pipeline {
         Ok(Some(empty))
     }
 
-    /// Scan the probed clusters **one at a time**.
+    /// Scan the probed clusters in batches of `CLUSTER_BATCH`.
     ///
-    /// ! This loop is the OOM guarantee (`docs/MCP_ENGINE.md` §5): a request holds
-    /// one cluster at a time, so the working set does not grow with
-    /// `clusters_probed`.
+    /// ! This loop is **not** the OOM guarantee, though it was documented as one.
+    /// The store returns `(id, score)` rows under a `LIMIT`, so no shape of this
+    /// loop puts a cluster in this process — measured peak RSS is flat across
+    /// `cluster_batch` (`docs/HARDWARE.md` §6a). What the loop decides is how
+    /// many round trips the dense arm costs.
+    ///
+    /// ! `cluster_batch` is validated at startup, so the chunk size here cannot
+    /// be zero and the loop cannot spin.
     async fn dense_arm(
         &self,
         qvec: &[f32],
         probed: &[(i32, f32)],
     ) -> Result<Vec<store::Scored>, PipelineError> {
+        let batch = self.cfg.cluster_batch.max(1);
+        let ids: Vec<i32> = probed.iter().map(|(id, _)| *id).collect();
         let mut dense: Vec<store::Scored> = Vec::new();
-        for (cluster_id, _) in probed {
-            dense.extend(
-                self.ops
-                    .dense_in_cluster(*cluster_id, qvec, self.cfg.per_cluster_k)
-                    .await?,
-            );
+        for window in ids.chunks(batch) {
+            // ! per_cluster_k × the window, ✗ per_cluster_k. The store applies
+            // ONE limit across the whole window, so the per-cluster figure
+            // would make a batch of 5 yield a fifth of the rows five separate
+            // calls yield.
+            //
+            // ! At the shipped defaults that is invisible — per_arm_k equals
+            // per_cluster_k, so both spellings truncate to the same true top 20
+            // (verified against the corpus: identical ids and scores). It bites
+            // the moment PER_ARM_K > PER_CLUSTER_K, where the unscaled version
+            // hands back fewer candidates than per_arm_k asked for and a memory
+            // knob silently becomes a recall knob. Scaling is also strictly
+            // better than the sequential loop there: one window returns the true
+            // top k×m, where five separate calls return a per-cluster quota.
+            let k = self.cfg.per_cluster_k * i64::try_from(window.len()).unwrap_or(1);
+            dense.extend(self.ops.dense_in_clusters(window, qvec, k).await?);
         }
         dense.sort_by(|a, b| {
             b.score

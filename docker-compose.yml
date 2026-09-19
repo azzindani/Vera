@@ -131,7 +131,15 @@ services:
       MAX_CONCURRENCY: ${MAX_CONCURRENCY:-4}
       QUEUE_WAIT_MS: ${QUEUE_WAIT_MS:-2000}
       CLUSTERS_PROBED: ${CLUSTERS_PROBED:-5}
-      DENSE_WEIGHT: ${DENSE_WEIGHT:-0.0}
+      # ! Latency only. Engine RSS measured flat at 14/12/14 MB across 1/2/5,
+      # because the engine never holds a cluster -- Postgres does the scan and
+      # returns ranked ids (docs/HARDWARE.md §6a). 5 is worth -182 ms.
+      CLUSTER_BATCH: ${CLUSTER_BATCH:-1}
+      # ! 2.0, ✗ the 0.0 this carried until 2026-09-19. The old corpus was
+      # embedded by a provider that did not reproduce the declared space, so the
+      # dense arm was muted on purpose; a stale default here would silently mute
+      # it again for anyone who brings the stack up without a .env.
+      DENSE_WEIGHT: ${DENSE_WEIGHT:-2.0}
       SPARSE_WEIGHT: ${SPARSE_WEIGHT:-1.0}
       TEXT_WEIGHT: ${TEXT_WEIGHT:-1.0}
     volumes:

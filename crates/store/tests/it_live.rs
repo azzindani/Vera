@@ -74,6 +74,66 @@ async fn centroids_load_at_the_declared_width() {
     }
 }
 
+/// Batching clusters must change WHEN rows are read, never WHICH rows win.
+///
+/// ! This is the test that makes `CLUSTER_BATCH` a memory knob rather than a
+/// recall knob. One `LIMIT` covers the whole window, so a batched call asking
+/// for the per-cluster budget returns a fraction of what the same clusters
+/// yield one at a time; the pipeline scales `k` by the window size to stop
+/// that, and this is what would catch it being removed.
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn batching_clusters_does_not_change_which_rows_win() {
+    let store = ops();
+    let centroids = store.centroids().await.expect("centroids");
+    assert!(centroids.len() >= 2, "need two clusters to batch");
+    let (a, qvec) = &centroids[0];
+    let b = centroids[1].0;
+    let k = 5usize;
+    let ki = i64::try_from(k).expect("k fits");
+
+    let mut apart = store.dense_in_cluster(*a, qvec, ki).await.expect("a");
+    apart.extend(store.dense_in_cluster(b, qvec, ki).await.expect("b"));
+    // ! The same order `settle` imposes — total_cmp, then id. Sorting here with
+    // a bare `partial_cmp` would leave ties in arrival order and make the
+    // comparison below depend on which cluster was read first, which is the
+    // flakiness this file refuses to carry.
+    apart.sort_by(|x, y| y.score.total_cmp(&x.score).then_with(|| x.id.cmp(&y.id)));
+
+    // ! k × the window, which is what the pipeline passes. Asking for plain `k`
+    // here is the bug this test exists for.
+    let together = store
+        .dense_in_clusters(&[*a, b], qvec, ki * 2)
+        .await
+        .expect("batched");
+
+    let want: Vec<(&str, f32)> = apart
+        .iter()
+        .take(k)
+        .map(|s| (s.id.as_str(), s.score))
+        .collect();
+    let got: Vec<(&str, f32)> = together
+        .iter()
+        .take(k)
+        .map(|s| (s.id.as_str(), s.score))
+        .collect();
+    assert_eq!(want.len(), k, "clusters {a}+{b} hold fewer than {k} rows");
+    assert_eq!(want, got, "batching changed the top {k}");
+    println!("clusters {a}+{b} · top {k} identical batched and apart");
+}
+
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn an_empty_window_is_not_a_query() {
+    // ! `cluster_id = ANY('{}')` matches nothing but still plans a scan. The
+    // early return is what keeps a short final window from costing a round trip.
+    let hits = ops()
+        .dense_in_clusters(&[], &[0.0; 8], 5)
+        .await
+        .expect("empty");
+    assert!(hits.is_empty());
+}
+
 #[tokio::test]
 #[ignore = "needs a live corpus"]
 async fn a_cluster_scan_returns_ranked_hits_from_that_cluster_only() {

@@ -149,6 +149,11 @@ impl Settings {
 
             pipeline: Config {
                 clusters_probed: parsed("CLUSTERS_PROBED", "positive integer", d.clusters_probed)?,
+                // ! Config, ✗ a constant, because §7.12 forbids a hardcoded
+                // limit — not because it trades memory for speed. Measured
+                // engine RSS is flat across it; what it buys is −182 ms
+                // (ARCHITECTURE.md §4).
+                cluster_batch: parsed("CLUSTER_BATCH", "positive integer", d.cluster_batch)?,
                 per_cluster_k: parsed("PER_CLUSTER_K", "positive integer", d.per_cluster_k)?,
                 per_arm_k: parsed("PER_ARM_K", "positive integer", d.per_arm_k)?,
                 top_k: parsed("TOP_K", "positive integer", d.top_k)?,
@@ -216,6 +221,10 @@ impl Settings {
             ("READ_CHUNK_CHARS", self.read_chunk_chars),
             ("MAX_PROVENANCE_IDS", self.max_provenance_ids),
             ("CLUSTERS_PROBED", self.pipeline.clusters_probed),
+            // ! 0 would chunk into empty windows and scan nothing, returning an
+            // empty dense arm with no error — the same class of silent failure
+            // MAX_CONCURRENCY=0 causes.
+            ("CLUSTER_BATCH", self.pipeline.cluster_batch),
             ("TOP_K", self.pipeline.top_k),
             ("CANDIDATE_POOL", self.pipeline.candidate_pool),
             ("SNIPPET_CHARS", self.pipeline.snippet_chars),
@@ -768,6 +777,34 @@ mod tests {
         let mut s = settings();
         s.pipeline.clusters_probed = 0;
         assert!(s.validate().is_err());
+    }
+
+    #[test]
+    fn a_batch_of_zero_clusters_is_refused() {
+        // ! `chunks(0)` panics, and guarding it with `.max(1)` in the hot loop
+        // would silently serve a configuration the operator did not ask for.
+        // Refusing at startup is the only honest reading of `CLUSTER_BATCH=0`.
+        let mut s = settings();
+        s.pipeline.cluster_batch = 0;
+        assert!(s.validate().is_err());
+    }
+
+    #[test]
+    fn the_default_batch_is_the_sequential_scan() {
+        // ! Not a memory floor — engine RSS is flat across this knob. The
+        // default is 1 because every published latency number was taken at it,
+        // so a different default would silently invalidate the docs.
+        assert_eq!(Config::default().cluster_batch, 1);
+    }
+
+    #[test]
+    fn a_batch_wider_than_the_probe_is_harmless() {
+        // ! `chunks` yields a short final window rather than padding, so a batch
+        // larger than `clusters_probed` degenerates to one query over every
+        // probed cluster — the fast end of the trade, not a misconfiguration.
+        let mut s = settings();
+        s.pipeline.cluster_batch = 64;
+        assert!(s.validate().is_ok());
     }
 
     #[test]

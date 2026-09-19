@@ -45,7 +45,8 @@ PG = os.environ.get(
 # Anything the engine reads from the environment passes straight through, so a
 # sweep needs no rebuild — which is the point of invariant 12.
 PASSTHROUGH = (
-    "EMBED_ENDPOINT", "BM25_VOCAB", "CLUSTERS_PROBED", "MAX_CONCURRENCY",
+    "EMBED_ENDPOINT", "BM25_VOCAB", "CLUSTERS_PROBED", "CLUSTER_BATCH",
+    "MAX_CONCURRENCY",
     "DENSE_WEIGHT", "SPARSE_WEIGHT", "TEXT_WEIGHT",
     "DOMAIN_FLOOR", "DOMAIN_LEXICAL_FLOOR", "CANARY_MIN_COSINE",
     "PER_CLUSTER_K", "PER_ARM_K", "TOP_K", "SNIPPET_CHARS", "GATE_SAMPLE",
