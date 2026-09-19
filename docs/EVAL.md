@@ -89,26 +89,136 @@ clustering or `CLUSTERS_PROBED`.
 
 ## 4. Current results
 
-Through the real server, 44 retrievable cases, `dense=0 sparse=1 text=1`:
+**Re-measured 2026-09-19, after the corpus was re-embedded with the model's
+reference implementation (`EMBEDDING.md` §5).** Every figure below post-dates that
+change; anything quoting 50.0% or a dense arm at 0.0% describes the previous corpus.
 
-| | | |
+### 4a. The arms, and what the re-embed bought
+
+44 retrievable cases, each arm alone, `python dev_tools/eval/run.py`:
+
+| arm | Recall@5 | MRR |
 |---|---|---|
-| | factors off | **shipped** |
-| Recall@5 | 50.0% | **54.5%** |
-| Recall@10 | 52.3% | **59.1%** |
-| MRR | 0.360 | **0.454** |
+| **dense** | **61.4%** | **0.504** |
+| text (`tsvector`) | 40.9% | 0.329 |
+| sparse (BM25) | 38.6% | 0.354 |
+| identifier | 4.5% | 0.045 |
+| RRF(sparse+text) | 50.0% | 0.374 |
+| RRF(sparse+dense) | 59.1% | 0.461 |
+| RRF(all three) | 56.8% | 0.458 |
 
-| | |
-|---|---|
-| Domain gate | 6/6 out-of-domain refused, 0/44 false refusals |
-| Latency p50 / p90 | 691 ms / 1,046 ms |
-| `expand: ["siblings"]` | 56.8% / 59.1% / 0.456 — **+1 case**, off by default (`SCORING.md` §7) |
+The dense arm was **0.0%** before the re-embed and is now the strongest of the
+three. Note that `RRF(sparse+dense)` beats `RRF(all three)`: at k=5, adding the
+text arm *costs* 2.3 points, because unweighted RRF rewards consensus and averages
+a strong arm toward weaker ones. §4b shows that this reverses with depth.
 
-Both columns come from **one binary** (`e2e_sweep.py`), with `factor_weights`
-varied per request, so the difference is the scoring layer and nothing else —
-rebuilding between configurations would vary the binary too. Identical under the
-2 vCPU / 4 GB memory limits and without them — the constraints cost latency, not
-quality.
+### 4b. Recall at the width an agent is actually given
+
+! **k=5 is the strictness knob, ✗ the operating point.** A caller receives 20–50
+results and reasons over them, and the ordering between configurations *changes*
+with k. `python dev_tools/eval/recall_at_k.py`, 39 cases on the full corpus:
+
+| configuration | @5 | @10 | @20 | @50 | @100 |
+|---|---|---|---|---|---|
+| sparse+text | 56.4% | 59.0% | 64.1% | 79.5% | 89.7% |
+| dense (routed, 5 clusters) | 64.1% | 71.8% | 71.8% | 79.5% | 82.1% |
+| dense (flat scan) | 69.2% | 82.1% | 82.1% | 89.7% | 92.3% |
+| **all three fused** | 59.0% | 74.4% | **82.1%** | **87.2%** | **94.9%** |
+
+! Each arm returns `PER_ARM = 100` here, ✗ the 50 `run.py` uses, so the fused rows
+are not directly comparable to §4a. Depth changes RRF's ordering rather than only
+extending it: a document ranked 51-100 in **both** lexical arms outscores one ranked
+1st in a single arm (`2/(60+60) > 1/(60+1)`), so a deeper pool reshuffles the top-50
+instead of appending to it. Worth knowing before comparing two runs at different
+`PER_ARM`.
+
+Fusion loses at k=5 and wins from k=20 up. Tuning `DENSE_WEIGHT` on Recall@5 alone
+would therefore weight dense too heavily for the way the engine is actually used.
+
+`DENSE_WEIGHT` through the real server (`e2e.py`, one binary per value, default
+factor weights, 44 cases):
+
+| `DENSE_WEIGHT` | Recall@5 | Recall@10 | MRR |
+|---|---|---|---|
+| 0.0 | 50.0% | 52.3% | 0.349 |
+| 1.0 | 54.5% | 63.6% | 0.411 |
+| **2.0** | **56.8%** | **65.9%** | 0.428 |
+| 4.0 | 54.5% | 63.6% | 0.450 |
+| 8.0 | 59.1% | 63.6% | 0.470 |
+
+! **Read MRR, not Recall@5, across these rows.** At n=44 one query is 2.3 points, so
+every gap in the Recall@5 column is one or two cases. MRR rises monotonically
+(0.349 → 0.470) and has no threshold to straddle. Recall@10 moves +13.6 points,
+which is 6 cases and clear of the noise. `DENSE_WEIGHT=2.0` is the shipped value:
+best Recall@10, near-best Recall@5, and it keeps the lexical arms contributing at
+the depth §4b shows they matter.
+
+### 4c. The domain gate regressed, and the cause is not a threshold
+
+`DOMAIN_FLOOR` moved 0.45 → 0.39. Before: 2 of 39 real questions refused, 6/6
+out-of-domain refused. After: **0 false refusals, 4/6 out-of-domain refused.**
+
+! That is a trade, ✗ a fix. In the new space the two distributions **overlap**:
+
+| | centroid similarity | lexical evidence |
+|---|---|---|
+| in-domain | min 0.396, p5 0.433 | min 0.475 |
+| out-of-domain | **max 0.493** | max 0.767 |
+
+No centroid threshold separates them, and the lexical floor does most of the real
+work — it catches 4 of the 6 out-of-domain cases on its own. The two that now leak
+(`q049`, `q050`) are refused only by the centroid floor. This is a *consequence of a
+better embedder*: the new space is semantically sharper, so fluent Indonesian
+questions about non-legal topics land genuinely close to Indonesian legal centroids.
+`q048` ("cara memperbaiki keran air yang bocor") scores 0.493, the highest of any
+out-of-domain case, for exactly that reason.
+
+Fixing this properly needs a better gate signal than max-centroid similarity, not a
+re-tuned number.
+
+### 4d. Routing, measured for the first time
+
+Layers 2 and 3 exist to prune the dense arm's search. While dense carried weight
+0.0 they pruned nothing that mattered, so routing recall had never been measured.
+39 cases, 177 clusters, `python dev_tools/cluster_maint/routing_recall.py`:
+
+| clusters probed | routing recall | dense Recall@5 | corpus touched |
+|---|---|---|---|
+| 1 | 41.0% | 30.8% | 0.6% |
+| 2 | 69.2% | 56.4% | 1.2% |
+| 3 | 74.4% | 56.4% | 1.7% |
+| **5 (shipped)** | **84.6%** | **64.1%** | **2.8%** |
+| 8 | 84.6% | 64.1% | 4.4% |
+| 12 | 87.2% | 61.5% | 6.6% |
+| 20 | 94.9% | 64.1% | 11.4% |
+| 40 | 97.4% | 66.7% | 22.6% |
+| flat scan | 100.0% | 69.2% | 100.0% |
+
+**Probing 5 of 177 clusters keeps 93% of flat-scan quality for 2.8% of the work.**
+That is the claim the architecture is built on, and it holds.
+
+! `CLUSTERS_PROBED=5` is correctly tuned, and the reason is the §3 diagnostic rather
+than the headline: widening 5 → 20 raises routing recall by **10.3 points** and
+changes Recall@5 by **nothing**. The answers recovered by wider probing do not rank
+in the top 5 anyway, so the bottleneck is ranking, ✗ routing. Widening costs 4× the
+scan for no measurable gain.
+
+6 of 39 cases have their answer outside the 5 probed clusters entirely (`q007`,
+`q019`, `q020`, `q026`, `q027`, `q036`). **This is what the global sparse and text
+arms are for** — CLAUDE.md §5.3, *"routing accelerates; the global arms guarantee"*.
+The guarantee is load-bearing: at k=20 routed dense alone reaches 71.8% while the
+fused result reaches 82.1%, recovering exactly what routing dropped.
+
+### 4e. Withdrawn
+
+- **Latency.** The previous 691 ms / 1,046 ms p50/p90 and the 1,059 ms / 1,638 ms
+  2 vCPU / 4 GB figures predate the re-embed and have **not** been re-measured. They
+  are withdrawn rather than restated (CLAUDE.md §7.15).
+- **The fitted factor-weight column.** The old `shipped` column (54.5%) came from
+  `e2e_sweep.py` with fitted `factor_weights` against the *old* corpus. Those weights
+  were fitted to a corpus where dense contributed nothing and must be refitted before
+  they mean anything. §4b's sweep therefore runs with **default** factor weights.
+- **`expand: ["siblings"]`** at 56.8% / 59.1% / 0.456 — same reason, not re-measured.
 
 ### These numbers were not reproducible until they were
 
@@ -199,7 +309,7 @@ Optimisations this harness has **rejected**:
 | the relevance floor at 0.4 | fitted against the **text arm**, which the engine does not rank. On the fused pool it costs 2.5 points; refitting it against IDF-weighted `bm25::evidence` does not rescue it. Kept at 0.3, where it is free. |
 | `enacting_body` in the authority score | the column is unusable: `PERATURAN BUPATI` / `MA` (10,395 rows), `PERATURAN DAERAH KABUPATEN` / `RI` (7,770). Extraction artefacts, not enacting bodies. |
 | fine-grained regulation hierarchy | **unmeasurable at n=40.** The legally-correct ordering and an inverted one score identically (57.5% / 47.5% LOO), and a coarse national-vs-local split does at least as well. |
-| TurboQuant / TurboVec vector compression | wrong bottleneck: the dense arm is 53 ms of a 1,059 ms query and returns 0.0%. Compressing it 16× buys ~1% of latency on the one arm that contributes nothing. |
+| TurboQuant / TurboVec vector compression | wrong bottleneck **when measured**: the dense arm was 53 ms of a 1,059 ms query and returned 0.0%. ! The premise expired on 2026-09-19 — dense now returns 61.4% and carries weight 2.0, so this is worth re-examining rather than citing as settled. |
 
 Both looked obviously good on paper. That is what the harness is for.
 

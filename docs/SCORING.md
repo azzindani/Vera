@@ -508,7 +508,7 @@ example; no result from this corpus can carry one.
 
 | | |
 |---|---|
-| arms | dense (weight 0.0), sparse, text |
+| arms | dense (weight 0.0 **at the time of this fit**; now 2.0), sparse, text |
 | fusion | RRF over ranks |
 | **relevance floor** | **0.3 of the query's content terms · drops candidates, reported in `progress`** |
 | **factors** | **authority 0.5 · structural 0.25 · topical 0.25 · completeness 0.0 · temporal 0.0** |
@@ -524,6 +524,12 @@ example; no result from this corpus can carry one.
 
 Measured in situ, three identical runs, against **50.0% / 52.3% / 0.360** for
 the same binary with `factor_weights` zeroed.
+
+! **Both columns predate the 2026-09-19 re-embed** (`EMBEDDING.md` §5d) and were
+fitted on a corpus where the dense arm contributed 0.0%. The weights are therefore
+fitted to a retrieval mix that no longer exists and **must be refitted** before this
+section's numbers mean anything. `EVAL.md` §4b's `DENSE_WEIGHT` sweep runs with
+*default* factor weights for exactly this reason. The refit is the open work.
 
 ! What the layer was worth could not be measured at all until the arms stopped
 returning different rows for the same query. Two identical evaluations scored

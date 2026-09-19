@@ -92,7 +92,7 @@ safe.
 
 | Variable | Default | |
 |---|---|---|
-| `DENSE_WEIGHT` | `0.0` | |
+| `DENSE_WEIGHT` | `2.0` | fitted 2026-09-19 · `EVAL.md` §4b |
 | `SPARSE_WEIGHT` | `1.0` | |
 | `TEXT_WEIGHT` | `1.0` | |
 
@@ -105,17 +105,30 @@ while the offline harness reported 50.0%, because the harness fused with its own
 weights. Stale weights are silent: every arm still runs and the results still look
 reasonable.
 
-Measured through the deployed server on the current corpus, 44 retrievable cases:
+Measured through the deployed server, 44 retrievable cases, **re-measured
+2026-09-19 after the re-embed** (`EMBEDDING.md` §5d):
 
-| dense | sparse | text | Recall@5 | MRR |
-|---|---|---|---|---|
-| 0 | 1 | 0 | 38.6% | 0.344 |
-| 0 | 1 | 1 | **50.0%** | 0.360 |
-| 1 | 1 | 1 | 50.0% | 0.360 |
+| dense | sparse | text | Recall@5 | Recall@10 | MRR |
+|---|---|---|---|---|---|
+| 0 | 1 | 1 | 50.0% | 52.3% | 0.349 |
+| 1 | 1 | 1 | 54.5% | 63.6% | 0.411 |
+| **2** | **1** | **1** | **56.8%** | **65.9%** | 0.428 |
+| 4 | 1 | 1 | 54.5% | 63.6% | 0.450 |
+| 8 | 1 | 1 | 59.1% | 63.6% | 0.470 |
 
-Recall@5 is flat for any text weight in 0.3–1.0 and MRR wanders 0.360–0.383 with no
-trend, so that spread is noise on n=44. Equal weight is the RRF paper's default and
-claims no precision the measurement supports.
+! **Fit this on MRR and Recall@10, ✗ on Recall@5.** At n=44 one query is 2.3 points,
+so every gap in the Recall@5 column is one or two cases and it moves
+non-monotonically. MRR rises monotonically across the whole range and Recall@10
+moves +13.6 points, which is 6 cases and clear of the noise.
+
+! **And do not fit it at k=5 at all.** `EVAL.md` §4b measures the same corpus at the
+width a caller actually receives: fusion *loses* to dense-alone at k=5 and *wins*
+from k=20 up (82.1% at k=20, 94.9% at k=100). A k=5 fit therefore over-weights
+dense for the way the engine is used. `2.0` is shipped rather than `8.0` for that
+reason.
+
+~~Recall@5 is flat for any text weight in 0.3–1.0~~ — that observation was made when
+the dense arm contributed nothing and has not been re-measured.
 
 All three at zero is rejected at startup: it fuses nothing and returns nothing, which
 is indistinguishable from a corpus that simply has no match.
@@ -169,7 +182,7 @@ only `e2e.py` scores what ships.
 | Variable | Default | Effect |
 |---|---|---|
 | `CANARY_MIN_COSINE` | `0.98` | startup vector-space check |
-| `DOMAIN_FLOOR` | `0.45` | nearest-centroid similarity below which results carry a weak-match hint |
+| `DOMAIN_FLOOR` | `0.39` | nearest-centroid similarity below which results carry a weak-match hint · lowered 2026-09-19, `EVAL.md` §4c |
 | `DOMAIN_LEXICAL_FLOOR` | `0.40` | minimum IDF-mass of the query the evidence must account for |
 | `GATE_SAMPLE` | `5` | how many sparse hits the lexical evidence pools over |
 

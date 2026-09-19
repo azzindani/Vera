@@ -30,16 +30,29 @@ returns nothing rather than guessing.
 | | |
 |---|---|
 | Corpus under test | 355,621 chunks · 177 clusters · 2.4 GB |
-| Recall@5 | **50.0%** through the deployed server |
-| Latency p50 / p95 | **1,059 ms / 1,638 ms** on 2 vCPU / 4 GB |
+| Recall@20 / @50 | **82.1% / 87.2%** — the width an agent is actually handed |
+| Recall@5 | **56.8%** through the deployed server, `DENSE_WEIGHT=2.0` |
+| Routing | probing 5 of 177 clusters touches **2.8%** of the corpus for **93%** of flat-scan quality |
 | Memory, full stack | **2,640 MB** measured against a 3,584 MB budget |
-| Domain gate | 6/6 out-of-domain queries refused, 0/44 false refusals |
+| Domain gate | 4/6 out-of-domain refused, **0/44 false refusals** |
 | Concurrency | 12 concurrent → 8 served, 4 refused with `503` + `Retry-After` |
 
-The dense arm currently contributes nothing (weight 0.0): the corpus vectors were
-produced by a backend whose embedding space does not match the model's reference
-implementation. Retrieval runs on the sparse and text arms.
-[docs/EMBEDDING.md](docs/EMBEDDING.md) §5 has the measurement.
+All three arms now carry weight. The corpus was re-embedded on 2026-09-19 with the
+model's reference implementation, and the dense arm went from **0.0% to 61.4%
+Recall@5** — the strongest of the three, against 40.9% text and 38.6% sparse
+(`python dev_tools/eval/run.py`). [docs/EMBEDDING.md](docs/EMBEDDING.md) §5 records
+the defect that caused it and the measurement that closed it.
+
+! **Read Recall@20/@50, not Recall@5.** k=5 is the eval's strictness knob; a calling
+agent is handed 20–50 results and reasons over them. The ordering between
+configurations changes with k — at k=5 dense alone beats fusion, and from k=20 up
+fusion wins (`docs/EVAL.md` §4b).
+
+! Two numbers moved the *wrong* way and are stated rather than buried: the domain
+gate now lets 2 of 6 out-of-domain queries through, because in-domain and
+out-of-domain centroid scores overlap in the new space (`docs/EVAL.md` §4c); and
+latency has not been re-measured on the 2 vCPU / 4 GB profile since the re-embed, so
+the previous 1,059 ms p50 figure is withdrawn rather than restated.
 
 ## Run it
 

@@ -106,8 +106,14 @@ through the deployed HTTP server:
 | `vera-mcp` | 512 MB | **8.5 MB** | 1.7% |
 | **total** | **3,584 MB** | **2,640 MB** | leaves ~1.4 GB for the OS |
 
-Quality under the limits is **identical** to unconstrained: Recall@5 50.0%,
-domain gate 6/6, 0/44 false refusals.
+Quality under the limits was **identical** to unconstrained when measured:
+Recall@5 50.0%, domain gate 6/6, 0/44 false refusals.
+
+! Those figures predate the 2026-09-19 re-embed (`EMBEDDING.md` §5d) and the
+memory numbers above have **not** been re-measured since. Memory is unlikely to
+have moved — the vectors are the same width and count — but the retrieval figures
+are superseded by `EVAL.md` §4, and the *equivalence claim* (constrained ==
+unconstrained) has not been re-established on the new corpus.
 
 ! The engine holds 8.5 MB inside a 512 MB limit. The limit exists for the
 concurrency term, not the resident one — see the peak calculation above.

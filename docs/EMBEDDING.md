@@ -80,11 +80,19 @@ rule broken silently.
 
 ---
 
-## 5. The dense arm carries zero weight, and why
+## 5. The dense arm carried zero weight · resolved 2026-09-19
 
-`DENSE_WEIGHT` ships at `0.0`. Not because the model is weak — because the corpus
-vectors were produced by a backend whose output does not match the model's reference
-implementation.
+**The corpus was re-embedded with the model's reference implementation on
+2026-09-19. `DENSE_WEIGHT` now ships at `2.0` and the dense arm scores 61.4%
+Recall@5 — the strongest of the three arms (`EVAL.md` §4a).** This section is kept
+in full because the defect is instructive and the canary genuinely could not catch
+it; §5d records how it was closed.
+
+### 5a. What was wrong
+
+`DENSE_WEIGHT` shipped at `0.0` for months. Not because the model is weak — because
+the corpus vectors were produced by a backend whose output does not match the
+model's reference implementation.
 
 Measured head to head: 12 questions against a pool of 203 candidate chunks, the only
 variable being which implementation produced the vectors.
@@ -99,6 +107,8 @@ Ruled out as explanations: dtype (fp16 against fp32 agrees at 0.999986), pooling
 position (−1, −2 and −3 all land around 0.12–0.16 against the corpus vectors), and
 weight loading (595,776,512 parameters, no warnings).
 
+### 5b. Why the canary could not catch it
+
 ! This is exactly the failure the canary cannot catch, and it is worth being precise
 about why. The canary asks *is the query in the same space as the corpus?* The answer
 was yes — consistently, at 0.99998. Both sides were in the same wrong space. Corpus
@@ -106,12 +116,14 @@ self-retrieval scored 8/8. Only question→clause retrieval failed, because only
 crosses from one kind of text to another, and only the head-to-head above compares the
 space against an independent implementation of the same model.
 
-The dense arm ships at weight **0.0** and contributes **0.0%** Recall@5; sparse
+~~The dense arm ships at weight **0.0** and contributes **0.0%** Recall@5~~ — superseded
+by §5d; kept because the reasoning below is why the re-embed was not treated as urgent
+at the time. As written then: sparse
 and text carry retrieval to **54.5%** without it (`EVAL.md` §4). The defect above
 is therefore documented, ✗ load-bearing for *ranking* — nothing in the query path
 depends on the dense vectors today.
 
-### It does constrain the deployment, though
+### 5c. It did constrain the deployment, though
 
 The corpus is reproducible **only** by the pinned `86-1.7.2` image. Measured
 against stored vectors (`HARDWARE.md` §1):
@@ -134,6 +146,48 @@ tag". Consequences, neither of them about CPU:
   other space.
 
 Both unblock the same way and only that way.
+
+### 5d. How it was closed
+
+The precondition set when the re-embed was previously closed was *a number, not a
+better argument*: embed the chunks the labelled answers live in plus distractors and
+score the dense arm on that subset. That number came back decisive —
+`dev_tools/pre_embed/dense_probe.py --pool 5000 --hard 40`:
+
+| space | Recall@5 | Recall@10 | median rank |
+|---|---|---|---|
+| stored (TEI `86-1.7.2`) | 2.6% | 2.6% | 1,316 |
+| reference implementation | **79.5%** | **97.4%** | **1** |
+
+`dev_tools/pre_embed/reembed.py` then wrote 355,623 vectors into `dense_v2`
+alongside the live column, and `--swap` promoted them in one transaction. Both
+columns were dumped to `.test/backup/` first; the old one verified at 355,621 rows.
+Centroids and chunk assignments were rebuilt from the new vectors
+(`dev_tools/cluster_maint/kmeans.py`), because the 177 centroids were means of the
+old ones and routing would otherwise point into a space that no longer exists.
+
+**The container lock-in is gone.** `docker/embed_cpu` — the transformers reference
+server, which scored 0.002–0.19 against the old corpus and was correctly refused by
+the canary — now reproduces the corpus at **0.999997**, and the engine's own startup
+canary passes at **1.00000**. Both consequences above are lifted: TEI can be
+upgraded, and a CPU-only deployment is possible.
+
+! **The canary still cannot prove correctness, and that has not changed.** It asks
+whether query and corpus occupy the same space; the old corpus passed at 0.99998
+while ranking the right answer at median 857. Both sides agreed and both were wrong.
+What establishes that *this* space is right is the head-to-head retrieval
+measurement above, against an independent implementation — the same standard that
+exposed the original defect.
+
+! **Dense degrades with corpus size, measured rather than assumed.** Recall@5 over
+the same 39 queries: **76.9%** against an 11k pool, **74.4%** at 103k, **69.2%** at
+the full 355,621. Roughly 7.7 points across a 32× larger field. Worth knowing before
+anyone extrapolates a small-pool probe to production.
+
+! **The query instruction was tested and does not help.** `corpus_meta
+.dense_instruction` is NULL and stays NULL: prefixing queries with Qwen3's
+`Instruct: …` form scored identically at k=5 (76.9%) and *worse* at k=10 (92.3%
+against 97.4%). Do not add one.
 
 ---
 

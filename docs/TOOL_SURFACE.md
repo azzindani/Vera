@@ -83,11 +83,13 @@ search_knowledge(
 Which arms run. `hybrid` fuses all three; `keyword` runs sparse + text only;
 `semantic` runs the dense arm alone.
 
-! **`semantic` is measurably broken on this corpus and says so.** The dense arm
-scores **0.0% Recall@5** alone and ships at weight 0.0 (`EVAL.md` §4,
-`EMBEDDING.md` §5). The mode exists because the argument surface should not be
-reshaped when the embedding space is fixed — but requesting it returns results
-with an explicit `hint` that this arm is not currently contributing. Offering a
+! ~~**`semantic` is measurably broken on this corpus and says so.**~~ **Fixed
+2026-09-19.** The corpus was re-embedded with the model's reference implementation
+and the dense arm now scores **61.4% Recall@5** alone — the strongest of the three
+— shipping at `DENSE_WEIGHT=2.0` (`EVAL.md` §4a, `EMBEDDING.md` §5d). The
+weak-arm `hint` no longer applies. The text below is kept because the reasoning
+about the argument surface still holds: it was not reshaped while the space was
+broken, which is why nothing had to change when it was fixed. Offering a
 capability we measured as absent, silently, would be the worse option.
 
 ### `top_k` and `candidate_pool`
