@@ -191,6 +191,63 @@ against 97.4%). Do not add one.
 
 ---
 
+## 5e. The space is wider than it needs to be · 512 costs nothing
+
+Qwen3-Embedding is trained with Matryoshka representation learning, so the first
+`N` dimensions of a vector are independently meaningful. Truncating and
+renormalising is therefore pure SQL — `l2_normalize(subvector(dense, 1, N))` — with
+no GPU and no re-embedding. Measured against the eval set, flat scan, full corpus
+(`python dev_tools/eval/mrl_recall.py`, 39 queries with resolvable targets):
+
+| dims | stored | @5 | @10 | @20 | @50 |
+|---|---|---|---|---|---|
+| **1024** (served) | 696 MB | 69.2% | 82.1% | 82.1% | 89.7% |
+| **512** | 349 MB | 69.2% | 82.1% | **84.6%** | 89.7% |
+| 256 | 176 MB | 69.2% | 71.8% | 74.4% | 87.2% |
+
+**512 is free.** Identical at @5, @10 and @50, and 2.6 points *better* at @20 — the
+width a calling agent is actually handed. 256 is not: it loses 10.3 points at @10
+and 7.7 at @20, precisely where it would hurt.
+
+That makes **347 MB** available on the one column the page cache most wants, which
+matters because the database does not fit the sub-1 GB Postgres profile
+(`HARDWARE.md` §5) and every arm is a scan.
+
+! **Designed, ✗ built** — but it is the **same swap the re-embed already used**,
+and a cheaper one. `reembed.py` populates `dense_v2` alongside the live column,
+validates it, and `--swap` promotes it with `DROP COLUMN dense; RENAME dense_v2
+TO dense`; `kmeans.py` swaps centroids by generation. That procedure is proven on
+this corpus (§5d). The steps:
+
+1. `ALTER TABLE chunks ADD COLUMN dense_v2 halfvec(512)`
+2. `UPDATE chunks SET dense_v2 = l2_normalize(subvector(dense, 1, 512))`
+   — **pure SQL, no GPU.** The re-embed needed ~6 GPU hours; this is a table scan.
+3. `python dev_tools/pre_embed/reembed.py --swap`
+4. rebuild the 177 centroids in the new space (`kmeans.py`, generation swap)
+5. `corpus_meta.dense_dim` → 512. **Ravel owns that row**, so it starts there
+   (`README.md`), and Vera reads it.
+6. restart · the canary must reproduce the 512-d space or the engine refuses (§3)
+
+! Step 6 does **not** pass today, and this is the one piece that needs code.
+`validate_against` (`crates/embed/src/lib.rs`) rejects any vector whose length is
+not the declared width — correctly, since a wrong-width vector is silent
+corruption. The provider returns 1024, so the engine must truncate and
+renormalise the **query** to the declared width before validating, exactly as
+step 2 does to the corpus. Half a Matryoshka operation is not a smaller space, it
+is a different one (§1), so this is a correctness requirement, ✗ an optimisation. Until all of that exists the
+corpus is served at 1024.
+
+! The `dense_512` and `dense_256` columns this was measured from have been
+**dropped**. The measurement is the asset; the columns were 525 MB of page cache
+serving no query, and either is one statement to regenerate. Do not keep an
+experiment resident to avoid re-running it.
+
+! Measured at `LIMIT 50` on a flat scan, so it isolates truncation from routing.
+Centroids are 1024-d and would need rebuilding per width; mixing that in would
+measure a clustering change instead.
+
+---
+
 ## 6. Reranker
 
 Not used. RRF is the ranking mechanism. A cross-encoder reranker would put a model back
