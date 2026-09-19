@@ -99,6 +99,38 @@ dev_tools/       offline, operator-side: embedding, clustering, eval, fixtures
 | [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md) | what breaks silently, and what stops it |
 | [docs/STANDARDS_COMPLIANCE.md](docs/STANDARDS_COMPLIANCE.md) | mapping to the upstream standard |
 
+## Where the corpus comes from — [Ravel](https://github.com/azzindani/Ravel)
+
+Vera serves a corpus; it does not build one. That half is
+**[azzindani/Ravel](https://github.com/azzindani/Ravel)**, the offline corpus compiler.
+
+```
+Ravel (offline, GPU, transient)          Vera (online, VPS, always-on)
+────────────────────────────────         ────────────────────────────────
+documents → bundle → Postgres  ────────►  query → route → search → cite
+    owns the schema                           reads the schema
+```
+
+The seam is the **`corpus_meta` row**. Ravel generates the schema, and stamps the
+bundle's manifest — model, width, pooling, instruction strings, chunker version, source
+hashes — into that table before the first chunk is loaded. Vera reads it at startup
+(`crates/store/src/search.rs`) and builds its embedder to match: nothing about the vector
+space is compiled into the Rust, and the startup canary refuses to serve if the space it
+reproduces is not the one the row declares.
+
+**Ravel takes precedence on the corpus schema.** Ravel writes it, Vera reads it, and
+readers do not define formats. A schema change starts there and propagates here.
+
+Shared between the two repositories:
+
+| Thing | Here | In Ravel | Rule |
+|---|---|---|---|
+| Labelled eval queries | [`dev_tools/eval/queries.json`](dev_tools/eval/queries.json) — 50 cases, the origin | [`eval/id_legal/queries@v1.jsonl`](https://github.com/azzindani/Ravel/blob/main/eval/id_legal) | Vera's copy is the origin; Ravel's is imported by [`tools/import_vera_queries.py`](https://github.com/azzindani/Ravel/blob/main/tools/import_vera_queries.py) and drops the chunk ids, which cannot survive a re-chunk |
+| Byte-aware batching | [`dev_tools/pre_embed/batching.py`](dev_tools/pre_embed/batching.py) — frozen | [`src/runtime/batching.py`](https://github.com/azzindani/Ravel/blob/main/src/runtime/batching.py) | Ravel owns it now; Vera's copy is held only until `pre_embed`'s remaining scripts follow it |
+| Corpus schema | [`migrations/*.sql`](migrations) — applied by hand | [`src/bundle/schema.py`](https://github.com/azzindani/Ravel/blob/main/src/bundle/schema.py) — generated | Generated from the manifest there, never hand-written here |
+
+Family: Folio · Pipeline · Sift · **Vera** · Ravel.
+
 ## Licence
 
 MIT.

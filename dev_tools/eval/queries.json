@@ -47,7 +47,16 @@
     "itself and survives. `answer_articles` is the label; run.py resolves it to",
     "whatever chunk ids the current corpus uses, and ANY chunk of a labelled",
     "article counts as a hit. `answer_chunks_spike01` records the ids these were",
-    "originally labelled against, for archaeology only."
+    "originally labelled against, for archaeology only.",
+    "",
+    "SHARED WITH RAVEL -- github.com/azzindani/Ravel. This file is the origin;",
+    "Ravel imports it to `eval/id_legal/queries@v1.jsonl` via",
+    "`tools/import_vera_queries.py`, which drops the chunk ids for the reason",
+    "stated above, collapses the 12 shapes onto its 5 retrieval types, and keeps",
+    "the original shape in `notes`. Edit labels HERE and re-run that importer;",
+    "editing the copy makes two ground truths, which is worse than none. Ravel's",
+    "own gate reports what this set still lacks: 50 cases against a 100 minimum,",
+    "and 66% factual."
   ],
   "queries": [
     {
