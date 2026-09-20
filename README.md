@@ -36,6 +36,9 @@ returns nothing rather than guessing.
 | Memory, full stack | **2,640 MB** measured against a 3,584 MB budget |
 | Recall at 512 dims | **identical** to 1024 at @5/@10/@50, better at @20 — 347 MB reclaimable, designed ✗ built (`docs/EMBEDDING.md` §5e) |
 | Engine RAM | **~13 MB, flat** — measured 14/12/14 MB across `CLUSTER_BATCH` 1/2/5; independent of probe width and of corpus size |
+| Routing at scale | **proven at 14×** — corpus replicated to 5.0M rows / 23 GB, dense arm moved 46 → **57 ms** (`docs/HARDWARE.md` §6) |
+| Lexical arm | `pg_search` BM25 where available, `sparsevec` scan where not — **1,858 ms vs 6,282 ms at 5M**, same fused recall |
+| vs. a dedicated index | ParadeDB's IVF matches flat-scan recall but costs **2,409 ms against routing's 49 ms**, and its 2.6 GB index has no `halfvec` opclass (`docs/HARDWARE.md` §6b) |
 | Domain gate | 4/6 out-of-domain refused, **0/44 false refusals** |
 | Concurrency | 12 concurrent → 8 served, 4 refused with `503` + `Retry-After` |
 
