@@ -160,12 +160,29 @@ services:
       DENSE_WEIGHT: ${DENSE_WEIGHT:-2.0}
       SPARSE_WEIGHT: ${SPARSE_WEIGHT:-1.0}
       TEXT_WEIGHT: ${TEXT_WEIGHT:-1.0}
+      # ! Both optional, both validated at startup, both FATAL when they cannot
+      # work. Unset is a supported deployment: the engine loads one algorithm
+      # (`balanced`, from the FACTOR_* values above) and the scoring vocabulary
+      # of the corpus it was first built for -- and it SAYS SO on its first two
+      # log lines, because serving a corpus those tables do not describe makes
+      # every factor evaluate neutrally and the weights above do nothing.
+      #
+      # The vocabulary a CORPUS declares wins over the file. This is only
+      # consulted for a corpus loaded before Ravel wrote
+      # `corpus_meta.scoring_vocabulary`.
+      ALGORITHMS_PATH: ${ALGORITHMS_PATH:-}
+      VOCABULARY_PATH: ${VOCABULARY_PATH:-}
     volumes:
       # ! Sparse vectors are indexed by vocabulary POSITION. Serving a corpus
       # against another run's vocabulary compares unrelated dimensions and
       # returns plausible nonsense rather than failing, so the vocab is mounted
       # beside the corpus it was built from.
       - ${VOCAB_DIR:?set VOCAB_DIR in .env}:/vocab:ro
+      # ! The repository's own config directory, read-only, always mounted.
+      # Mounting it unconditionally costs nothing and removes the failure where
+      # an operator sets ALGORITHMS_PATH and the engine dies saying the file is
+      # missing -- which reads as a bad path rather than a missing mount.
+      - ./config:/cfg:ro
     ports:
       - "${ENGINE_BIND:-127.0.0.1}:${ENGINE_PORT:-8081}:8081"
     depends_on:

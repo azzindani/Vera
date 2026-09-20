@@ -263,7 +263,7 @@ impl Pipeline {
         vectorizer: QueryVectorizer,
         model: &str,
         cfg: Config,
-    ) -> Result<Self, store::StoreError> {
+    ) -> Result<Self, StartupError> {
         let meta = ops.corpus_meta().await?;
 
         // ! The CORPUS decides, and the engine matches -- the same rule invariant 2
@@ -285,14 +285,8 @@ impl Pipeline {
             "VOCABULARY_PATH"
         };
         if let Some(declared) = meta.scoring_vocabulary.as_deref() {
-            cfg.vocabulary = crate::vocabulary::CorpusVocabulary::load(declared).map_err(|e| {
-                store::StoreError::CorpusMismatch {
-                    corpus_model: format!("scoring_vocabulary · {e}"),
-                    corpus_dim: 0,
-                    engine_model: "a vocabulary this engine can evaluate".to_owned(),
-                    engine_dim: 0,
-                }
-            })?;
+            cfg.vocabulary = crate::vocabulary::CorpusVocabulary::load(declared)
+                .map_err(|e| StartupError::CorpusVocabulary { why: e.to_string() })?;
             vocab_source = "corpus_meta (declared by the corpus)";
         }
         let cfg = cfg;
@@ -302,22 +296,35 @@ impl Pipeline {
         // small effect -- it is NO effect, and it is indistinguishable from a weight
         // that was measured and found not to help.
         let mut unusable: Vec<&str> = Vec::new();
-        for algo in cfg.algorithms.algorithms.values() {
-            for f in cfg.vocabulary.missing_for(&weights_from_contract(&algo.factors)) {
+        let mut blamed: Vec<&str> = Vec::new();
+        for (name, algo) in &cfg.algorithms.algorithms {
+            let missing = cfg.vocabulary.missing_for(&weights_from_contract(&algo.factors));
+            if !missing.is_empty() && !blamed.contains(&name.as_str()) {
+                blamed.push(name);
+            }
+            for f in missing {
                 if !unusable.contains(&f) {
                     unusable.push(f);
                 }
             }
         }
         if !unusable.is_empty() {
-            return Err(store::StoreError::CorpusMismatch {
-                corpus_model: format!(
-                    "a corpus declaring no table for: {} (source: {vocab_source})",
-                    unusable.join(", ")
-                ),
-                corpus_dim: 0,
-                engine_model: "algorithms that weight those factors".to_owned(),
-                engine_dim: 0,
+            // ! Names the ALGORITHMS as well as the factors. "authority is
+            // unusable" sends an operator to the environment; "`balanced` and
+            // `sanction` weight authority" sends them to the file that says so.
+            return Err(StartupError::FactorWithoutVocabulary {
+                algorithms: blamed
+                    .iter()
+                    .map(|n| format!("`{n}`"))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                factors: unusable
+                    .iter()
+                    .map(|f| format!("`{f}`"))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                plural: if unusable.len() == 1 { "it" } else { "them" },
+                from_where: vocab_source,
             });
         }
         eprintln!(
@@ -337,7 +344,7 @@ impl Pipeline {
                 corpus_dim: meta.dense_dim,
                 engine_model: model.to_owned(),
                 engine_dim: usize::try_from(meta.dense_dim).unwrap_or(0),
-            });
+            }.into());
         }
 
         // ! The real canary. `ensure_compatible` above compares two strings;
@@ -354,7 +361,7 @@ impl Pipeline {
                         chunk_id,
                         got,
                         want: cfg.canary_min_cosine,
-                    });
+                    }.into());
                 }
                 log_canary(&chunk_id, got);
             }
@@ -363,7 +370,7 @@ impl Pipeline {
                 // the space is the failure mode invariant 2 exists to prevent.
                 return Err(store::StoreError::Pool(format!(
                     "canary embed failed · cannot verify the vector space: {e}"
-                )));
+                )).into());
             }
         }
 
@@ -1245,6 +1252,57 @@ pub enum PipelineError {
     /// may name instead.
     #[error(transparent)]
     Options(#[from] contract::ResolveError),
+}
+
+/// Why the engine would not start.
+///
+/// ! A separate type from [`store::StoreError`], and it exists because reusing
+/// `CorpusMismatch` for a configuration fault produced the message
+///
+/// ```text
+/// corpus was embedded with 'a corpus declaring no table for: authority,
+/// structural' at 0 dims but this engine ... at 0 dims
+/// ```
+///
+/// which is not what happened and sends the reader to the wrong file. A refusal
+/// is the one message an operator reads under time pressure; `docs/OPERATIONS.md`
+/// asks every one of them to name the variable and the value.
+#[derive(Debug, thiserror::Error)]
+pub enum StartupError {
+    #[error(transparent)]
+    Store(#[from] store::StoreError),
+
+    /// `corpus_meta.scoring_vocabulary` holds something this engine cannot score
+    /// with.
+    #[error(
+        "the corpus declares a scoring vocabulary this engine cannot use \u{b7} {why} \u{b7} \
+         it was written by Ravel from its profile, so the profile is where to fix it"
+    )]
+    CorpusVocabulary { why: String },
+
+    /// A weight asks for a factor the live vocabulary has no table for.
+    ///
+    /// ! Fatal, and this is the whole reason a vocabulary is declared. A weight of
+    /// 0.5 on a factor whose table is empty is not a small effect -- it is NO
+    /// effect, and it is indistinguishable from a weight that was measured and
+    /// found not to help. This project shipped that bug once already, with
+    /// `topical` fitted at 0.25 against a column the engine never selected.
+    #[error(
+        "algorithm(s) {algorithms} weight {factors}, but the scoring vocabulary in use \
+         ({from_where}) declares no table for {plural} \u{b7} every candidate would score 0.0 \
+         and the weight would do nothing at all. Either set those weights to 0, or \
+         declare the table -- in the corpus profile if Ravel built this corpus, \
+         otherwise in VOCABULARY_PATH"
+    )]
+    FactorWithoutVocabulary {
+        algorithms: String,
+        factors: String,
+        plural: &'static str,
+        // ! Named `from_where`, ✗ `source`. thiserror treats a field called
+        // `source` as the error's CAUSE and requires it to implement Error, so
+        // the obvious name silently changes what the type means.
+        from_where: &'static str,
+    },
 }
 
 /// The most precise locator ingest recorded · never a placeholder.
