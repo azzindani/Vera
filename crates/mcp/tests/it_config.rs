@@ -94,10 +94,16 @@ fn the_shipped_vocabulary_reproduces_the_compiled_in_fallback_exactly() {
     assert_eq!(from_file.min_term_chars, compiled.min_term_chars);
     assert_eq!(from_file.structural.len(), compiled.structural.len());
     for (a, b) in from_file.structural.iter().zip(&compiled.structural) {
-        assert_eq!(a.label, b.label);
+        // ! Compared by the pattern's SOURCE, not by the compiled automaton: two
+        // identical patterns compile to distinct values, and the property under test
+        // is "built from the same declaration".
+        assert_eq!(a.pattern.as_str(), b.pattern.as_str());
         assert_eq!(a.field, b.field);
-        assert_eq!(a.prefix, b.prefix);
-        assert!((a.score - b.score).abs() < f32::EPSILON, "{}", a.label);
+        assert!(
+            (a.score - b.score).abs() < f32::EPSILON,
+            "{}",
+            a.pattern.as_str()
+        );
     }
     assert_eq!(from_file.stopwords, compiled.stopwords);
 
@@ -168,16 +174,19 @@ fn load_vocab(rel: &str) -> engine::Vocabulary {
         .map(|rules| {
             rules
                 .iter()
-                .map(|r| engine::StructuralRule {
-                    label: r["label"].as_str().unwrap_or_default().to_uppercase(),
-                    field: match r["field"].as_str().unwrap_or("either") {
-                        "article" => engine::Field::Article,
-                        "chapter" => engine::Field::Chapter,
-                        _ => engine::Field::Either,
-                    },
-                    prefix: r["prefix"].as_bool().unwrap_or(false),
+                .map(|r| {
                     #[allow(clippy::cast_possible_truncation)]
-                    score: r["score"].as_f64().unwrap_or(0.0) as f32,
+                    engine::StructuralRule::new(
+                        &regex::escape(r["label"].as_str().unwrap_or_default().trim()),
+                        match r["field"].as_str().unwrap_or("either") {
+                            "article" => engine::Field::Article,
+                            "chapter" => engine::Field::Chapter,
+                            _ => engine::Field::Either,
+                        },
+                        r["score"].as_f64().unwrap_or(0.0) as f32,
+                        r["prefix"].as_bool().unwrap_or(false),
+                    )
+                    .expect("a shipped label must compile")
                 })
                 .collect()
         })

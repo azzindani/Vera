@@ -6,6 +6,28 @@ rust-version.workspace = true
 description = "Routing layers and fusion. Pure domain logic with zero MCP imports."
 
 [dependencies]
+# ! The one dependency, and it is here because the CORPUS declares the patterns.
+# `structural` asks whether a chunk is operative text or an appendix; the labels
+# are the corpus's (`corpus_meta.scoring_vocabulary`, written by Ravel from its
+# profile), and one of the shipped profiles declares a genuine pattern --
+# `\d+(\.\d+)*\.?\s` for numbered sections in a generic document. Evaluating a
+# corpus-declared pattern requires a pattern engine.
+#
+# The alternatives were both worse: literal prefix matching would fail to match
+# such a rule SILENTLY, which is the exact disease this whole change treats, and
+# refusing the rule would mean Vera cannot serve a corpus whose sections are
+# numbered rather than named.
+#
+# ! Default features, INCLUDING the Unicode tables. Trimming them was tried first
+# on the grounds that section labels are ASCII -- and that is an assumption about
+# Indonesian and English, which is the assumption this entire change exists to
+# remove. Case-insensitive matching without `unicode-case` fails to compile at
+# all, and a corpus labelled in Greek, Cyrillic or Turkish would fold wrongly
+# under an ASCII-only rule. ~1 MB of binary, no measurable resident cost.
+#
+# Compiled ONCE at startup, never per request -- the ranking loop runs the rules
+# over a pool of 60 on every call and cannot afford a compile.
+regex = "1"
 
 [lints]
 workspace = true

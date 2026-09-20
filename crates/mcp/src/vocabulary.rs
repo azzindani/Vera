@@ -166,13 +166,21 @@ impl VocabularyFile {
                     why: format!("score {} is outside 0.0..=1.0", r.score),
                 });
             }
-            structural.push(engine::StructuralRule {
-                // Uppercased once here, ✗ per candidate on every request.
-                label: r.label.trim().to_uppercase(),
-                field,
-                prefix: r.prefix,
-                score: r.score,
-            });
+            // ! `regex::escape`: a FILE rule names a literal label, so a `.` in it
+            // is a dot and not "any character". The corpus form below is the one
+            // that carries patterns, because that is what the profile declares.
+            structural.push(
+                engine::StructuralRule::new(
+                    &regex::escape(r.label.trim()),
+                    field,
+                    r.score,
+                    r.prefix,
+                )
+                .map_err(|e| VocabError::BadScore {
+                    label: r.label.clone(),
+                    why: e.to_string(),
+                })?,
+            );
         }
 
         Ok(engine::Vocabulary {
@@ -187,6 +195,130 @@ impl VocabularyFile {
             // ! Lowercased. `content_terms` lowercases each token before
             // comparing, so an uppercase entry here would never match and would
             // fail silently -- the whole class of bug this module exists for.
+            stopwords: me.stopwords.iter().map(|s| s.trim().to_lowercase()).collect(),
+            min_term_chars: me.min_term_chars,
+        })
+    }
+}
+
+/// The shape Ravel stamps into `corpus_meta.scoring_vocabulary`.
+///
+/// ! A second shape, ✗ a second source of truth. This is the one the **corpus**
+/// declares and it wins; [`VocabularyFile`] exists for a corpus loaded before the
+/// column did, and for an operator overriding one that declares nothing.
+///
+/// The two differ because they were written for different readers. Ravel's profile
+/// says `annex: [...]` and `operative: [...]` with one score each — which is how a
+/// person thinks about it — while the file form spells each rule out with its own
+/// field and match kind, which is how the engine had already been built. Mapping
+/// one onto the other here is cheaper than making either pretend to be the other.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CorpusVocabulary {
+    #[serde(default)]
+    pub authority: std::collections::BTreeMap<String, u8>,
+    #[serde(default = "default_max_tier_u")]
+    pub authority_scale: u32,
+    #[serde(default)]
+    pub annex: Vec<String>,
+    #[serde(default)]
+    pub operative: Vec<String>,
+    #[serde(default)]
+    pub annex_score: f32,
+    #[serde(default = "one")]
+    pub operative_score: f32,
+    #[serde(default = "default_structural")]
+    pub labelled_score: f32,
+    /// The domain vocabulary whose density Ravel folds into `completeness`.
+    ///
+    /// ! Accepted and **not used**. Vera has no factor that reads it yet — the
+    /// `richness` family is designed, not built — and rejecting the key would mean
+    /// the engine refuses to start against a corpus whose profile is perfectly
+    /// valid. Carrying it silently is the wrong half of the trade only if nothing
+    /// ever says so, which `list_algorithms` and the startup line do.
+    #[allow(dead_code)]
+    #[serde(default)]
+    pub terms: Vec<String>,
+    #[serde(default)]
+    pub stopwords: Vec<String>,
+    #[serde(default = "default_min_term")]
+    pub min_term_chars: usize,
+}
+
+const fn default_max_tier_u() -> u32 {
+    10
+}
+const fn one() -> f32 {
+    1.0
+}
+
+impl CorpusVocabulary {
+    /// Parse what Ravel stamped, and map it onto the engine's type.
+    ///
+    /// ! Every rule is anchored and matched against article **or** chapter, because
+    /// that is exactly what `enrich/factors.py::_structural` does: it tries
+    /// `article` then `chapter`, with patterns compiled as `^\s*(?:p)`. Two
+    /// implementations of one profile that disagree about matching are two
+    /// implementations that will disagree about ranking.
+    ///
+    /// # Errors
+    /// [`VocabError`] naming the pattern that would not compile.
+    pub fn load(json: &str) -> Result<engine::Vocabulary, VocabError> {
+        let me: Self =
+            serde_json::from_str(json).map_err(|e| VocabError::Malformed(e.to_string()))?;
+
+        if me.authority_scale == 0 {
+            return Err(VocabError::BadScore {
+                label: "authority_scale".to_owned(),
+                why: "0 would divide every rank by zero".to_owned(),
+            });
+        }
+        // ! Refused, ✗ clamped. A schedule outranking the clause it belongs to
+        // inverts the one thing this factor does, and Ravel's own ScoringSpec
+        // rejects it at profile-validation time. The engine checks again because it
+        // may be reading a corpus stamped by an older Ravel.
+        if !me.annex.is_empty() && !me.operative.is_empty() && me.annex_score >= me.operative_score
+        {
+            return Err(VocabError::BadScore {
+                label: "annex_score".to_owned(),
+                why: format!(
+                    "{} >= operative_score {} · a schedule would outrank the clause it \
+                     belongs to",
+                    me.annex_score, me.operative_score
+                ),
+            });
+        }
+
+        let mut structural = Vec::with_capacity(me.annex.len() + me.operative.len());
+        // Annex first: first match wins, and an appendix that also matches an
+        // operative rule is still an appendix.
+        for (patterns, score) in [
+            (&me.annex, me.annex_score),
+            (&me.operative, me.operative_score),
+        ] {
+            for pattern in patterns {
+                structural.push(
+                    engine::StructuralRule::new(pattern, engine::Field::Either, score, true)
+                        .map_err(|e| VocabError::BadScore {
+                            label: pattern.clone(),
+                            why: e.to_string(),
+                        })?,
+                );
+            }
+        }
+
+        Ok(engine::Vocabulary {
+            authority: me
+                .authority
+                .iter()
+                .map(|(k, v)| (k.trim().to_uppercase(), *v))
+                .collect(),
+            // ! Exact for every scale anyone declares. A u32 loses precision as
+            // f32 only above 2^24; an authority ladder is single digits.
+            #[allow(clippy::cast_precision_loss)]
+            max_tier: me.authority_scale as f32,
+            structural,
+            structural_default: me.labelled_score,
             stopwords: me.stopwords.iter().map(|s| s.trim().to_lowercase()).collect(),
             min_term_chars: me.min_term_chars,
         })

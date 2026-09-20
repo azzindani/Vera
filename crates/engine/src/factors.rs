@@ -129,8 +129,13 @@ pub struct Vocabulary {
     /// nearly every chunk, so counting them makes every candidate look equally
     /// relevant.
     pub stopwords: Vec<String>,
-    /// Shortest term kept. Below this a token carries no discriminative power
-    /// in any language this has been measured on.
+    /// A token must be **longer than** this to count. At 3 that keeps 4+
+    /// characters, which is what the relevance floor was fitted against.
+    ///
+    /// ! Strictly greater, ✗ at least. The distinction is one character and it
+    /// moves the floor: `content_terms` is the input to `coverage`, and a
+    /// threshold fitted on one tokenisation applied to another is a cut nothing
+    /// measured (`docs/SCORING.md` §3).
     pub min_term_chars: usize,
 }
 
@@ -148,19 +153,73 @@ pub enum Field {
 }
 
 /// One rule in the structural ladder: is this the operative body, or an annex?
-#[derive(Debug, Clone, PartialEq)]
+///
+/// ! The pattern is compiled **once, at startup**. The ranking loop runs it over a
+/// pool of 60 on every request and cannot afford a compile; more importantly, a
+/// pattern that fails to compile must stop the process rather than silently match
+/// nothing on every row forever.
+#[derive(Debug, Clone)]
 pub struct StructuralRule {
-    /// Uppercased. The caller uppercases the stored label before comparing, so
-    /// a corpus whose casing is inconsistent still matches.
-    pub label: String,
+    pub pattern: regex::Regex,
     pub field: Field,
-    /// `true` compares with `starts_with`, `false` with `contains`.
-    ///
-    /// ! Not cosmetic. `PASAL` is a prefix rule because "Pasal 9 dihapus" —
-    /// an amending clause — contains the word without being one, which is the
-    /// same distinction Ravel's profile makes with `marker_only`.
-    pub prefix: bool,
     pub score: f32,
+}
+
+impl StructuralRule {
+    /// Compile a rule.
+    ///
+    /// `anchored` wraps the pattern in `^\s*(?:…)`, which is how a *label* differs
+    /// from a *mention*: "Pasal 9 dihapus" is an amending clause that contains an
+    /// operative marker without being one — the same distinction Ravel's profile
+    /// draws with `marker_only`.
+    ///
+    /// Always case-insensitive. Stored labels are not consistently cased across a
+    /// corpus, and a rule that silently stopped matching on a lowercase row would be
+    /// invisible.
+    ///
+    /// # Errors
+    /// The pattern did not compile.
+    pub fn new(
+        pattern: &str,
+        field: Field,
+        score: f32,
+        anchored: bool,
+    ) -> Result<Self, regex::Error> {
+        let body = if anchored {
+            format!(r"(?i)^\s*(?:{pattern})")
+        } else {
+            format!("(?i)(?:{pattern})")
+        };
+        Ok(Self {
+            pattern: regex::Regex::new(&body)?,
+            field,
+            score,
+        })
+    }
+}
+
+/// ! Compared by the pattern's **source text**, ✗ by the compiled automaton.
+/// `regex::Regex` has no `PartialEq` — two identical patterns compile to distinct
+/// values — and the only equality this type needs is "was this built from the same
+/// declaration", which `as_str` answers exactly.
+impl PartialEq for StructuralRule {
+    fn eq(&self, other: &Self) -> bool {
+        self.pattern.as_str() == other.pattern.as_str()
+            && self.field == other.field
+            && (self.score - other.score).abs() < f32::EPSILON
+    }
+}
+
+/// A rule from a literal label · the built-in tables only, where the patterns are
+/// known good at compile time.
+///
+/// ! Panics on a bad pattern, and that is correct here: the argument is a literal in
+/// this file, so a failure is a programming error found by the first test run, ✗ a
+/// runtime condition. Corpus-declared patterns go through
+/// [`StructuralRule::new`], which returns a `Result`.
+fn rule(label: &str, field: Field, score: f32, anchored: bool) -> StructuralRule {
+    StructuralRule::new(&regex::escape(label), field, score, anchored)
+        .expect("built-in structural patterns must compile")
 }
 
 impl Vocabulary {
@@ -213,26 +272,16 @@ impl Vocabulary {
                 // ! 80,121 of 355,621 indexable chunks are LAMPIRAN — 22.5% of
                 // the corpus is annex material: tables, forms and schedules
                 // that are rarely the answer to a question about obligations.
-                StructuralRule {
-                    label: "LAMPIRAN".to_owned(),
-                    field: Field::Either,
-                    prefix: false,
-                    score: 0.0,
-                },
+                //
+                // Unanchored: the label appears mid-string in real rows
+                // ("LAMPIRAN I / LAMPIRAN"), unlike an operative marker.
+                rule("LAMPIRAN", Field::Either, 0.0, false),
                 // Elucidation sits between the two: it explains a clause
                 // authoritatively without being one.
-                StructuralRule {
-                    label: "PENJELASAN".to_owned(),
-                    field: Field::Chapter,
-                    prefix: false,
-                    score: 0.3,
-                },
-                StructuralRule {
-                    label: "PASAL".to_owned(),
-                    field: Field::Article,
-                    prefix: true,
-                    score: 1.0,
-                },
+                rule("PENJELASAN", Field::Chapter, 0.3, false),
+                // ! Anchored. "Ketentuan Pasal 9 dihapus" mentions the marker
+                // without being that clause.
+                rule("PASAL", Field::Article, 1.0, true),
             ],
             structural_default: 0.5,
             stopwords: STOP_ID.iter().map(|s| (*s).to_owned()).collect(),
@@ -365,21 +414,14 @@ pub fn authority(f: &Facets<'_>, v: &Vocabulary) -> f32 {
 /// authoritatively without being one.
 #[must_use]
 pub fn structural(f: &Facets<'_>, v: &Vocabulary) -> f32 {
-    let article = f.article.unwrap_or_default().to_uppercase();
-    let chapter = f.chapter.unwrap_or_default().to_uppercase();
-    let hit = |text: &str, r: &StructuralRule| {
-        if r.prefix {
-            text.starts_with(&r.label)
-        } else {
-            text.contains(&r.label)
-        }
-    };
+    let article = f.article.unwrap_or_default();
+    let chapter = f.chapter.unwrap_or_default();
     // First match wins, so the most specific rule is declared first.
     for r in &v.structural {
         let matched = match r.field {
-            Field::Article => hit(&article, r),
-            Field::Chapter => hit(&chapter, r),
-            Field::Either => hit(&article, r) || hit(&chapter, r),
+            Field::Article => r.pattern.is_match(article),
+            Field::Chapter => r.pattern.is_match(chapter),
+            Field::Either => r.pattern.is_match(article) || r.pattern.is_match(chapter),
         };
         if matched {
             return r.score;
@@ -1120,18 +1162,8 @@ mod tests {
             ],
             max_tier: 5.0,
             structural: vec![
-                StructuralRule {
-                    label: "APPENDIX".to_owned(),
-                    field: Field::Either,
-                    prefix: false,
-                    score: 0.0,
-                },
-                StructuralRule {
-                    label: "SECTION".to_owned(),
-                    field: Field::Article,
-                    prefix: true,
-                    score: 1.0,
-                },
+                rule("APPENDIX", Field::Either, 0.0, false),
+                rule("SECTION", Field::Article, 1.0, true),
             ],
             structural_default: 0.5,
             stopwords: vec!["the".to_owned(), "and".to_owned()],

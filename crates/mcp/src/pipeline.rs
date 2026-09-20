@@ -266,6 +266,68 @@ impl Pipeline {
     ) -> Result<Self, store::StoreError> {
         let meta = ops.corpus_meta().await?;
 
+        // ! The CORPUS decides, and the engine matches -- the same rule invariant 2
+        // applies to the vector space, applied to the tables that rank. Ravel stamps
+        // its profile's `scoring:` block into `corpus_meta.scoring_vocabulary`; when
+        // it is there it wins outright, because a vocabulary that describes a
+        // different corpus evaluates neutrally for every row and the operator's
+        // weights then do nothing AT ALL, silently.
+        //
+        // `VOCABULARY_PATH` is consulted only when the corpus declares nothing --
+        // for a corpus loaded before the column existed. A file that could override
+        // a corpus's own declaration would reintroduce exactly the drift this
+        // replaces; the two copies of the Indonesian ladder had already reached 27
+        // entries in Ravel against 10 in the engine.
+        let mut cfg = cfg;
+        let mut vocab_source = if cfg.vocabulary.is_builtin() {
+            "built-in id_regulation"
+        } else {
+            "VOCABULARY_PATH"
+        };
+        if let Some(declared) = meta.scoring_vocabulary.as_deref() {
+            cfg.vocabulary = crate::vocabulary::CorpusVocabulary::load(declared).map_err(|e| {
+                store::StoreError::CorpusMismatch {
+                    corpus_model: format!("scoring_vocabulary · {e}"),
+                    corpus_dim: 0,
+                    engine_model: "a vocabulary this engine can evaluate".to_owned(),
+                    engine_dim: 0,
+                }
+            })?;
+            vocab_source = "corpus_meta (declared by the corpus)";
+        }
+        let cfg = cfg;
+
+        // ! The guard, here rather than in Settings::validate, because the corpus is
+        // only known now. A weight of 0.5 on a factor whose table is empty is not a
+        // small effect -- it is NO effect, and it is indistinguishable from a weight
+        // that was measured and found not to help.
+        let mut unusable: Vec<&str> = Vec::new();
+        for algo in cfg.algorithms.algorithms.values() {
+            for f in cfg.vocabulary.missing_for(&weights_from_contract(&algo.factors)) {
+                if !unusable.contains(&f) {
+                    unusable.push(f);
+                }
+            }
+        }
+        if !unusable.is_empty() {
+            return Err(store::StoreError::CorpusMismatch {
+                corpus_model: format!(
+                    "a corpus declaring no table for: {} (source: {vocab_source})",
+                    unusable.join(", ")
+                ),
+                corpus_dim: 0,
+                engine_model: "algorithms that weight those factors".to_owned(),
+                engine_dim: 0,
+            });
+        }
+        eprintln!(
+            "[vera] scoring vocabulary \u{b7} {vocab_source} \u{b7} {} authority labels, \
+             {} structural rules, {} stopwords",
+            cfg.vocabulary.authority.len(),
+            cfg.vocabulary.structural.len(),
+            cfg.vocabulary.stopwords.len()
+        );
+
         // ! Startup refuses rather than degrading. This is the check whose
         // absence let an unreproducible corpus serve confident nonsense.
         meta.ensure_compatible(model, usize::try_from(meta.dense_dim).unwrap_or(0))?;

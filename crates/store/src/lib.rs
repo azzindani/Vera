@@ -84,6 +84,19 @@ pub struct CorpusMeta {
     pub sparse_scheme: String,
     pub sparse_dim: i32,
     pub sparse_vocab_sha256: String,
+    /// The corpus's own scoring vocabulary, as the JSON text Ravel stamped ·
+    /// `None` for a corpus loaded before the column existed.
+    ///
+    /// ! Text, ✗ a parsed type. `store` is the only crate that talks to the
+    /// database and it carries no JSON dependency; the shape belongs to
+    /// whatever reads it. The same reasoning keeps `dense_instruction` a String
+    /// here and an `InstructionStyle` upstream.
+    ///
+    /// ! `None` means **not recorded**, which is different from a corpus that
+    /// declares an empty vocabulary. The engine falls back to its compiled
+    /// tables for the first and honours the declaration for the second, and it
+    /// says at startup which happened.
+    pub scoring_vocabulary: Option<String>,
 }
 
 impl CorpusMeta {
@@ -219,6 +232,7 @@ mod tests {
             sparse_scheme: "bm25".into(),
             sparse_dim: 20000,
             sparse_vocab_sha256: "abc".into(),
+            scoring_vocabulary: None,
         }
     }
 

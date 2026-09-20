@@ -53,18 +53,6 @@ enum ConfigError {
     /// contents the engine will not score with.
     #[error("VOCABULARY_PATH={path} · {why}")]
     Vocabulary { path: String, why: String },
-    /// A factor carries a weight the loaded vocabulary cannot evaluate.
-    ///
-    /// ! Fatal, and this is the whole point of declaring a vocabulary. A
-    /// weight of 0.5 on a factor whose table is empty is not a small effect,
-    /// it is NO effect -- and it is indistinguishable from a weight that was
-    /// measured and found not to help. This project already shipped that bug
-    /// once, with `topical` fitted at 0.25 against a column the engine never
-    /// selected.
-    #[error(
-        "factor(s) {factors} carry a non-zero weight, but the loaded scoring vocabulary          declares no table for them · set FACTOR_{upper}=0, or declare the table in          VOCABULARY_PATH. A weight that cannot act is not a small effect, it is none."
-    )]
-    FactorWithoutVocabulary { factors: String, upper: String },
     /// `ALGORITHMS_PATH` names a file that cannot be read, or one whose contents
     /// are not a registry this engine will serve.
     ///
@@ -351,36 +339,11 @@ impl Settings {
                 kind: "pool at least as large as TOP_K",
             });
         }
-        // ! A weight the vocabulary cannot evaluate. Checked against EVERY
-        // algorithm, not just the server default: an operator who declares a
-        // vocabulary without a structural ladder and an algorithm that leans on
-        // `structural` has written two files that disagree, and the request
-        // that reveals it is whichever one names that algorithm.
-        let mut unusable: Vec<&'static str> = Vec::new();
-        for algo in self.pipeline.algorithms.algorithms.values() {
-            for f in self
-                .pipeline
-                .vocabulary
-                .missing_for(&engine::Weights {
-                    relevance_floor: algo.factors.relevance_floor,
-                    authority: algo.factors.authority,
-                    structural: algo.factors.structural,
-                    temporal: algo.factors.temporal,
-                    completeness: algo.factors.completeness,
-                    topical: algo.factors.topical,
-                })
-            {
-                if !unusable.contains(&f) {
-                    unusable.push(f);
-                }
-            }
-        }
-        if !unusable.is_empty() {
-            return Err(ConfigError::FactorWithoutVocabulary {
-                factors: unusable.join(", "),
-                upper: unusable.join("/FACTOR_").to_uppercase(),
-            });
-        }
+        // ! The "a weight the vocabulary cannot evaluate" check is NOT here. It
+        // moved to `Pipeline::new`, which is the first place the corpus's own
+        // declaration is known -- and the corpus's declaration is the one that
+        // decides. Checking the fallback here would pass a config the corpus then
+        // invalidates, which is a green startup check for the wrong thing.
         // ! All three weights at zero fuses nothing and returns nothing, which
         // looks exactly like a corpus with no matches.
         let weights =
@@ -421,22 +384,6 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         s.statement_timeout
     );
 
-    // ! Which scoring vocabulary is in use, always. `authority` and
-    // `structural` read tables that describe ONE corpus; on a corpus they do
-    // not describe, both evaluate neutrally for every row and the operator's
-    // weights do nothing at all. That failure is silent, so the line is not.
-    let vocab = &s.pipeline.vocabulary;
-    log!(
-        "scoring vocabulary \u{b7} {} \u{b7} {} authority labels, {} structural rules, {} stopwords",
-        if vocab.is_builtin() {
-            "BUILT-IN id_regulation (set VOCABULARY_PATH for your own corpus)"
-        } else {
-            "declared by VOCABULARY_PATH"
-        },
-        vocab.authority.len(),
-        vocab.structural.len(),
-        vocab.stopwords.len()
-    );
     log!(
         "algorithms \u{b7} {} loaded, {} offered to the agent \u{b7} default `{}`",
         s.pipeline.algorithms.algorithms.len(),

@@ -162,9 +162,16 @@ impl SearchOps {
         let c = self.client().await?;
         let row = c
             .query_opt(
+                // ! `to_jsonb(corpus_meta) ->> ...` rather than naming the column.
+                // Every corpus loaded before Ravel added `scoring_vocabulary` has a
+                // table without it, and naming a missing column is an error, not a
+                // NULL. Through `to_jsonb` the key is simply absent and the result is
+                // NULL -- so one query serves both schemas with no probe and no
+                // version flag.
                 "SELECT id, dense_model, dense_dim, dense_pooling, dense_normalize,
                         sparse_scheme, sparse_dim, sparse_vocab_sha256,
-                        dense_instruction
+                        dense_instruction,
+                        to_jsonb(corpus_meta) ->> 'scoring_vocabulary'
                  FROM corpus_meta ORDER BY created_at DESC LIMIT 1",
                 &[],
             )
@@ -180,6 +187,7 @@ impl SearchOps {
             sparse_dim: row.get(6),
             sparse_vocab_sha256: row.get(7),
             dense_instruction: row.get(8),
+            scoring_vocabulary: row.get(9),
         })
     }
 
