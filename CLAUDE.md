@@ -133,11 +133,13 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
    6,282 ms. Routing is proven; **the global arms are what does not scale**, and that is
    the accepted cost of the guarantee, ✗ an oversight (`docs/HARDWARE.md` §6).
 4. **OOM is impossible by construction, and the reason is measured.** The engine's
-   resident set is **~13 MB, flat** (14/12/14 MB at `CLUSTER_BATCH` 1/2/5) because it
-   never materialises the corpus: every arm returns `(id, score)` rows under a `LIMIT`,
-   so Postgres does the scanning. The cluster-sized working set is the **database's**,
-   bounded by its own configuration. `n` enters neither, because `k ∝ n` keeps cluster
-   size near constant. `docs/ARCHITECTURE.md` §4.
+   **per-request** cost is flat — it never materialises the corpus, every arm returns
+   `(id, score)` rows under a `LIMIT`, so Postgres does the scanning and the
+   cluster-sized working set is the **database's**. Measured 14/12/14 MB at
+   `CLUSTER_BATCH` 1/2/5, and 39 → 42 MB from idle to a 12-way burst at 5.1M rows.
+   ! Its **fixed** cost is O(k), ✗ constant: centroids are held hot and `k ∝ n`, so
+   the engine's floor is 9 MB at 355K and 39 MB at 5.1M, before any query.
+   `docs/HARDWARE.md` §2.
 5. **Provenance is captured at ingestion and immutable.** Never synthesize a source link
    at query time; omit what ingestion did not record. Immutability is a database
    trigger (`migrations/0002_provenance_immutable.sql`), ✗ a convention — and it is only true for a corpus the

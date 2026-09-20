@@ -65,25 +65,55 @@ which stops the stack, starts it, drives it through named phases and samples
 every container on an interval. Everything pinned to **2 cores**, engine capped
 at 512 MB, embedder at 1,280 MB, Postgres at 6,336 MB — an 8 GB box.
 
-| phase | db | embed | engine | total |
-|---|---|---|---|---|
-| all stopped | 0 | 0 | 0 | **0** |
-| starting | 55 | 327 | 6 | 389 |
-| idle after start | 55 | 327 | 9 | 391 |
-| first query (cold) | 677 | 326 | 9 | 1,012 |
-| 44 sequential queries | 1,156 | 328 | **11** | **1,495** |
-| 12 concurrent | 1,111 | 339 | 12 | 1,461 |
-| idle after load | 1,116 | 341 | 12 | 1,469 |
+Run at **both corpus sizes**, same hardware, back to back:
 
-**Peak 1,495 MB against a 3,584 MB budget.** The engine never exceeds **12 MB**
-across cold start, the full eval set and a concurrent burst.
+| phase | db | embed | engine | stack | | db | embed | engine | stack |
+|---|---|---|---|---|---|---|---|---|---|
+| | **355K** | | | | | **5.1M** | | | |
+| all stopped | 0 | 0 | 0 | **0** | | 0 | 0 | 0 | **0** |
+| starting | 60 | 374 | 6 | 440 | | 94 | 365 | 7 | 466 |
+| idle after start | 63 | 376 | **9** | 448 | | 102 | 366 | **39** | 507 |
+| first query (cold) | 64 | 375 | 9 | 447 | | 1,518 | 366 | 39 | 1,922 |
+| 44 sequential | 1,713 | 376 | 13 | 2,102 | | 5,907 | 367 | 41 | **6,316** |
+| 12 concurrent | 1,800 | 392 | **14** | **2,206** | | 5,713 | 378 | **42** | 6,133 |
+| idle after load | 1,846 | 393 | 14 | 2,253 | | 4,946 | 378 | 40 | 5,364 |
 
-**Nothing ratchets.** Idle-after-load (1,469 MB) matches peak-under-load
-(1,495 MB): what the db holds is page cache it already had, ✗ a leak.
+! **The engine is NOT flat in corpus size, and this document said it was.**
+14 MB → 42 MB for 14× the rows, and the jump is at **startup** — 9 MB → 39 MB
+before a single query is served. The cause is the **centroid table held hot**:
+177 clusters become 2,478, and `k ∝ n` by construction
+(`cluster_maint/kmeans.py:117`). §6 already called routing "linear in `k`"; that
+applies to memory as well as to CPU, and the earlier claim of "~13 MB flat,
+independent of corpus size" is **withdrawn**.
+
+What *is* flat is the **per-request** working set: the engine's figure barely
+moves between idle and a 12-way concurrent burst at either size (39 → 42 MB at
+5.1M). The arms still return `(id, score)` rows under a `LIMIT` and no vector
+enters the process. The fixed cost is O(k); the variable cost is not.
+
+Extrapolated: ~50,000 clusters at 100M is ~200 MB of centroids as f32, so the
+engine stays inside its 512 MB limit — but it is a term, ✗ a constant, and
+hierarchical routing (§6) would remove it.
+
+**db is the ceiling, not the engine.** At 5.1M Postgres peaks at **5,907 MB of a
+6,336 MB cap** — it wants every byte of cache available. That is the number that
+decides how large a corpus a given box serves.
+
+**The embedder is genuinely flat**: 393 MB against 378 MB across a 14× corpus.
+It does not touch the corpus at all.
+
+**Nothing leaks.** Idle-after-load is at or below peak-under-load at both sizes
+(2,253 vs 2,206 at 355K; 5,364 vs 6,316 at 5.1M): what the db holds is page cache
+it already had.
 
 ! `docker stats` reports the cgroup's `memory.current`, which **includes
 reclaimable page cache**. Most of the db column is that. Split by
 `/sys/fs/cgroup/memory.stat` the db's `anon` is tens of MB; the rest is cache.
+
+! The 355K figures here are higher than the 1,495 MB this section reported
+earlier the same day. Nothing regressed: that run followed a `DROP DATABASE` and
+measured an unusually cold page cache. 2,253 MB is the honest steady state for a
+box that has been doing work, and is what a deployment will look like.
 
 ### The embedder's dtype is the single largest memory decision
 
@@ -125,8 +155,9 @@ Engine peak RSS, from the container's own `memory.peak`, at three settings:
 |---|---|---|---|
 | peak engine RSS | 14 MB | 12 MB | 14 MB |
 
-**~13 MB, flat.** It does not move with the batch, and batch=5 would have had to
-hold five clusters — some 21 MB more — if the old formula were right.
+**Flat in the batch.** It does not move with the window, and batch=5 would have
+had to hold five clusters — some 21 MB more — if the old formula were right.
+(It is not flat in *corpus size*; see §2.)
 
 ! The previous text here read **"Peak engine RAM = 8.3 MB + (MAX_CONCURRENCY ×
 23.4 MB)", giving 102 MB at the defaults. That number was never measured**, and
@@ -165,12 +196,17 @@ through the deployed HTTP server:
 | `vera-db` | 1,792 MB | 1,156 MB | 65% |
 | `vera-embed` | 1,280 MB | **341 MB** | 27% · at `DTYPE=bfloat16` |
 | `vera-mcp` | 512 MB | **12 MB** | 2.3% |
-| **total** | **3,584 MB** | **1,495 MB** | leaves ~2.1 GB for the OS |
+| **total** | **3,584 MB** | **2,253 MB** | leaves ~1.3 GB for the OS |
 
-Re-measured 2026-09-20 by `hardware_profile.py` on the current corpus, which
-replaces the 2,640 MB this table used to report. Two of the three rows moved:
-the embedder because of `DTYPE` (see above), the engine because 8.5 MB was
-always an idle figure and 12 MB is the peak under a concurrent burst.
+Re-measured 2026-09-20 by `hardware_profile.py` at **355K**, replacing the
+2,640 MB this table used to report. The embedder moved because of `DTYPE`; the
+engine because 8.5 MB was always an idle figure and 14 MB is the peak under a
+concurrent burst.
+
+! **At 5.1M rows this budget does not hold.** Postgres alone peaks at 5,907 MB
+and the stack at 6,316 MB — well past 3,584 MB. The 4 GB profile serves a
+355K-row corpus; it does not serve a 5M one, and §2's two-scale table is what
+says so.
 
 ! **At the default `DTYPE=float32` this profile does not start.** The embedder
 needs 2,553 MB against the 1,280 MB budgeted here and is SIGKILLed on the first
@@ -210,11 +246,21 @@ number** — these differ by 15× across configurations that all call themselves
 | profile | p50 | p95 | max |
 |---|---|---|---|
 | dev box, embedder unpinned | **866 ms** | 1,459 ms | 1,701 ms |
-| **2 cores, whole stack pinned** | **10,007 ms** | 11,841 ms | 14,261 ms |
+| **2 cores pinned · 355K** | **10,251 ms** | 11,790 ms | 14,036 ms |
+| **2 cores pinned · 5.1M** | **18,527 ms** | 24,604 ms | 27,541 ms |
 | sub-1 GB Postgres, embedder unpinned | 5,908 ms | 7,664 ms | — |
-| refused by domain gate (2 cores) | 7,119 ms | | |
-| first query after start (cold) | 13,341 ms | | |
-| startup: db + embedder load + canary | 38 s | | |
+| refused by domain gate · 355K / 5.1M | 6,953 / 8,651 ms | | |
+| first query after start · 355K / 5.1M | 13,219 / 23,190 ms | | |
+| startup: db + embedder load + canary | 39–44 s | | |
+
+**14× the corpus costs 1.8× the latency.** That is far better than the per-arm
+figures predict (§6 measures 19.8× on the SQL alone) and it has two causes: the
+worst-scaling arm was replaced by an index (`pg_search`, migration 0004), and on
+2 pinned cores the embedder is a fixed ~7 s floor that database growth hides
+behind. Extrapolating, 10M lands near 25–30 s on this hardware.
+
+! The 10,251 ms at 355K reproduces the 10,007 ms measured earlier the same day
+on a separate cold-start run, so the 2-core figure is stable to ~2%.
 
 ! **The 2-core row is the honest one for a 2 vCPU VPS**, and it is the only row
 measured with the embedder on the same cores as everything else
@@ -232,14 +278,19 @@ measurement.
 
 Peak CPU by phase, where 2 cores = 200%:
 
-| phase | db | embed | engine |
-|---|---|---|---|
-| 44 sequential queries | 76% | **150%** | 1% |
-| 12 concurrent | 9% | **198%** | 0% |
+| phase | | db | embed | engine |
+|---|---|---|---|---|
+| 44 sequential | 355K | 135% | 147% | 0% |
+| | 5.1M | **199%** | 146% | 0% |
+| 12 concurrent | 355K | 47% | **201%** | 0% |
+| | 5.1M | **200%** | **202%** | 0% |
 
-**The embedder saturates both cores.** Postgres and the engine contend with it
-for CPU, not for memory — §2 shows the stack peaking at 1,495 MB of a 3,584 MB
-budget while latency is 10 s.
+**Both cores are saturated, and which process owns them shifts with scale.** At
+355K the embedder dominates; at 5.1M Postgres pins a full 200% and the two
+together demand roughly twice what the box has. The engine is 0–1% throughout.
+
+This is a CPU wall, ✗ a memory one: §2 shows 2,253 MB of a 3,584 MB budget at
+355K while latency is already 10 s.
 
 So the largest lever available is the embedder: quantization, fewer torch
 threads, or moving embedding off the box. None of the retrieval work in §6
@@ -438,7 +489,8 @@ nothing per query.
 
 | | scales with n | measured |
 |---|---|---|
-| engine RAM | **no** | ~13 MB flat (§2) |
+| engine RAM, per request | **no** | flat under load and across `CLUSTER_BATCH` (§2) |
+| engine RAM, floor | **yes**, linear in `k` | 9 MB → 39 MB for 14× the corpus: hot centroids (§2) |
 | dense arm latency | **no** | 1.24× for 14× rows |
 | layer-2 routing | yes, linear in `k` | 14.2× |
 | sparse arm latency | **worse than linear** | 41.9× |

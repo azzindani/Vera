@@ -209,9 +209,11 @@ to test is a guarantee nobody tests.
 
 ## 5. The OOM guarantee
 
-**Engine peak RSS is ~13 MB and flat** — 14 / 12 / 14 MB measured at `CLUSTER_BATCH`
-1 / 2 / 5 (`HARDWARE.md` §6a). It does not scale with the batch, with
-`CLUSTERS_PROBED`, or with the corpus.
+**Engine peak RSS is flat per request** — 14 / 12 / 14 MB measured at `CLUSTER_BATCH`
+1 / 2 / 5 (`HARDWARE.md` §6a). It does not scale with the batch or with
+`CLUSTERS_PROBED`. It **does** scale with the corpus through the hot centroid
+table — 14 MB at 355K, 42 MB at 5.1M — which is a startup cost, ✗ a per-request
+one (`HARDWARE.md` §2).
 
 The guarantee is structural, ✗ budgeted: **the engine never materialises the corpus.**
 Every arm returns ranked addresses under a `LIMIT` —

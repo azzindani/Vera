@@ -33,11 +33,12 @@ returns nothing rather than guessing.
 | Recall@20 / @50 | **82.1% / 87.2%** — the width an agent is actually handed |
 | Recall@5 | **56.8%** through the deployed server, `DENSE_WEIGHT=2.0` |
 | Routing | probing 5 of 177 clusters touches **2.8%** of the corpus for **93%** of flat-scan quality |
-| Memory, full stack | **1,495 MB** peak measured against a 3,584 MB budget — engine never above **12 MB** (`docs/HARDWARE.md` §2) |
+| Memory, full stack | **2,253 MB** at 355K against a 3,584 MB budget; **6,316 MB** at 5.1M, which that budget does not cover (`docs/HARDWARE.md` §2) |
 | Embedder dtype | `bfloat16` is a **prerequisite**, ✗ an optimisation: `float32` needs 2,553 MB against the 1,280 MB budgeted and is OOM-killed on the first query |
-| Latency, 2 cores | **p50 10,007 ms** with the whole stack pinned — the embedder saturates both cores. 866 ms where it is unpinned. Quote the profile with the number. |
+| Latency, 2 cores | **p50 10,251 ms at 355K · 18,527 ms at 5.1M** — 1.8× for 14× the corpus. Both cores saturate. 866 ms where the embedder is unpinned; quote the profile with the number. |
 | Recall at 512 dims | **identical** to 1024 at @5/@10/@50, better at @20 — 347 MB reclaimable, designed ✗ built (`docs/EMBEDDING.md` §5e) |
-| Engine RAM | **~13 MB, flat** — measured 14/12/14 MB across `CLUSTER_BATCH` 1/2/5; independent of probe width and of corpus size |
+| Engine RAM | **14 MB at 355K · 42 MB at 5.1M** — per-request cost is flat, the floor is the hot centroid table and grows with `k ∝ n` (`docs/HARDWARE.md` §2) |
+| Whole stack | **2,253 MB at 355K · 6,316 MB at 5.1M** — Postgres is the ceiling, peaking at 5,907 MB of a 6,336 MB cap |
 | Routing at scale | **proven at 14×** — corpus replicated to 5.0M rows / 23 GB, dense arm moved 46 → **57 ms** (`docs/HARDWARE.md` §6) |
 | Lexical arm | `pg_search` BM25 where available, `sparsevec` scan where not — **1,858 ms vs 6,282 ms at 5M**, same fused recall |
 | vs. a dedicated index | ParadeDB's IVF matches flat-scan recall but costs **2,409 ms against routing's 49 ms**, and its 2.6 GB index has no `halfvec` opclass (`docs/HARDWARE.md` §6b) |

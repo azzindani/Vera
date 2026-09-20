@@ -39,7 +39,9 @@ queue, so `QUEUE_WAIT_MS` has no effect there.
 ## 3. Concurrency — the OOM guarantee
 
 ```
-engine   ~13 MB, flat   measured 14/12/14 MB at CLUSTER_BATCH 1/2/5
+engine   14 MB @ 355K, 42 MB @ 5.1M   the delta is the hot centroid table,
+         which is O(k) and k grows with the corpus. Per-REQUEST it is flat:
+         14/12/14 MB at CLUSTER_BATCH 1/2/5, and 39->42 MB under a burst.
 postgres bounded by shared_buffers + work_mem + its container limit
 ```
 

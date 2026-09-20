@@ -119,9 +119,10 @@ dial an operator would reasonably raise for recall, with no visible connection t
 OOM two weeks later.
 
 **Stopped by** the engine never holding a cluster at all. Arms return `(id, score)`
-rows under a `LIMIT`; Postgres does the scanning. Engine peak RSS is ~13 MB and is
-flat across `CLUSTER_BATCH` 1/2/5 (`HARDWARE.md` §6a), so probe width cannot drag it
-anywhere.
+rows under a `LIMIT`; Postgres does the scanning. Engine peak RSS is flat across
+`CLUSTER_BATCH` 1/2/5 (`HARDWARE.md` §6a) and barely moves between idle and a
+12-way burst, so probe width cannot drag it anywhere. Corpus size can, through
+the hot centroid table — a different term, measured in `HARDWARE.md` §2.
 
 ! **This failure mode was mis-attributed, and the fix was real for the wrong reason.**
 The concern was that loading all probed clusters at once would put `CLUSTERS_PROBED ×

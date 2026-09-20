@@ -181,10 +181,16 @@ def report() -> None:
             if c not in names:
                 names.append(c)
     names = [n for n in STACK if n in names] + [n for n in names if n not in STACK]
+    # ! Anything that is not this stack is reported SEPARATELY, not folded
+    # into the total. A number that silently includes another project's
+    # container reads as Vera's cost and is not.
+    foreign = [n for n in names if n not in STACK]
+    names = [n for n in names if n in STACK]
+
 
     print("\n\nPEAK CONTAINER MEMORY BY PHASE (MB · cgroup current, page cache included)\n")
     print(f"{'phase':<22}" + "".join(f"{n.replace('vera-', ''):>14}" for n in names)
-          + f"{'total':>10}{'samples':>9}")
+          + f"{'stack':>10}{'samples':>9}")
     for ph in order:
         rows = [s for s in _samples if s["phase"] == ph]
         peaks = []
@@ -193,6 +199,30 @@ def report() -> None:
             peaks.append(max(vals) if vals else 0.0)
         print(f"{ph:<22}" + "".join(f"{p:>14.0f}" for p in peaks)
               + f"{sum(peaks):>10.0f}{len(rows):>9}")
+    if foreign:
+        print("")
+        print("! FOREIGN CONTAINERS SEEN - NOT in the totals above, and their")
+        print("  CPU contends with the stack even when pinned to other cores:")
+        print("")
+        for n in foreign:
+            vals = [mb(s["c"][n]["mem"]) for s in _samples if n in s["c"]]
+            cpus = []
+            for s in _samples:
+                if n in s["c"]:
+                    try:
+                        cpus.append(float(s["c"][n]["cpu"].rstrip("%")))
+                    except ValueError:
+                        pass
+            print(f"    {n:<28} peak {max(vals) if vals else 0:>7.0f} MB"
+                  f"   peak CPU {max(cpus) if cpus else 0:>5.0f}%")
+        print("")
+        print("  ! Treat every latency figure from this run as contaminated")
+        print("    unless their peak CPU is ~0%.")
+    else:
+        print("")
+        print("! No foreign containers during the run - the figures above are")
+        print("  this stack's alone.")
+
 
     print("\nPEAK CPU BY PHASE (% of one core; 2 cores = 200%)\n")
     print(f"{'phase':<22}" + "".join(f"{n.replace('vera-', ''):>14}" for n in names))

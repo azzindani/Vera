@@ -59,9 +59,18 @@ INDEXES = (
     "CREATE INDEX chunks_identifier_idx ON chunks USING btree "
     "(regulation_type, regulation_number, year)",
     "CREATE INDEX chunks_tsv_rum ON chunks USING rum (tsv)",
+    # ! The BM25 index too, or the replica falls back to the sparsevec scan
+    # while the real corpus uses pg_search -- and the two scales then measure
+    # different engines. Skipped automatically where pg_search is absent.
+    "CREATE INDEX chunks_bm25 ON chunks USING bm25 (id, body) WITH (key_field='id')",
 )
+# ! chunks_bm25 belongs here too. The clone is a file-level copy of a database
+# that already has it, so leaving it in place means 4.8M rows are inserted into a
+# LIVE Tantivy index -- slow, and it leaves the index bloated in a way that makes
+# the size measurement a lie.
 DROP_FIRST = ("chunks_cluster_idx", "chunks_indexable_idx",
-              "chunks_identifier_idx", "chunks_tsv_rum", "chunks_tsv_idx")
+              "chunks_identifier_idx", "chunks_tsv_rum", "chunks_tsv_idx",
+              "chunks_bm25")
 
 
 def admin(dsn: str) -> psycopg.Connection:
@@ -135,7 +144,15 @@ def main() -> None:
             print(f"  copy {i}/{args.factor - 1} in {time.monotonic() - t0:.0f}s",
                   flush=True)
 
+        cur.execute("SELECT EXISTS (SELECT 1 FROM pg_extension"
+                    " WHERE extname = 'pg_search')")
+        has_bm25 = cur.fetchone()[0]
         for sql in INDEXES:
+            if "bm25" in sql and not has_bm25:
+                print("  chunks_bm25 SKIPPED - pg_search not installed;"
+                      " the lexical arm here will use the sparsevec fallback",
+                      flush=True)
+                continue
             t0 = time.monotonic()
             cur.execute(sql)
             print(f"  {sql.split()[2]} built in {time.monotonic() - t0:.0f}s",

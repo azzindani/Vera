@@ -17,7 +17,7 @@ is still in force, or whether the passage is an operative clause or an annex. Th
 is what the factor model in `SCORING.md` is for. **Routing decides what to look at;
 factors decide what matters.**
 
-The result is a retrieval server that holds ~12 MB resident while searching 355,621
+The result is a retrieval server that holds ~14 MB resident while searching 355,621
 chunks, and whose peak memory is a function of its concurrency ceiling rather than of
 corpus size.
 
@@ -98,10 +98,17 @@ live in memory never exists.
 
 ## 4. Why OOM is impossible · corrected against measurement 2026-09-19
 
-**The engine's resident set is ~13 MB and does not move.** Measured at
-`CLUSTER_BATCH` 1, 2 and 5: **14 / 12 / 14 MB** peak RSS from the container's own
-`memory.peak` (`python dev_tools/eval/cluster_batch_sweep.py`). It does not vary
-with the batch, with `CLUSTERS_PROBED`, or with the size of the corpus.
+**The engine's PER-REQUEST cost does not move.** Measured at `CLUSTER_BATCH`
+1, 2 and 5: **14 / 12 / 14 MB** peak RSS from the container's own `memory.peak`
+(`python dev_tools/eval/cluster_batch_sweep.py`). It does not vary with the
+batch, with `CLUSTERS_PROBED`, or with load — at 5.1M rows the engine sits at
+39 MB idle and 42 MB under a 12-way concurrent burst.
+
+! It **does** vary with corpus size, which an earlier version of this section
+denied. The centroids are held hot and `k ∝ n`, so 177 clusters at 355K become
+2,478 at 5.1M and the engine's floor goes 9 MB → 39 MB *at startup*, before a
+query. `HARDWARE.md` §2. The bound below is about the per-request term, which is
+the one the loop in `search.rs` governs.
 
 ! This section used to state `peak RAM = fixed + (MAX_CONCURRENCY × one cluster)`,
 putting a cluster-sized working set inside the engine and making 102 MB the budget.
@@ -129,7 +136,8 @@ What the engine does hold is small and enumerable: the 177 centroids held hot
 about to return. None of those is a function of `n`.
 
 ```
-engine   ≈ 13 MB, flat · bounded because it never materialises the corpus
+engine   ≈ 14 MB at 355K, 42 MB at 5.1M · the DELTA is centroids (O(k), k ∝ n);
+         the per-request term is flat because it never materialises the corpus
 postgres  bounded by shared_buffers + work_mem + its container limit
 ```
 
@@ -235,7 +243,7 @@ known identifier must never be silently lost. These hits are reported separately
 │  • windowed scan   │     │  • sparsevec BM25  │     │                    │
 │  • RRF fusion      │     │  • tsvector + RUM  │     │                    │
 │  • concurrency     │     │  • provenance      │     │                    │
-│  12 MB resident    │     │  read-only at qry  │     │  341 MB (bf16)     │
+│  14 MB @ 355K      │     │  read-only at qry  │     │  378 MB (bf16)     │
 │  read-only rootfs  │     │                    │     │                    │
 └────────────────────┘     └────────────────────┘     └────────────────────┘
    replicate for QPS          cores + disk for size       shared by replicas
@@ -275,7 +283,9 @@ live engine never sees a half-updated index.
 11. agent  → writes prose, appends the citation block
 ```
 
-Measured p50 with the whole stack pinned to 2 cores: **10,007 ms**, and the
-embedder holds 150-198% of the 200% available. On a dev box that leaves the
-embedder unpinned the same queries are 866 ms. Both are in `HARDWARE.md` §3, with
-the profile attached to each -- a latency figure without one means nothing here.
+Measured p50 with the whole stack pinned to 2 cores: **10,251 ms at 355K** and
+**18,527 ms at 5.1M** — 1.8× for 14× the corpus. Both cores stay saturated, with
+the embedder dominating at 355K and Postgres pinning a full 200% at 5.1M. On a
+dev box that leaves the embedder unpinned the same queries are 866 ms. All of it
+is in `HARDWARE.md` §3 with the profile attached to each figure — a latency
+number without one means nothing here.
