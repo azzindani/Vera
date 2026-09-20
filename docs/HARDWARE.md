@@ -391,6 +391,61 @@ meaningless — `scale_probe.py` says so in its own docstring.
 
 ---
 
+## 6c. What `CLUSTERS_PROBED` buys · and why 5 is right
+
+§6b showed routing giving up 10.3 points @20 against a flat scan. The obvious
+next move is to probe wider, so this sweeps the dial over the eval set
+(`dev_tools/eval/probe_sweep.py`, dense arm only — the other two arms are global
+and do not move with probe width, so any change here is routing's alone).
+
+| probed | corpus touched | @5 | @20 | @50 |
+|---|---|---|---|---|
+| 1 | 0.6% | 30.8% | 35.9% | 38.5% |
+| 3 | 1.7% | 56.4% | 61.5% | 69.2% |
+| **5** (shipped) | **2.8%** | **64.1%** | **71.8%** | **79.5%** |
+| 8 | 4.4% | 64.1% | 71.8% | 79.5% |
+| 12 | 6.6% | 61.5% | 74.4% | 82.1% |
+| 20 | 11.4% | 64.1% | 76.9% | 84.6% |
+| 30 | 17.0% | 64.1% | 76.9% | 84.6% |
+| 45 | 25.4% | 66.7% | 79.5% | 87.2% |
+
+No cliff and no free lunch: recall climbs roughly with corpus touched, and
+**5 → 8 buys literally nothing**. The whole end-to-end cost of the two settings
+worth comparing (`arm_latency.py`, 10 queries, all three arms):
+
+| | @20 | @50 | total |
+|---|---|---|---|
+| `CLUSTERS_PROBED=5` | 71.8% | 79.5% | **639 ms** |
+| `CLUSTERS_PROBED=20` | 76.9% | 84.6% | 4,187 ms |
+
+**+5.1 points for 6.5× the latency.** `CLUSTERS_PROBED=5` stays.
+
+### Widening the probe costs cache locality, ✗ just rows
+
+This is the part worth remembering, because the arithmetic suggests otherwise.
+20 clusters is 3.5× the rows of 5, and on a **warm cache over the same clusters**
+it costs exactly that — 229 ms against 65 ms, measured with `EXPLAIN ANALYZE`
+repeated. The plans are identical, both `Bitmap Index Scan on chunks_cluster_idx`;
+there is no planner flip.
+
+But across a **stream of different queries**, each routing to its own clusters,
+the dense arm goes 53 ms → 3,604 ms — **68×, not 3.5×**. At probe 5 the union of
+working sets over many queries stays small enough to cache. At probe 20 it does
+not, and every query pays disk.
+
+! So the cost of probe width is superlinear in production and linear in a
+benchmark that repeats one query. A measurement that reuses the same query
+vector will report 3.5× and recommend widening. Ours did, until it was run over
+the whole eval set.
+
+! The `p50 ms` column of `probe_sweep.py` is **not** usable as a latency figure:
+it sweeps all widths back to back per query, so the 25%-of-corpus probe evicts
+the cache the narrow ones need and every row is polluted by the next. Its recall
+columns are sound — those are deterministic. Latency comes from `arm_latency.py`,
+one width per process.
+
+---
+
 ## 6b. Routing against a dedicated vector index
 
 The design's central bet — route to a few clusters rather than carry a global

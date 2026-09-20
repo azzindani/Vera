@@ -289,7 +289,7 @@ article-level buckets, so they are excluded here and included in Recall@5.
 | Decision | Signal |
 |---|---|
 | fusion weights | Recall@5 / MRR per weight combination — refitted after every re-chunk |
-| `CLUSTERS_PROBED` | the smallest value that holds Recall@5 |
+| `CLUSTERS_PROBED` | the smallest value that holds Recall@5 — **and, since 2026-09-20, checked at @20/@50 too** (`HARDWARE.md` §6c): 5 gives up 5.1 points against 20 and saves 6.5× the latency |
 | candidate caps | Recall@5 against cap-induced misses |
 | `CANDIDATE_POOL` | `pool_depth.py` — the depth at which "regulation absent" stops falling |
 | factor weights + `RELEVANCE_FLOOR` | `fit_factors.py` — leave-one-out Recall@5, ✗ the in-sample peak, and fitted **jointly** so no factor is credited for the floor's work |
@@ -312,6 +312,7 @@ Optimisations this harness has **rejected**:
 | `completeness` factor (body length) | +2.5 **before** a relevance floor existed, **0.0 after** — it was serving as a crude relevance proxy, not measuring completeness. It returns at 1.0 in any fit that does not bound `Σw`, which is the clearest evidence the bound is doing work. |
 | an unbounded metadata prior | the best unconstrained fit scores the **highest Recall@5 measured on this corpus (56.8%)** and is the worst answer on the list: Recall@10 is also 56.8% — positions 6–10 find nothing new — and MRR falls to 0.382 against 0.454. Its bound is 3.75× against a pool spanning 2.56×, so metadata decides the order. Recall@5 alone cannot see this; `SCORING.md` §3 is the rule that rejects it. |
 | the relevance floor at 0.4 | fitted against the **text arm**, which the engine does not rank. On the fused pool it costs 2.5 points; refitting it against IDF-weighted `bm25::evidence` does not rescue it. Kept at 0.3, where it is free. |
+| widening `CLUSTERS_PROBED` 5 → 20 | +5.1 points @20 and @50 for **6.5× the total latency** (639 ms → 4,187 ms). The arithmetic says 3.5× — 20 clusters is 3.5× the rows — and a warm cache over one repeated query agrees. Across a stream of queries each routing to its own clusters it is **68×**, because probe width costs cache locality rather than rows. `HARDWARE.md` §6c. |
 | `enacting_body` in the authority score | the column is unusable: `PERATURAN BUPATI` / `MA` (10,395 rows), `PERATURAN DAERAH KABUPATEN` / `RI` (7,770). Extraction artefacts, not enacting bodies. |
 | fine-grained regulation hierarchy | **unmeasurable at n=40.** The legally-correct ordering and an inverted one score identically (57.5% / 47.5% LOO), and a coarse national-vs-local split does at least as well. |
 | TurboQuant / TurboVec vector compression | wrong bottleneck **when measured**: the dense arm was 53 ms of a 1,059 ms query and returned 0.0%. ! The premise expired on 2026-09-19 — dense now returns 61.4% and carries weight 2.0, so this is worth re-examining rather than citing as settled. |
