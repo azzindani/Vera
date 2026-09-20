@@ -17,7 +17,7 @@ is still in force, or whether the passage is an operative clause or an annex. Th
 is what the factor model in `SCORING.md` is for. **Routing decides what to look at;
 factors decide what matters.**
 
-The result is a retrieval server that holds 8.5 MB resident while searching 355,621
+The result is a retrieval server that holds ~12 MB resident while searching 355,621
 chunks, and whose peak memory is a function of its concurrency ceiling rather than of
 corpus size.
 
@@ -235,7 +235,7 @@ known identifier must never be silently lost. These hits are reported separately
 │  • windowed scan   │     │  • sparsevec BM25  │     │                    │
 │  • RRF fusion      │     │  • tsvector + RUM  │     │                    │
 │  • concurrency     │     │  • provenance      │     │                    │
-│  8.5 MB resident   │     │  read-only at qry  │     │  1,088 MB          │
+│  12 MB resident    │     │  read-only at qry  │     │  341 MB (bf16)     │
 │  read-only rootfs  │     │                    │     │                    │
 └────────────────────┘     └────────────────────┘     └────────────────────┘
    replicate for QPS          cores + disk for size       shared by replicas
@@ -275,4 +275,7 @@ live engine never sees a half-updated index.
 11. agent  → writes prose, appends the citation block
 ```
 
-Measured p50 on the target profile: 1,059 ms. Where it goes is in `HARDWARE.md` §3.
+Measured p50 with the whole stack pinned to 2 cores: **10,007 ms**, and the
+embedder holds 150-198% of the 200% available. On a dev box that leaves the
+embedder unpinned the same queries are 866 ms. Both are in `HARDWARE.md` §3, with
+the profile attached to each -- a latency figure without one means nothing here.

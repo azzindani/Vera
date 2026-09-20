@@ -8,6 +8,11 @@ target/
 
 # Offline tooling. Nothing in the runtime images imports it.
 dev_tools/
+# ! Except the embedding server, which is not offline tooling at all -- it is
+# the query path, and it DEFINES the vector space (docker/Dockerfile.embed). It
+# lives under dev_tools/pre_embed/ because that is where it was written for the
+# re-embed; the runtime image needs it.
+!dev_tools/pre_embed/server.py
 eval/
 fixtures/
 

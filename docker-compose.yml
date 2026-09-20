@@ -79,45 +79,53 @@ services:
     restart: unless-stopped
 
   embed:
-    # ! Tag pinned, ✗ :latest. This container defines the vector space; an image
-    # that updates underneath a loaded corpus breaks that rule silently.
-    # The default tag targets CUDA compute capability 8.6; set EMBED_IMAGE for
-    # other hardware.
-    image: ${EMBED_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:86-1.7.2}
+    # ! Built, ✗ pulled, and this is the correction that matters most in this
+    # file. This service used to run
+    # ghcr.io/huggingface/text-embeddings-inference:86-1.7.2. That image produced
+    # the vector space the corpus was re-embedded AWAY from on 2026-09-19
+    # (docs/EMBEDDING.md §5d): 2.6% Recall@5 against the reference
+    # implementation's 79.5%. An engine pointed at it now fails its startup
+    # canary and refuses to serve -- correctly, and it meant `docker compose up`
+    # could not serve the corpus in this repository.
+    #
+    # ! The reference server lives in the repo (dev_tools/pre_embed/server.py)
+    # rather than in a registry, because it DEFINES the vector space. It was
+    # previously only a local image on one machine, which meant the corpus was
+    # unservable anywhere else.
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.embed
+    image: vera-embed:cpu
     container_name: vera-embed
-    command:
-      - --model-id=/data/model
-      # ! Must match the model's 1_Pooling/config.json. Mean-pooling the same
-      # weights yields a different vector space and silently plausible, wrong
-      # rankings.
-      - --pooling=${EMBED_POOLING:-last-token}
-      - --dtype=${EMBED_DTYPE:-float16}
-      - --max-client-batch-size=64
-      # ! The model's full context. A lower value silently truncates long
-      # chunks, embedding a vector that does not represent its text.
-      # auto-truncate is deliberately OFF so an over-length chunk fails loudly.
-      - --max-batch-tokens=${EMBED_MAX_BATCH_TOKENS:-32768}
+    environment:
+      # ! The pooling, the normalization and the dtype are the whole contract.
+      # bfloat16 is a PREREQUISITE, not a tuning choice: float32 needs 2,553 MB
+      # against the 1,280 MB the vps overlay budgets and is SIGKILLed by its
+      # first request (docs/HARDWARE.md §2).
+      DTYPE: ${EMBED_DTYPE:-bfloat16}
+      MODEL_DIR: /data/model
     volumes:
       - ${MODEL_DIR:?set MODEL_DIR in .env}:/data/model:ro
     ports:
       - "127.0.0.1:${EMBED_PORT:-8080}:80"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # ! No GPU reservation. This is the CPU path, which is what the 2 vCPU
+    # profile runs and what the corpus was last verified against.
     healthcheck:
-      # ! Loading and warming the model takes ~40s, and TEI accepts connections
-      # before it can answer one. Without this the engine's startup canary hits
-      # a live socket that refuses work, refuses to serve (correctly —
-      # CLAUDE.md §7.3), exits, and restart-loops until the model is warm.
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/health || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 60s
+      # ! Probes /embed with a real request, ✗ /health. Measured: /health
+      # answers 200 as soon as the socket binds, which is BEFORE the weights
+      # finish loading. It is a LIVENESS check and the engine's canary needs
+      # READINESS -- given the wrong one, the engine starts against a model
+      # server that cannot embed, refuses to serve (correctly, CLAUDE.md §7.3)
+      # and exits. That was this file's own failure mode, under a comment
+      # describing the symptom.
+      #
+      # ! python, ✗ curl: the CPU image is python-slim and carries no curl.
+      test: ["CMD-SHELL", "python -c \"import json,urllib.request;urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:80/embed',data=json.dumps({'inputs':'ready','truncate':False}).encode(),headers={'Content-Type':'application/json'}),timeout=10)\" || exit 1"]
+      interval: 10s
+      timeout: 15s
+      retries: 30
+      # ! Loading the weights on 2 cores takes ~40s cold, longer on a slow disk.
+      start_period: 300s
     restart: unless-stopped
 
   engine:

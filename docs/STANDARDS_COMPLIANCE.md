@@ -59,7 +59,7 @@ tools.
 
 **Rationale** — and it is the standard's own rule, "libraries dictate language". The
 engine's job is a tiny stateless footprint and bounded concurrency, which is what Rust
-and tokio are for; the result is 8.5 MB resident and a compile-time-enforced bound on
+and tokio are for; the result is ~12 MB resident and a compile-time-enforced bound on
 peak memory. The offline tools need transformers, GPU and k-means, which is Python. The
 FastMCP-specific rules apply to `dev_tools/`; the engine uses the Rust equivalents
 (`cargo fmt`, clippy at pedantic with `-D warnings`, `cargo test`), all gated in CI on

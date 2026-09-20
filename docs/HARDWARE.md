@@ -58,19 +58,63 @@ without a GPU. This is the one component that does not.
 
 ## 2. Memory
 
-### Measured, on the dev box
+### The whole stack, cold start to steady state
 
-Read from the container cgroups (`/sys/fs/cgroup/memory.stat`), so `anon` is
-memory that must be resident and `file` is cache the kernel can reclaim.
+Re-measured 2026-09-20 with `python -X utf8 dev_tools/eval/hardware_profile.py`,
+which stops the stack, starts it, drives it through named phases and samples
+every container on an interval. Everything pinned to **2 cores**, engine capped
+at 512 MB, embedder at 1,280 MB, Postgres at 6,336 MB — an 8 GB box.
 
-| component | measured | notes |
-|---|---|---|
-| engine (`mcp`) | **8.3 MB** RSS | idle and under load; vectors never enter it |
-| Postgres `anon` | 18.8 MB | backend private memory |
-| Postgres `shmem` | 1,624 MB | this *is* `shared_buffers=1500MB` |
-| Postgres `slab` | 75.6 MB | kernel structures |
-| Postgres page cache | 4,105 MB | **reclaimable** — not a requirement |
-| embedder `anon` | 1,060 MB | model weights |
+| phase | db | embed | engine | total |
+|---|---|---|---|---|
+| all stopped | 0 | 0 | 0 | **0** |
+| starting | 55 | 327 | 6 | 389 |
+| idle after start | 55 | 327 | 9 | 391 |
+| first query (cold) | 677 | 326 | 9 | 1,012 |
+| 44 sequential queries | 1,156 | 328 | **11** | **1,495** |
+| 12 concurrent | 1,111 | 339 | 12 | 1,461 |
+| idle after load | 1,116 | 341 | 12 | 1,469 |
+
+**Peak 1,495 MB against a 3,584 MB budget.** The engine never exceeds **12 MB**
+across cold start, the full eval set and a concurrent burst.
+
+**Nothing ratchets.** Idle-after-load (1,469 MB) matches peak-under-load
+(1,495 MB): what the db holds is page cache it already had, ✗ a leak.
+
+! `docker stats` reports the cgroup's `memory.current`, which **includes
+reclaimable page cache**. Most of the db column is that. Split by
+`/sys/fs/cgroup/memory.stat` the db's `anon` is tens of MB; the rest is cache.
+
+### The embedder's dtype is the single largest memory decision
+
+| `DTYPE` | `anon` | Recall@5 | Recall@10 | MRR |
+|---|---|---|---|---|
+| `float32` (the default) | **2,553 MB** | 63.6% | 70.5% | 0.557 |
+| `bfloat16` | **296 MB** | 65.9% | 72.7% | 0.562 |
+
+**8.6× less memory, and recall is not worse** — +2.3 points is one query on
+n=44, so read it as no measurable difference. The startup canary accepts it:
+the corpus was embedded at float32 and a bfloat16 query still reproduces the
+space above `CANARY_MIN_COSINE`.
+
+! **At `float32` this stack cannot start on its own documented budget.** The
+embedder sits at 1,242 MB of a 1,280 MB limit at idle — 97% full — and is
+SIGKILLed (exit 137) by the first request. The 1,060 MB this section used to
+quote was measured on the old TEI container, which loaded fp16; the reference
+implementation adopted on 2026-09-19 defaults to `float32` and needs 2.4× that.
+Every figure above is at `DTYPE=bfloat16`.
+
+! `corpus_meta` records model, width, pooling and normalization — **but not
+dtype**, although `dev_tools/pre_embed/server.py` calls dtype part of the
+contract. The canary catches a mismatch empirically through cosine; nothing
+*declares* it. Closing that gap starts in Ravel (`README.md`).
+
+! That server was **recovered into the repository on 2026-09-20**. Until then it
+existed only as a local image on one machine, while `docker-compose.yml` still
+started the TEI image the corpus had been re-embedded away from — so
+`docker compose up` produced a stack whose canary refused to serve, and the
+vector space this corpus lives in was not reproducible anywhere else.
+`docker/Dockerfile.embed` builds it now.
 
 ### Per-request working set
 
@@ -118,22 +162,24 @@ through the deployed HTTP server:
 
 | container | limit | measured | |
 |---|---|---|---|
-| `vera-db` | 1,792 MB | 1,544 MB | 88% |
-| `vera-embed` | 1,280 MB | 1,088 MB | 87% |
-| `vera-mcp` | 512 MB | **8.5 MB** | 1.7% |
-| **total** | **3,584 MB** | **2,640 MB** | leaves ~1.4 GB for the OS |
+| `vera-db` | 1,792 MB | 1,156 MB | 65% |
+| `vera-embed` | 1,280 MB | **341 MB** | 27% · at `DTYPE=bfloat16` |
+| `vera-mcp` | 512 MB | **12 MB** | 2.3% |
+| **total** | **3,584 MB** | **1,495 MB** | leaves ~2.1 GB for the OS |
 
-Quality under the limits was **identical** to unconstrained when measured:
-Recall@5 50.0%, domain gate 6/6, 0/44 false refusals.
+Re-measured 2026-09-20 by `hardware_profile.py` on the current corpus, which
+replaces the 2,640 MB this table used to report. Two of the three rows moved:
+the embedder because of `DTYPE` (see above), the engine because 8.5 MB was
+always an idle figure and 12 MB is the peak under a concurrent burst.
 
-! Those figures predate the 2026-09-19 re-embed (`EMBEDDING.md` §5d) and the
-memory numbers above have **not** been re-measured since. Memory is unlikely to
-have moved — the vectors are the same width and count — but the retrieval figures
-are superseded by `EVAL.md` §4, and the *equivalence claim* (constrained ==
-unconstrained) has not been re-established on the new corpus.
+! **At the default `DTYPE=float32` this profile does not start.** The embedder
+needs 2,553 MB against the 1,280 MB budgeted here and is SIGKILLed on the first
+request. `bfloat16` is not an optimisation for this profile, it is a
+prerequisite — and it is not set anywhere in `docker-compose.vps.yml`.
 
-! The engine holds 8.5 MB inside a 512 MB limit. The limit exists for the
-concurrency term, not the resident one — see the peak calculation above.
+! The equivalence claim — constrained scoring the same as unconstrained — is
+**still not re-established** on the post-re-embed corpus. The memory numbers
+above are current; that claim is not.
 
 ! `shared_buffers` drops 1500 → 512 MB. On a 4 GB box with a 2.4 GB database,
 page cache beats a large private pool: every arm is a scan, and Postgres
@@ -157,30 +203,52 @@ docker stats --no-stream vera-db vera-embed vera-mcp
 
 ## 3. Latency
 
-Measured end-to-end through the MCP server over stdio, 44 real queries,
-reproduced across three runs at ±3%.
+44 real queries through the deployed HTTP server. **Read the profile with the
+number** — these differ by 15× across configurations that all call themselves
+"the stack", and the difference is which cores the embedder gets.
 
-| | p50 | p95 | max |
+| profile | p50 | p95 | max |
 |---|---|---|---|
-| `search_knowledge` · dev box | **866 ms** | 1,459 ms | 1,701 ms |
-| `search_knowledge` · **2 vCPU / 4 GB** | **1,059 ms** | 1,638 ms | 2,005 ms |
-| refused by domain gate | 357 ms | | |
-| exact identifier (routing bypassed) | 444 ms | | |
-| `explain_routing` | 68 ms | | |
-| `read_chunk`, `list_domains` | ~0 ms | | |
-| startup (centroids + canary) | 146–938 ms | | |
+| dev box, embedder unpinned | **866 ms** | 1,459 ms | 1,701 ms |
+| **2 cores, whole stack pinned** | **10,007 ms** | 11,841 ms | 14,261 ms |
+| sub-1 GB Postgres, embedder unpinned | 5,908 ms | 7,664 ms | — |
+| refused by domain gate (2 cores) | 7,119 ms | | |
+| first query after start (cold) | 13,341 ms | | |
+| startup: db + embedder load + canary | 38 s | | |
 
-! **These belong to the 1,792 MB Postgres profile** (`docker-compose.vps.yml`,
-`shared_buffers=512MB`), where the database mostly fits its cache. They do **not**
-describe the sub-1 GB profile.
+! **The 2-core row is the honest one for a 2 vCPU VPS**, and it is the only row
+measured with the embedder on the same cores as everything else
+(`hardware_profile.py`, 2026-09-20). Every other latency figure in this document
+— including the per-arm table below — was taken with the embedder free to use
+the dev box's remaining 12 cores. Those per-arm numbers are still correct *per
+arm*; they do not sum to what a 2-vCPU box delivers.
 
-On a **1 GB** Postgres cap with `shared_buffers=320MB`, the same 44 queries measure
-**p50 5,908 ms · p95 7,664 ms** (§6a) — 5.6× slower. The database is 1,801 MB (§5)
-against a 1 GB cap, so every arm pages from disk and no amount of tuning closes it.
-Only a smaller database would: `EMBEDDING.md` §5e is the 347 MB on the table.
+! The 1,059 ms figure this table used to publish for "2 vCPU / 4 GB" was
+measured under the VPS overlay, which constrains **memory** but left the
+embedder unpinned. It is withdrawn, ✗ corrected: it was never a 2-core
+measurement.
 
-! Both figures are real; neither is "the" latency. Quote the profile with the
-number, or the number means nothing.
+### CPU, not memory, is the constraint on 2 cores
+
+Peak CPU by phase, where 2 cores = 200%:
+
+| phase | db | embed | engine |
+|---|---|---|---|
+| 44 sequential queries | 76% | **150%** | 1% |
+| 12 concurrent | 9% | **198%** | 0% |
+
+**The embedder saturates both cores.** Postgres and the engine contend with it
+for CPU, not for memory — §2 shows the stack peaking at 1,495 MB of a 3,584 MB
+budget while latency is 10 s.
+
+So the largest lever available is the embedder: quantization, fewer torch
+threads, or moving embedding off the box. None of the retrieval work in §6
+touches the term that actually dominates this profile.
+
+! Concurrency behaves differently when each query costs 10 s: 12 concurrent
+gives **4 served, 8 refused**, against the 8/4 recorded in §4. Same
+`MAX_CONCURRENCY=4` and same 2,000 ms queue ceiling — the queue simply times out
+more often when the work takes longer. Both are correct for their profile.
 
 ### Where it goes
 

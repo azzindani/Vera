@@ -132,6 +132,29 @@ VERA_HTTP=http://localhost:8081 python dev_tools/eval/e2e.py
 
 ---
 
+## 5b. Set `DTYPE=bfloat16` on the embedder
+
+```bash
+docker compose up -d embed      # with DTYPE=bfloat16 in the environment
+```
+
+**Not an optimisation — a prerequisite on any profile with a memory limit.**
+The embed server defaults to `float32`, which needs **2,553 MB** of anonymous
+memory. `docker-compose.vps.yml` budgets 1,280 MB, so the container sits at 97%
+of its limit at idle and is SIGKILLed (exit 137) by the first request. At
+`bfloat16` it needs **296 MB** and recall is not worse (`HARDWARE.md` §2).
+
+! Changing dtype changes the vector space, so the startup canary is what
+licenses this, ✗ the arithmetic. It passes on this corpus: a bfloat16 query
+reproduces a float32-embedded chunk above `CANARY_MIN_COSINE`. **Verify it on
+yours** — the engine refuses to serve if it does not, which is the check working.
+
+! `corpus_meta` does not record dtype, although the embed server calls it part
+of the contract. Nothing declares which dtype a corpus was built with; the
+canary catches a mismatch empirically. Closing that starts in Ravel.
+
+---
+
 ## 5c. Turning on the BM25 index
 
 ```bash

@@ -1,0 +1,59 @@
+# The reference CPU embedding server · this container DEFINES the vector space.
+#
+# ! It exists because the pinned TEI CPU image cannot serve this model: ONNX
+# Runtime declines `last_token` pooling, the candle backend takes over, and
+# MKL's SGEMM faults. See dev_tools/pre_embed/server.py's own header.
+#
+# ! More importantly, it is what the corpus was re-embedded with on 2026-09-19
+# (docs/EMBEDDING.md §5d). The TEI image the compose file used before produced a
+# space this corpus no longer lives in -- 2.6% Recall@5 against 79.5%. An engine
+# pointed at TEI now fails its startup canary and refuses to serve, which is the
+# guard working, and is also why this image has to exist in the repository
+# rather than on one developer's machine.
+#
+#   docker compose build embed && docker compose up -d embed
+#
+# ! Versions are pinned. The dtype, the pooling and the normalization are the
+# whole contract (server.py), and torch changing its kernels underneath a loaded
+# corpus is the same class of silent break as swapping the model.
+#
+# ! CPU build. The GPU path is a different image and is not what the 2 vCPU
+# profile runs.
+
+FROM python:3.11-slim-bookworm
+
+# ! --index-url for the CPU wheels. The default index pulls the CUDA build,
+# which is ~2 GB of driver libraries this image will never use.
+ARG TORCH_VERSION=2.5.1
+ARG TRANSFORMERS_VERSION=4.53.2
+RUN pip install --no-cache-dir \
+      --index-url https://download.pytorch.org/whl/cpu \
+      "torch==${TORCH_VERSION}" \
+ && pip install --no-cache-dir \
+      "transformers==${TRANSFORMERS_VERSION}" \
+      "safetensors==0.8.0" \
+      "numpy==2.4.6"
+
+WORKDIR /app
+COPY dev_tools/pre_embed/server.py /app/server.py
+
+# ! bfloat16, ✗ the file's own float32 default. float32 needs 2,553 MB of anon
+# memory against the 1,280 MB docker-compose.vps.yml budgets, so the container
+# is SIGKILLed by its first request. bfloat16 needs 296 MB and measures the same
+# recall (docs/HARDWARE.md §2). The canary is what licenses the change.
+ENV MODEL_DIR=/data/model \
+    DTYPE=bfloat16 \
+    PORT=80
+EXPOSE 80
+
+# ! /health answers as soon as the socket binds, which is BEFORE the weights
+# finish loading. It is a liveness check; readiness is /embed returning 200.
+# Anything that waits on /health starts the engine against a model server that
+# cannot embed, and the canary then kills the engine.
+HEALTHCHECK --interval=10s --timeout=10s --start-period=300s --retries=30 \
+  CMD python -c "import json,urllib.request; \
+urllib.request.urlopen(urllib.request.Request('http://localhost:80/embed', \
+data=json.dumps({'inputs':'ready','truncate':False}).encode(), \
+headers={'Content-Type':'application/json'}), timeout=10)" || exit 1
+
+ENTRYPOINT ["python", "server.py"]
