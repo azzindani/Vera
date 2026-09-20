@@ -141,7 +141,7 @@ holding.
 The upstream write-tool fields — snapshot, dry_run, restore — do not apply. The query
 path never writes.
 
-! `token_estimate` is **measured on all five tools** — `tools::sized` serialises the
+! `token_estimate` is **measured on all six tools** — `tools::sized` serialises the
 response and applies the same `len / 4` rule as `SearchResponse::estimate_tokens`, so
 the numbers are comparable across tools. It was previously a constant on
 `list_domains` (60) and `explain_routing` (120), `rows × 40` on `get_provenance`, and

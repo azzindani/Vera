@@ -4,9 +4,20 @@ How Vera ranks. Retrieval finds candidates; this decides their order.
 
 > **Status.** §2 (the factors) and §3 (the relevance gate) are **built and
 > shipping** — `crates/engine/src/factors.rs`, fitted by
-> `dev_tools/eval/fit_factors.py`. §4 (per-query-type weights), §5 (viewpoints
-> and consensus) and §6 (tiered effort) remain **designed, not
-> implemented**. §9 is the ledger of what actually runs.
+> `dev_tools/eval/fit_factors.py`. §4 (per-query-type weights) is **designed,
+> not implemented**, and now has somewhere to live: algorithms are named and
+> declared in `config/algorithms.json`, so a fitted per-type vector ships as a
+> file entry rather than a release.
+>
+> §5 (viewpoints, consensus) and §6 (tiered effort) are **dropped, ✗ pending** —
+> the reasoning is in those sections and the designs are kept folded beneath it.
+> §9 is the ledger of what actually runs.
+>
+> ! The tables §2 reads are the **corpus's**, not the engine's
+> (`corpus_meta.scoring_vocabulary`, written by Ravel). Vera is a retrieval
+> engine, not a legal one: `authority` asks how binding a source is and
+> `structural` asks whether a chunk is operative text or an appendix. Neither
+> question is Indonesian; only the answers are.
 
 ---
 
@@ -242,7 +253,28 @@ same reason: they are properties of the corpus, not of the engine.
 
 ---
 
-## 5. Viewpoints and consensus
+## 5. Viewpoints and consensus · **dropped, ✗ pending**
+
+! The prior is bounded at
+2.00x precisely so relevance dominates metadata, which forces several weight
+vectors over one pool to produce near-identical orderings. Either viewpoints
+disagree enough to be informative -- meaning the prior out-spans the pool and
+invariant 9 is broken -- or they agree trivially and agreement carries no
+signal. The same dial, turned opposite ways. It is also unfittable here:
+`EVAL.md` §5 records that at n=40 a legally-correct hierarchy ordering and an
+inverted one score identically, and an agreement statistic is finer than the
+signal that set already cannot resolve.
+
+The **caller** replaces them. An agent that judges a ranking unfit calls again
+naming a different algorithm; it sees the results and the query intent, which is
+strictly more than rank agreement between weight vectors can observe.
+
+The design below is kept because the reasoning is the finding, and because
+`06_ID_Legal` ships it — a reader who meets that system needs to know why this
+one declined to copy it.
+
+<details>
+<summary>The design that was not built</summary>
 
 Several weight vectors are applied to **one** candidate pool. Each is a
 viewpoint — the analogue of asking several paralegals with different instincts
@@ -278,7 +310,20 @@ the ordering.
 
 ---
 
-## 6. Tiered effort — do the cheap thing first
+</details>
+
+## 6. Tiered effort — **dropped, ✗ pending**
+
+! Escalation is a second request, ✗ a longer one. An agent that judges a
+ranking unfit calls again with a wider `candidate_pool`, a different algorithm
+or `expand`, all of which are already per-request arguments.
+
+That also dissolves the conflict this section recorded as unresolved: a 30s
+tier-3 request would hold one of `MAX_CONCURRENCY`'s four permits for half a
+minute and refuse the fifth caller after two seconds. A retry holds none.
+
+<details>
+<summary>The design that was not built</summary>
 
 ! The budget is a ceiling, ✗ a target. A query that is answered confidently in
 one round must not be made to spend thirty seconds proving it.
@@ -309,6 +354,8 @@ Interactive retrieval and deep research are different budgets. Either the tier
 is requested by the caller, or Vera picks one.
 
 ---
+
+</details>
 
 ## 7. Expansion — the pool is not fixed by what retrieval returned  · built, opt-in
 
@@ -515,10 +562,13 @@ example; no result from this corpus can carry one.
 | **prior bound** | **2.00×, against a pool spanning 2.56× median** |
 | arm tie-breaks | each arm over-reads 3× and settles ties on id (`store::search::settle`) |
 | weights | one global set, ✗ per query type (§4) |
-| viewpoints / consensus | ✗ |
+| viewpoints / consensus | **dropped** (§5), ✗ pending |
+| effort tiers | **dropped** (§6) · the caller retries |
+| algorithms | named, declared in `config/algorithms.json`, validated at startup |
+| scoring vocabulary | the corpus's, from `corpus_meta.scoring_vocabulary` |
 | exact identifiers | retrieved globally, fused normally |
 | confidence | heuristic over score spread |
-| effort | single round, always |
+| effort | single round, always · escalation is the caller's second call |
 | pool | 60 fused candidates, no expansion |
 | Recall@5 / Recall@10 / MRR | **54.5% / 59.1% / 0.454** |
 

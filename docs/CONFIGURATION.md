@@ -159,12 +159,49 @@ no weight here can promote a candidate that retrieval did not find.
 
 | Variable | Default | |
 |---|---|---|
-| `RELEVANCE_FLOOR` | `0.4` | **a floor, ✗ a weight.** Share of the query's content terms a candidate must contain to be ranked at all. Worth more than every weight below combined. |
-| `FACTOR_AUTHORITY` | `1.0` | how binding the instrument is — the published hierarchy |
-| `FACTOR_STRUCTURAL` | `0.5` | operative clause vs annex |
+| `RELEVANCE_FLOOR` | `0.3` | **a floor, ✗ a weight.** Share of the query's content terms a candidate must contain to be ranked at all. ! `0.3`, ✗ the `0.4` this table carried: 0.4 was fitted against the **text arm alone**, and on the RRF pool the engine actually ranks it costs 2.5 points while 0.3 costs nothing (`SCORING.md` §3). |
+| `FACTOR_AUTHORITY` | `0.5` | how binding the instrument is — the published hierarchy |
+| `FACTOR_STRUCTURAL` | `0.25` | operative clause vs annex |
 | `FACTOR_TOPICAL` | `0.25` | subject match — earns its weight once the floor exists |
 | `FACTOR_COMPLETENESS` | `0.0` | **measured to add nothing** once a real floor exists |
 | `FACTOR_TEMPORAL` | `0.0` | recency — **measured to add nothing** |
+
+! **Σw = 1.0, so the prior is bounded at 2.00×, and that ceiling is enforced at
+startup.** It is not a style preference: the fused pool's own relevance spans as
+little as **1.31×**, so a wider prior can lift the last candidate in the pool to
+first on metadata alone (invariant 9). This table previously listed
+`1.0 / 0.5 / 0.25` — sum 1.75, bound 2.75× — which is the unconstrained fit this
+project measured and rejected for having an MRR *below* factors-off. A registry
+declaring that now fails to start, and so does this environment.
+
+### The algorithm registry and the scoring vocabulary
+
+| Variable | Default | |
+|---|---|---|
+| `ALGORITHMS_PATH` | *(unset)* | Named ways to rank, selectable per request via `profile`. Unset loads exactly one, `balanced`, built from the `FACTOR_*` values above. An entry with no `fitted` block loads as **experimental**: reachable by name, absent from the tool schema — the agent is never *offered* a weight vector nobody measured. `config/algorithms.json` is the shipped set. |
+| `VOCABULARY_PATH` | *(unset)* | What this corpus's labels mean: the authority ladder, the structural rules, the stop list. |
+
+! **The corpus wins.** Ravel stamps its profile's `scoring:` block into
+`corpus_meta.scoring_vocabulary`, and when that column is populated it is used
+outright — the same rule invariant 2 applies to the vector space, applied to the
+tables that rank. `VOCABULARY_PATH` is consulted **only** when the corpus declares
+nothing, which is the case for every corpus loaded before Ravel wrote the column.
+A file that could override a corpus's own declaration would reintroduce the drift
+this replaces: the two copies of the Indonesian ladder had already reached 27
+entries in Ravel against 10 compiled into the engine.
+
+! Startup names which source it took, on its first two lines, and **refuses to
+serve** when any loaded algorithm weights a factor the live vocabulary has no
+table for. A weight of 0.5 on an empty table is not a small effect — it is *no*
+effect, and it is indistinguishable from a weight that was measured and found not
+to help. This project shipped that bug once already.
+
+Both files are mounted read-only at `/cfg` by `docker-compose.yml`, so
+`ALGORITHMS_PATH=/cfg/algorithms.json` works with no further setup.
+
+```bash
+MSYS_NO_PATHCONV=1 VERA_HTTP=http://localhost:8081   python -X utf8 dev_tools/eval/algorithm_scenarios.py   # 18 scenarios, live
+```
 
 Fitted, not chosen: `python dev_tools/eval/fit_factors.py` reranks the text arm over
 a 60-candidate pool on the 40 article-labelled cases.

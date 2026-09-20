@@ -58,7 +58,7 @@ LAYER 3   │  LEAF search                        │  load ONE cluster, scan it
                             │
                    sibling expansion, opt-in     ← `expand: ["siblings"]`
                             │
-                   [ viewpoints · consensus ]    ← designed, ✗ built
+                   [ viewpoints · consensus ]    ← DROPPED, ✗ pending (SCORING.md §5)
                             │
                    top-k results + provenance  →  agent summarizes
 ```

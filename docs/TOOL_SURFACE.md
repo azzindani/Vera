@@ -2,12 +2,13 @@
 
 How a calling agent steers Vera, and what it is deliberately not allowed to steer.
 
-`MCP_ENGINE.md` §2 defines the five tools and their wire shapes. This document
+`MCP_ENGINE.md` §2 defines the six tools and their wire shapes. This document
 defines the **arguments** — the knobs an agent may turn per request, the ones the
 server keeps, and the reasoning for each side of that line.
 
 > **Status.** §3 (retrieval controls) and §5 (profiles) are **built**. §4 (effort),
-> §6's `citations` and §7 (consensus) are **designed, not
+> §7's `viewpoints` argument is **dropped, ✗ pending** — see `SCORING.md` §5.
+> §6's `citations` is **designed, not
 > implemented**. §8 is the ledger.
 
 ---
@@ -24,7 +25,7 @@ twelve, whether the arms agree. Tool choice forces a commitment at the moment of
 least information. An argument on one tool lets the agent call, look, and adjust.
 
 **Every tool is permanent surface.** `CLAUDE.md` §6 caps this engine at eight, and
-the cap is doing work: five tools with rich arguments compose into one loop an
+the cap is doing work: six tools with rich arguments compose into one loop an
 agent can learn (`ROUTE → SEARCH → READ → VERIFY`); twelve tools is a menu nobody
 reads to the end.
 

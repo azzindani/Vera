@@ -39,7 +39,8 @@ Vera's job:    embed → gate → route → search → fuse → SCORE → return
 Retrieval finds what is relevant; **scoring decides what matters**. Legal results
 cannot be ordered on text similarity alone — a district regulation and the national
 law it implements both match the query, and only metadata separates them. The
-multi-factor model, viewpoints and consensus are in `docs/SCORING.md`.
+multi-factor model is in `docs/SCORING.md`, and the algorithms a caller may
+select from are declared in a file, ✗ compiled in (`config/algorithms.json`).
 
 Vera **never calls an LLM**. It does not summarize, rerank with a model, or interpret.
 It returns structured evidence; the agent does the thinking. This single rule is what
@@ -60,8 +61,14 @@ LAYER 3  per-cluster scan → load CLUSTER_BATCH (default 1), flat halfvec scan,
                           → RRF over RANKS → candidate pool
 SCORING  multi-factor     → relevance floor, then authority / structural / topical,
                             the prior bounded inside the pool's own spread  [built]
-                          · viewpoints · consensus sets confidence and triggers
-                            more work  [designed, ✗ built]
+                          · the tables it reads are the CORPUS's, declared in
+                            corpus_meta.scoring_vocabulary  [built]
+                          · which weights apply is a NAMED ALGORITHM the caller
+                            selects; unknown name refused, unfitted not offered
+                            [built]
+                          ✗ viewpoints · consensus — dropped, not pending. A
+                            bounded prior forces weight vectors to agree, so
+                            agreement measures nothing (docs/SCORING.md §5)
 EXPAND   opt-in           → siblings of a candidate, admitted by the same
                             relevance gate, never merged unscored  [built, off by
                             default]
@@ -158,7 +165,7 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
 
 ---
 
-## 6. Tool surface (agent-facing, read-only, ≤ 8 tools)
+## 6. Tool surface (agent-facing, read-only, 6 of ≤ 8 tools)
 
 Schemas in `docs/MCP_ENGINE.md`; per-request arguments in `docs/TOOL_SURFACE.md`. The read-only analog of the upstream
 LOCATE→INSPECT→PATCH→VERIFY loop is **ROUTE → SEARCH → READ → VERIFY**.
@@ -166,6 +173,7 @@ LOCATE→INSPECT→PATCH→VERIFY loop is **ROUTE → SEARCH → READ → VERIFY
 | Tool | Role | Returns |
 |---|---|---|
 | `list_domains` | introspection (not a router input) | domain ids + descriptions, zero content |
+| `list_algorithms` | introspection: what each way of ranking is for | names, what they scored, which are unfitted |
 | `search_knowledge` | the workhorse: routed hybrid search (**query only**) | ranked results: id, snippet, scores, provenance |
 | `read_chunk` | bounded surgical read of one chunk | full text of one chunk, size-capped |
 | `get_provenance` | verification bundle for result ids | source + locator, id-capped |
