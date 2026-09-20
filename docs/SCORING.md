@@ -587,3 +587,89 @@ returning different rows for the same query. Two identical evaluations scored
 that separate several of the configurations compared here. `EVAL.md` §4 carries
 that story; the rule it leaves behind is that **a comparison on 40 cases is only
 worth making against an engine that returns the same answer twice.**
+
+---
+
+## 10. Scoring is assembled · validated at 355K
+
+`SCORING.md` §2's factors are no longer five compiled functions. A factor is
+`variable × transform × weight`, declared, and the combination rule is fixed:
+
+```text
+final = relevance × (1 + Σ wᵢ · fᵢ(variableᵢ))
+```
+
+**variable** — any column (`regulation_type`, `article`, `chapter`, `about`,
+`body`, `body_len`, `year`) or `number:<key>` / `text:<key>` for an enrichment
+value the engine has never heard of. **transform** — a closed set of bounded
+shapes: `authority`, `structural`, `half_life`, `range`, `saturate`,
+`match_share`, `present`, `at_least`. **weight** — fitted, as before.
+
+! **The grammar is constrained so the assembly can be free.** `1 + Σw ≤ 2.00` is
+the only mechanical guard in this layer, and it is checkable only because every
+term is bounded by construction. Given a formula as text you cannot compute that
+bound by inspection, and invariant 9 goes back to being a comment — guarding the
+failure that *looks correct* in the output: a real law, correctly cited, ranked
+first for every query.
+
+The multiplication by relevance is **not** declarable and is not meant to be. It
+is what encodes "factors rank, but only after relevance", and it is the one part
+of the formula with nothing to gain from being configurable.
+
+### What was measured
+
+```bash
+MSYS_NO_PATHCONV=1 python -X utf8 dev_tools/eval/scale_validate.py --only vera2
+```
+
+`vera2`, **367,069 chunks**, 12 labelled queries, 2 vCPU / 8 GB overlay:
+
+| | |
+|---|---|
+| composed ranking == compiled ranking | **every query** |
+| reproducible on a second call | **every query** |
+| distinct from `literal` | 12 / 12 |
+| p50 · compiled | 2,964 ms |
+| p50 · composed | 2,956 ms |
+| **assembly cost at p50** | **−7 ms (−0.3%)** |
+| engine RSS (anon) | 6 MB |
+
+Declaring a scoring function costs nothing measurable against compiling one. The
+equality is asserted **per query**, ✗ on an aggregate: two scorers can agree on
+average and disagree on individual queries, which is the shape of error that
+quietly moves a fitted weight.
+
+! The first run of this harness reported the cost as **−632 ms**, which is not a
+speed-up. Whichever algorithm ran first per query absorbed that query's cold
+embedding and cold pages, and the second looked faster by construction. Each
+query is now warmed with a discarded call before anything is timed. A negative
+number was the only reason the artefact was visible at all — a +632 ms version of
+the same bug would have been published.
+
+### 5.1M · startup verified, latency NOT measured
+
+The `vera5m` leg reached `ready` with **2,478 clusters** and a passing canary, so
+the engine starts and serves at that scale. **No query timings were taken** — the
+run was stopped before the measurement completed, and there is no partial number
+worth quoting from it.
+
+What that leaves unproven is **latency at 5.1M**, which is a property of the
+global arms and is already measured in `HARDWARE.md` §6. It does not affect the
+result above: ranking equivalence is a property of the scorer over a pool, not of
+how large the corpus behind the pool is.
+
+```bash
+# the missing leg, when the box is free
+MSYS_NO_PATHCONV=1 python -X utf8 dev_tools/eval/scale_validate.py --only vera5m --queries 10
+```
+
+### Not validated here
+
+! **Recall.** `vera5m` is a 14× synthetic clone: every answer chunk exists
+fourteen times, so every arm finds it trivially and any Recall@5 from it is
+meaningless. `e2e.py` owns recall, against the real corpus.
+
+! **That the weights are right.** They were fitted before the 2026-09-19
+re-embed, on a corpus where the dense arm contributed 0.0%, and must be refitted
+(§9). This validates that the layer is *faithful and fast*, ✗ that its numbers
+are good.

@@ -259,10 +259,7 @@ impl Vocabulary {
             ("PERATURAN WALIKOTA", 2),
         ];
         Self {
-            authority: tiers
-                .iter()
-                .map(|(k, v)| ((*k).to_owned(), *v))
-                .collect(),
+            authority: tiers.iter().map(|(k, v)| ((*k).to_owned(), *v)).collect(),
             // ! The top of the published hierarchy (UUD 1945 = 9, and 10 leaves
             // headroom), ✗ the top present in this corpus. Normalising against
             // what happens to be loaded would make the same chunk score
@@ -497,7 +494,6 @@ pub fn topical(f: &Facets<'_>, query_terms: &[&str], v: &Vocabulary) -> f32 {
         matched as f32 / query_terms.len() as f32
     }
 }
-
 
 /// The content words of a text · lowercased, longer than three characters,
 /// function words removed.
@@ -877,9 +873,7 @@ impl Composition {
             let absent = match (&f.variable, &f.transform) {
                 (_, Transform::Authority) => v.authority.is_empty(),
                 (_, Transform::Structural) => v.structural.is_empty(),
-                (Variable::Number(k) | Variable::Text(k), _) => {
-                    !available.contains(&k.as_str())
-                }
+                (Variable::Number(k) | Variable::Text(k), _) => !available.contains(&k.as_str()),
                 _ => false,
             };
             if absent && !out.contains(&f.name.as_str()) {
@@ -1427,7 +1421,11 @@ mod tests {
             };
             let name = k.trim().trim_matches('"');
             let want: u8 = raw.trim().parse().expect("tier must be an integer");
-            assert_eq!(v().tier(name), Some(want), "{name} disagrees with the fitter");
+            assert_eq!(
+                v().tier(name),
+                Some(want),
+                "{name} disagrees with the fitter"
+            );
             seen += 1;
         }
         assert_eq!(seen, 10, "the corpus contains ten regulation types");
@@ -1689,7 +1687,9 @@ mod tests {
                     regulation_type: Some("UNDANG-UNDANG"),
                     article: Some("Pasal 99"),
                     about: Some("pertambangan mineral dan batubara"),
-                    body: Some("Pemegang izin usaha pertambangan wajib menyerahkan rencana reklamasi"),
+                    body: Some(
+                        "Pemegang izin usaha pertambangan wajib menyerahkan rencana reklamasi",
+                    ),
                     year: Some(2009),
                     body_len: 240,
                     ..Facets::default()
@@ -1804,8 +1804,22 @@ mod tests {
         let cited: &[(&str, f32)] = &[("citation_in_degree", 40.0)];
         let ignored: &[(&str, f32)] = &[("citation_in_degree", 0.0)];
         let mut pool = vec![
-            (0.010_f32, Facets { numbers: ignored, ..Facets::default() }, 1_u8),
-            (0.009, Facets { numbers: cited, ..Facets::default() }, 2),
+            (
+                0.010_f32,
+                Facets {
+                    numbers: ignored,
+                    ..Facets::default()
+                },
+                1_u8,
+            ),
+            (
+                0.009,
+                Facets {
+                    numbers: cited,
+                    ..Facets::default()
+                },
+                2,
+            ),
         ];
         rescore_composed(&mut pool, &c, &cx(&v, &[]));
 
@@ -1828,7 +1842,10 @@ mod tests {
         let bare = Facets::default();
         assert_eq!(evaluate(&spec, &bare, &cx(&v, &[])), None);
 
-        let c = Composition { relevance_floor: 0.0, factors: vec![spec] };
+        let c = Composition {
+            relevance_floor: 0.0,
+            factors: vec![spec],
+        };
         assert!(composed_prior(&bare, &c, &cx(&v, &[])).abs() < f32::EPSILON);
     }
 
@@ -1856,11 +1873,20 @@ mod tests {
             (Variable::Year, Transform::HalfLife { years: 25.0 }),
             (Variable::Year, Transform::Range),
             (Variable::BodyLen, Transform::Saturate { at: 400.0 }),
-            (Variable::Number("x".to_owned()), Transform::Saturate { at: 0.0 }),
-            (Variable::Number("neg".to_owned()), Transform::Saturate { at: 1.0 }),
+            (
+                Variable::Number("x".to_owned()),
+                Transform::Saturate { at: 0.0 },
+            ),
+            (
+                Variable::Number("neg".to_owned()),
+                Transform::Saturate { at: 1.0 },
+            ),
             (Variable::About, Transform::MatchShare),
             (Variable::About, Transform::Present),
-            (Variable::Number("x".to_owned()), Transform::AtLeast { min: 1.0 }),
+            (
+                Variable::Number("x".to_owned()),
+                Transform::AtLeast { min: 1.0 },
+            ),
         ] {
             let spec = FactorSpec {
                 name: "t".to_owned(),
@@ -1888,11 +1914,35 @@ mod tests {
             transform: Transform::HalfLife { years: 25.0 },
             weight: 1.0,
         };
-        let f = Facets { year: Some(2001), ..Facets::default() };
+        let f = Facets {
+            year: Some(2001),
+            ..Facets::default()
+        };
 
-        let a = evaluate(&spec, &f, &Context { now: 2026, ..cx(&v, &[]) });
-        let b = evaluate(&spec, &f, &Context { now: 2026, ..cx(&v, &[]) });
-        let later = evaluate(&spec, &f, &Context { now: 2051, ..cx(&v, &[]) });
+        let a = evaluate(
+            &spec,
+            &f,
+            &Context {
+                now: 2026,
+                ..cx(&v, &[])
+            },
+        );
+        let b = evaluate(
+            &spec,
+            &f,
+            &Context {
+                now: 2026,
+                ..cx(&v, &[])
+            },
+        );
+        let later = evaluate(
+            &spec,
+            &f,
+            &Context {
+                now: 2051,
+                ..cx(&v, &[])
+            },
+        );
 
         assert_eq!(a, b);
         assert!(later < a, "an older document decays");

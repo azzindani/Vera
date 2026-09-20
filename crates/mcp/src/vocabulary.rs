@@ -104,9 +104,15 @@ pub enum VocabError {
     /// ! Refused rather than defaulted. A rule silently widened from `article`
     /// to `either` matches chunks its author never intended, and the ranking
     /// change is invisible.
-    BadField { label: String, field: String },
+    BadField {
+        label: String,
+        field: String,
+    },
     /// A score outside `0.0..=1.0`, or a non-finite `max_tier`.
-    BadScore { label: String, why: String },
+    BadScore {
+        label: String,
+        why: String,
+    },
 }
 
 impl std::fmt::Display for VocabError {
@@ -195,7 +201,11 @@ impl VocabularyFile {
             // ! Lowercased. `content_terms` lowercases each token before
             // comparing, so an uppercase entry here would never match and would
             // fail silently -- the whole class of bug this module exists for.
-            stopwords: me.stopwords.iter().map(|s| s.trim().to_lowercase()).collect(),
+            stopwords: me
+                .stopwords
+                .iter()
+                .map(|s| s.trim().to_lowercase())
+                .collect(),
             min_term_chars: me.min_term_chars,
         })
     }
@@ -319,7 +329,11 @@ impl CorpusVocabulary {
             max_tier: me.authority_scale as f32,
             structural,
             structural_default: me.labelled_score,
-            stopwords: me.stopwords.iter().map(|s| s.trim().to_lowercase()).collect(),
+            stopwords: me
+                .stopwords
+                .iter()
+                .map(|s| s.trim().to_lowercase())
+                .collect(),
             min_term_chars: me.min_term_chars,
         })
     }
@@ -362,17 +376,17 @@ mod tests {
             article: Some("Section 4.2"),
             ..engine::Facets::default()
         };
-        assert!(engine::factors::structural(&section, &v) > engine::factors::structural(&appendix, &v));
+        assert!(
+            engine::factors::structural(&section, &v) > engine::factors::structural(&appendix, &v)
+        );
     }
 
     #[test]
     fn authority_normalises_against_the_declared_scale_not_this_corpus() {
         // max_tier 5 with a top tier of 5 means the most binding instrument
         // scores 1.0 -- the same as UU does against the Indonesian 10.
-        let v = VocabularyFile::load(
-            r#"{"authority": {"INTERNET STANDARD": 5}, "max_tier": 5}"#,
-        )
-        .expect("valid");
+        let v = VocabularyFile::load(r#"{"authority": {"INTERNET STANDARD": 5}, "max_tier": 5}"#)
+            .expect("valid");
         let f = engine::Facets {
             regulation_type: Some("INTERNET STANDARD"),
             ..engine::Facets::default()

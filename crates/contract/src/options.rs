@@ -424,7 +424,10 @@ mod tests {
             ..SearchOptions::default()
         });
         assert!(a.experimental);
-        assert_eq!(a.factor_weights, mine, "the effective weights must be echoed");
+        assert_eq!(
+            a.factor_weights, mine,
+            "the effective weights must be echoed"
+        );
     }
 
     #[test]

@@ -66,6 +66,9 @@ SCORING  multi-factor     → relevance floor, then authority / structural / top
                           · which weights apply is a NAMED ALGORITHM the caller
                             selects; unknown name refused, unfitted not offered
                             [built]
+                          · a factor is variable x transform x weight, DECLARED.
+                            The grammar is closed so 1+Sum(w) stays checkable;
+                            the combination rule is fixed  [built, SCORING.md §10]
                           ✗ viewpoints · consensus — dropped, not pending. A
                             bounded prior forces weight vectors to agree, so
                             agreement measures nothing (docs/SCORING.md §5)

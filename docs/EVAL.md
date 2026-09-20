@@ -350,3 +350,34 @@ moving any number.
 genuinely *answers* a question is a lawyer's judgement, not a retrieval engineer's, and
 a wrong label is worse than no label: it silently moves every dial this document gates.
 Treat 54.5% as a number measured against labels of known-imperfect provenance.
+
+---
+
+## Scale validation · `dev_tools/eval/scale_validate.py`
+
+Not a recall harness. It restarts the engine against each database in turn and
+asserts the properties that must hold at any size: an assembled composition ranks
+identically to the compiled shorthand, every ranking is reproducible on a second
+call, and the algorithms are genuinely distinct. Latency and resident memory are
+reported beside them, because a ranking guarantee that only holds while the
+corpus is small is not a guarantee.
+
+```bash
+MSYS_NO_PATHCONV=1 python -X utf8 dev_tools/eval/scale_validate.py
+MSYS_NO_PATHCONV=1 python -X utf8 dev_tools/eval/scale_validate.py --only vera5m --queries 10
+```
+
+Results and their limits: `SCORING.md` §10. 355K is validated; the 5.1M leg
+verified startup (2,478 clusters, canary passing) and was stopped before its
+timings completed.
+
+! Each query is warmed with a **discarded call** before anything is timed.
+Without it whichever algorithm runs first pays for that query's cold embedding
+and the other looks faster by construction — the first run reported assembly at
+−632 ms on exactly that artefact.
+
+! The tool restores the engine to whichever database it started on, in a
+`finally`. **A hard kill skips that**, and leaves the engine pointed at the
+synthetic clone — which is how a later measurement gets quoted as the real
+corpus. After interrupting it, check `docker inspect vera-mcp` before trusting
+any number.

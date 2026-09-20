@@ -169,7 +169,10 @@ fn the_generic_profile_scores_an_english_corpus() {
         (numbered - 1.0).abs() < f32::EPSILON,
         "a numbered section is operative · {numbered}"
     );
-    assert!(appendix < section, "appendix {appendix} · section {section}");
+    assert!(
+        appendix < section,
+        "appendix {appendix} · section {section}"
+    );
 }
 
 #[test]

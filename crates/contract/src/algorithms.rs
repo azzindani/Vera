@@ -111,7 +111,6 @@ pub struct Fitted {
     pub note: Option<String>,
 }
 
-
 /// How one assembled factor turns a stored value into a number in `0.0..=1.0`.
 ///
 /// ! A closed set, ✗ an expression language, and the reason is
@@ -420,7 +419,6 @@ impl Registry {
                     bound_centi: (algo.prior_bound() * 100.0).round() as u32,
                 });
             }
-
         }
         Ok(())
     }
@@ -496,7 +494,10 @@ fn check_weights(name: &str, w: &FactorWeights) -> Result<(), RegistryError> {
             // that is a legible thing to want; it is just not something to
             // acquire by typing a minus sign into a config file and never
             // measuring it. Declare the inverted factor instead.
-            return Err(bad(field, format!("{v} is negative · see the note in source")));
+            return Err(bad(
+                field,
+                format!("{v} is negative · see the note in source"),
+            ));
         }
     }
     if !w.relevance_floor.is_finite() || !(0.0..=1.0).contains(&w.relevance_floor) {
@@ -532,11 +533,7 @@ const COLUMNS: &[&str] = &[
     "year",
 ];
 
-fn check_composition(
-    name: &str,
-    floor: f32,
-    entries: &[FactorEntry],
-) -> Result<(), RegistryError> {
+fn check_composition(name: &str, floor: f32, entries: &[FactorEntry]) -> Result<(), RegistryError> {
     let bad = |field: &'static str, why: String| RegistryError::BadWeight {
         name: name.to_owned(),
         field,
@@ -564,7 +561,10 @@ fn check_composition(
         if seen.contains(&e.name.as_str()) {
             return Err(bad(
                 "composition",
-                format!("`{}` declared twice · contributions are reported by name", e.name),
+                format!(
+                    "`{}` declared twice · contributions are reported by name",
+                    e.name
+                ),
             ));
         }
         seen.push(&e.name);
@@ -572,7 +572,10 @@ fn check_composition(
         if !e.weight.is_finite() || e.weight < 0.0 {
             return Err(bad(
                 "composition",
-                format!("`{}` has weight {} · must be finite and non-negative", e.name, e.weight),
+                format!(
+                    "`{}` has weight {} · must be finite and non-negative",
+                    e.name, e.weight
+                ),
             ));
         }
         let v = e.variable.trim();
@@ -610,13 +613,15 @@ fn check_composition(
         {
             return Err(bad(
                 "composition",
-                format!("`{}` declares {what} = {value} · must be finite and positive", e.name),
+                format!(
+                    "`{}` declares {what} = {value} · must be finite and positive",
+                    e.name
+                ),
             ));
         }
     }
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -674,7 +679,13 @@ mod tests {
         );
         let err = registry(&body).expect_err("3.75x must not load");
         assert!(
-            matches!(err, RegistryError::PriorTooWide { bound_centi: 375, .. }),
+            matches!(
+                err,
+                RegistryError::PriorTooWide {
+                    bound_centi: 375,
+                    ..
+                }
+            ),
             "{err:?}"
         );
         // The operator must be able to act on the message without the source.
@@ -711,7 +722,11 @@ mod tests {
         );
         let r = registry(&body).expect("valid");
         assert_eq!(r.names(), vec!["balanced", "guess"]);
-        assert_eq!(r.offered(), vec!["balanced"], "unfitted must not be offered");
+        assert_eq!(
+            r.offered(),
+            vec!["balanced"],
+            "unfitted must not be offered"
+        );
         assert!(r.get("guess").is_some(), "still reachable by name");
     }
 
@@ -734,7 +749,10 @@ mod tests {
 
     #[test]
     fn a_floor_outside_its_own_units_is_refused() {
-        let body = MINIMAL.replace(r#""relevance_floor":0.3,"authority":0.5"#, r#""relevance_floor":30.0,"authority":0.5"#);
+        let body = MINIMAL.replace(
+            r#""relevance_floor":0.3,"authority":0.5"#,
+            r#""relevance_floor":30.0,"authority":0.5"#,
+        );
         let err = registry(&body).expect_err("30.0 is not a share");
         assert!(matches!(
             err,

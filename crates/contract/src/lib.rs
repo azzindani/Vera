@@ -14,8 +14,8 @@ pub mod contract;
 pub mod options;
 
 pub use algorithms::{
-    Algorithm, DEFAULT_ALGORITHM, FactorEntry, Fitted, MAX_PRIOR_BOUND, Registry,
-    RegistryError, TransformSpec, classic_composition,
+    Algorithm, DEFAULT_ALGORITHM, FactorEntry, Fitted, MAX_PRIOR_BOUND, Registry, RegistryError,
+    TransformSpec, classic_composition,
 };
 pub use contract::{
     Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,

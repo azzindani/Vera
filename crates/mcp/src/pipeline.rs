@@ -167,9 +167,7 @@ impl Default for Config {
             // copy of the fitted numbers. Two literals that must agree are two
             // literals that will eventually disagree.
             vocabulary: engine::Vocabulary::id_regulation(),
-            algorithms: contract::Registry::builtin(weights_to_contract(
-                &engine::Weights::FITTED,
-            )),
+            algorithms: contract::Registry::builtin(weights_to_contract(&engine::Weights::FITTED)),
         }
     }
 }
@@ -307,10 +305,7 @@ fn guard_vocabulary(cfg: &Config, vocab_source: &'static str) -> Result<(), Star
 /// no serde and `contract` carries no logic. The mapping is dull on purpose —
 /// everything that can be wrong about a composition was rejected at load
 /// (`contract::algorithms::check_composition`), so this cannot fail.
-fn composition_from_contract(
-    floor: f32,
-    entries: &[contract::FactorEntry],
-) -> engine::Composition {
+fn composition_from_contract(floor: f32, entries: &[contract::FactorEntry]) -> engine::Composition {
     engine::Composition {
         relevance_floor: floor,
         factors: entries
@@ -444,7 +439,8 @@ impl Pipeline {
                 corpus_dim: meta.dense_dim,
                 engine_model: model.to_owned(),
                 engine_dim: usize::try_from(meta.dense_dim).unwrap_or(0),
-            }.into());
+            }
+            .into());
         }
 
         // ! The real canary. `ensure_compatible` above compares two strings;
@@ -461,7 +457,8 @@ impl Pipeline {
                         chunk_id,
                         got,
                         want: cfg.canary_min_cosine,
-                    }.into());
+                    }
+                    .into());
                 }
                 log_canary(&chunk_id, got);
             }
@@ -470,7 +467,8 @@ impl Pipeline {
                 // the space is the failure mode invariant 2 exists to prevent.
                 return Err(store::StoreError::Pool(format!(
                     "canary embed failed · cannot verify the vector space: {e}"
-                )).into());
+                ))
+                .into());
             }
         }
 
@@ -603,6 +601,43 @@ impl Pipeline {
         }
     }
 
+    /// RRF over the three arms' ranked ids.
+    ///
+    /// ! Extracted so `search_with` stays inside the line budget the workspace's
+    /// pedantic lints enforce. The budget is not arbitrary: `search_with` is the
+    /// one function that has to be readable end to end, because every invariant
+    /// about ordering -- gate before fuse, fetch before score, cut after score --
+    /// is visible only in its sequence.
+    fn fuse(
+        &self,
+        mode: contract::Mode,
+        dense_ids: &[String],
+        sparse_ids: &[String],
+        text_ids: &[String],
+    ) -> Vec<engine::Fused> {
+        let (w_dense, w_sparse, w_text) = self.arm_weights(mode);
+        reciprocal_rank_fusion(
+            &[
+                Arm {
+                    name: "dense",
+                    ids: dense_ids,
+                    weight: w_dense,
+                },
+                Arm {
+                    name: "sparse",
+                    ids: sparse_ids,
+                    weight: w_sparse,
+                },
+                Arm {
+                    name: "text",
+                    ids: text_ids,
+                    weight: w_text,
+                },
+            ],
+            DEFAULT_K,
+        )
+    }
+
     /// The workhorse · search under caller-supplied options
     /// (`docs/TOOL_SURFACE.md`).
     ///
@@ -651,27 +686,7 @@ impl Pipeline {
         let sparse_ids: Vec<String> = sparse.iter().map(|s| s.id.clone()).collect();
         let text_ids: Vec<String> = text.iter().map(|s| s.id.clone()).collect();
 
-        let (w_dense, w_sparse, w_text) = self.arm_weights(applied.mode);
-        let fused = reciprocal_rank_fusion(
-            &[
-                Arm {
-                    name: "dense",
-                    ids: &dense_ids,
-                    weight: w_dense,
-                },
-                Arm {
-                    name: "sparse",
-                    ids: &sparse_ids,
-                    weight: w_sparse,
-                },
-                Arm {
-                    name: "text",
-                    ids: &text_ids,
-                    weight: w_text,
-                },
-            ],
-            DEFAULT_K,
-        );
+        let fused = self.fuse(applied.mode, &dense_ids, &sparse_ids, &text_ids);
         // ! The pool, ✗ the answer. Cutting to `top_k` here is what made the
         // metadata fetch below useless for ranking: a candidate at rank 15
         // carrying the governing law could never be promoted, because nothing
@@ -709,7 +724,14 @@ impl Pipeline {
         // domain gate is. See `apply_factors`.
         let apply_floor = exact_matches.is_empty();
         let vocab = &self.cfg.vocabulary;
-        Self::apply_factors(&mut ranked, query, &applied, apply_floor, &mut progress, vocab);
+        Self::apply_factors(
+            &mut ranked,
+            query,
+            &applied,
+            apply_floor,
+            &mut progress,
+            vocab,
+        );
 
         // ! Expansion runs AFTER ranking, ✗ before. Its seeds are the
         // candidates that actually ranked; walking the whole pool would be a
@@ -798,7 +820,14 @@ impl Pipeline {
             return Ok(());
         }
         ranked.extend(admitted);
-        Self::apply_factors(ranked, query, applied, apply_floor, progress, &self.cfg.vocabulary);
+        Self::apply_factors(
+            ranked,
+            query,
+            applied,
+            apply_floor,
+            progress,
+            &self.cfg.vocabulary,
+        );
         Ok(())
     }
 
@@ -973,10 +1002,8 @@ impl Pipeline {
             .enumerate()
             .map(|(i, c)| (c.relevance, Self::facets_of(&c.row), i))
             .collect();
-        let mut composition = composition_from_contract(
-            applied.factor_weights.relevance_floor,
-            &applied.composition,
-        );
+        let mut composition =
+            composition_from_contract(applied.factor_weights.relevance_floor, &applied.composition);
         if !apply_floor {
             composition.relevance_floor = 0.0;
             progress.push("relevance floor skipped · the query names a regulation".into());

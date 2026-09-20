@@ -69,7 +69,10 @@ fn a_fitted_block_names_the_harness_that_produced_it() {
     let r = contract::Registry::parse(&repo_file("config/algorithms.json")).expect("loads");
     for (name, a) in &r.algorithms {
         if let Some(f) = &a.fitted {
-            assert!(!f.harness.trim().is_empty(), "`{name}` claims without a harness");
+            assert!(
+                !f.harness.trim().is_empty(),
+                "`{name}` claims without a harness"
+            );
             assert!(f.n > 0, "`{name}` claims a figure from zero cases");
         }
     }
@@ -88,9 +91,7 @@ fn the_shipped_vocabulary_reproduces_the_compiled_in_fallback_exactly() {
     // one side and written as a literal on the other; exact equality happens to
     // hold for these values and is not the property being asserted.
     assert!((from_file.max_tier - compiled.max_tier).abs() < f32::EPSILON);
-    assert!(
-        (from_file.structural_default - compiled.structural_default).abs() < f32::EPSILON
-    );
+    assert!((from_file.structural_default - compiled.structural_default).abs() < f32::EPSILON);
     assert_eq!(from_file.min_term_chars, compiled.min_term_chars);
     assert_eq!(from_file.structural.len(), compiled.structural.len());
     for (a, b) in from_file.structural.iter().zip(&compiled.structural) {
@@ -195,7 +196,10 @@ fn load_vocab(rel: &str) -> engine::Vocabulary {
     #[allow(clippy::cast_possible_truncation)]
     engine::Vocabulary {
         authority,
-        max_tier: obj.get("max_tier").and_then(serde_json::Value::as_f64).unwrap_or(10.0) as f32,
+        max_tier: obj
+            .get("max_tier")
+            .and_then(serde_json::Value::as_f64)
+            .unwrap_or(10.0) as f32,
         structural,
         structural_default: obj
             .get("structural_default")
