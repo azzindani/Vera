@@ -19,9 +19,23 @@
     "",
     "! An unknown key anywhere in this file kills the process at startup. That is",
     "deliberate: a typo that silently does nothing is the same defect class as",
-    "`topical` shipping at 0.25 while the engine evaluated it against NULL."
+    "`topical` shipping at 0.25 while the engine evaluated it against NULL.",
+    "",
+    "An entry may declare `composition` instead of `factors`. That is the general",
+    "form: any variable, any bounded shape, any number of terms. `factors` stays",
+    "the default because every fitted weight here was measured against it, and",
+    "the engine reproduces it term for term as a composition.",
+    "",
+    "! The combination rule is NOT declarable and is not meant to be.",
+    "`relevance x (1 + sum(w_i * f_i))` is what encodes 'factors rank, but only",
+    "after relevance'. Every transform returns [0,1] by construction, which is",
+    "the only reason `sum(w)` is a bound that can be checked at startup.",
+    "",
+    "Variables are bare columns -- regulation_type, article, chapter, about,",
+    "body, body_len, year -- or `number:<key>` / `text:<key>` for an enrichment",
+    "value the engine has never heard of. ! A weight on a key no row supplies is",
+    "a startup REFUSAL, not a silent zero."
   ],
-
   "algorithms": {
     "balanced": {
       "description": "The general case. Ranks on text, then lets an instrument's authority and structure reorder within what retrieval found. Start here.",
@@ -43,7 +57,6 @@
       },
       "expand": []
     },
-
     "literal": {
       "description": "No metadata prior at all: the arms' own fused order, unmodified. For a question where the wording is the answer, or to see what the retrieval layer alone believes.",
       "fitted": {
@@ -64,7 +77,6 @@
       },
       "expand": []
     },
-
     "balanced_expanded": {
       "description": "EXPERIMENTAL. `balanced`, plus sibling clauses of the regulations that ranked. For when the right law is clearly being found but the wrong clause of it is coming back.",
       "factors": {
@@ -75,7 +87,65 @@
         "completeness": 0.0,
         "topical": 0.25
       },
-      "expand": ["siblings"]
+      "expand": [
+        "siblings"
+      ]
+    },
+    "balanced_composed": {
+      "_note": "EXPERIMENTAL, and deliberately identical to `balanced`. It exists to prove the assembled form on the deployment rather than only in a unit test: same five terms, same weights, written out. `algorithm_scenarios.py` asserts it returns the same ranking as `balanced`, which is what says the composition layer changed nothing. ! No `fitted` block -- it inherits no measurement by looking alike, and an unfitted entry is never offered in the tool schema.",
+      "description": "EXPERIMENTAL. `balanced`, written out as an assembled composition. Same ranking; the worked example of declaring a scoring function.",
+      "factors": {
+        "relevance_floor": 0.3,
+        "authority": 0.0,
+        "structural": 0.0,
+        "temporal": 0.0,
+        "completeness": 0.0,
+        "topical": 0.0
+      },
+      "composition": [
+        {
+          "name": "authority",
+          "variable": "regulation_type",
+          "transform": {
+            "kind": "authority"
+          },
+          "weight": 0.5
+        },
+        {
+          "name": "structural",
+          "variable": "article",
+          "transform": {
+            "kind": "structural"
+          },
+          "weight": 0.25
+        },
+        {
+          "name": "topical",
+          "variable": "about",
+          "transform": {
+            "kind": "match_share"
+          },
+          "weight": 0.25
+        },
+        {
+          "name": "completeness",
+          "variable": "body_len",
+          "transform": {
+            "kind": "saturate",
+            "at": 400.0
+          },
+          "weight": 0.0
+        },
+        {
+          "name": "temporal",
+          "variable": "year",
+          "transform": {
+            "kind": "range"
+          },
+          "weight": 0.0
+        }
+      ],
+      "expand": []
     }
   }
 }

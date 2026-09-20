@@ -13,7 +13,10 @@ pub mod factors;
 pub mod fusion;
 pub mod routing;
 
-pub use factors::{Facets, Field, StructuralRule, Vocabulary, Weights, rescore};
+pub use factors::{
+    Composition, Context, Facets, FactorSpec, Field, StructuralRule, Transform, Variable,
+    Vocabulary, Weights, contributions, rescore, rescore_composed,
+};
 pub use fusion::{Arm, DEFAULT_K, Fused, reciprocal_rank_fusion};
 pub use routing::{Centroid, DomainAnchor, Route, cosine, detect_domain, route, select_clusters};
 

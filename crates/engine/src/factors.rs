@@ -388,6 +388,17 @@ pub struct Facets<'a> {
     /// factor input that is not metadata.
     pub body: Option<&'a str>,
     pub body_len: usize,
+    /// Numeric enrichment, by key · the extension point for a factor the engine
+    /// does not know about.
+    ///
+    /// ! Empty today: Ravel computes factors at ingest and no pipeline stage
+    /// stores them, so nothing populates this yet. It is here because a
+    /// composition can already *declare* `Variable::Number("citation_in_degree")`
+    /// and the startup guard already refuses to serve a weight on a key no row
+    /// supplies — which is the difference between an extension point and a plan.
+    pub numbers: &'a [(&'a str, f32)],
+    /// String enrichment, by key.
+    pub strings: &'a [(&'a str, &'a str)],
 }
 
 /// How binding is this instrument?
@@ -679,6 +690,399 @@ pub fn rescore<T: Copy>(
     pool.sort_by(|a, b| {
         let sa = a.0 * (1.0 + prior(&a.1, w, query_terms, oldest, newest, v));
         let sb = b.0 * (1.0 + prior(&b.1, w, query_terms, oldest, newest, v));
+        sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal)
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Composition · scoring assembled from parts, ✗ compiled as five functions
+// ---------------------------------------------------------------------------
+
+/// Where a factor reads its value.
+///
+/// ! The named variants are the columns `ChunkRow` already carries. [`Number`]
+/// and [`Text`] are the extension point: an enrichment value Ravel computed at
+/// ingest, read by key. A corpus that gains `citation_in_degree` gets a factor
+/// over it by adding four lines to a file, ✗ by shipping a binary.
+///
+/// [`Number`]: Variable::Number
+/// [`Text`]: Variable::Text
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Variable {
+    RegulationType,
+    Article,
+    Chapter,
+    About,
+    Body,
+    BodyLen,
+    Year,
+    /// A numeric enrichment value, by key.
+    Number(String),
+    /// A string enrichment value, by key.
+    Text(String),
+}
+
+/// How a raw value becomes a factor in `0.0..=1.0`.
+///
+/// ! **Every transform is bounded by construction**, and that is the whole
+/// reason this is a closed set rather than an expression language. `Σw` is the
+/// prior's bound only if each `fᵢ ≤ 1`; given an arbitrary formula as text you
+/// cannot compute the bound by inspection, and invariant 9 goes back to being a
+/// comment. The failure it guards is the one that looks correct in the output —
+/// a real law, correctly cited, ranked first for every query.
+///
+/// The grammar is constrained; the assembly is not. Which variable, which
+/// shape, which weight, how many — all declared.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Transform {
+    /// The corpus's authority ladder · `tier / max_tier`.
+    Authority,
+    /// The corpus's structural ladder · annex vs operative text.
+    Structural,
+    /// Recency decaying with age · `half_life / (half_life + age)`.
+    ///
+    /// ! Absolute, ✗ pool-relative, and that is a real difference from
+    /// [`Range`]: two identical candidates score the same here whatever else
+    /// was retrieved. Ravel computes the same shape at ingest.
+    ///
+    /// [`Range`]: Transform::Range
+    HalfLife { years: f32 },
+    /// Position within the pool's own span of this variable · 0.5 when the pool
+    /// is flat. This is what `temporal` has always done.
+    Range,
+    /// Saturating growth · `1 - e^(-x/at)`. Past `at` more is not more.
+    ///
+    /// ! Saturating, ✗ linear. A linear term ranks the largest value first,
+    /// which on `body_len` means an annex table.
+    Saturate { at: f32 },
+    /// Share of the query's content terms this text contains.
+    MatchShare,
+    /// 1.0 when the value is present and non-empty, else `None`.
+    Present,
+    /// 1.0 when the value is at least `min`, else 0.0.
+    AtLeast { min: f32 },
+}
+
+/// One assembled factor.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FactorSpec {
+    /// Published in the response beside its contribution. A factor whose
+    /// contribution cannot be seen is one that cannot be debugged, and an
+    /// assembled scorer makes that failure much easier to reach.
+    pub name: String,
+    pub variable: Variable,
+    pub transform: Transform,
+    pub weight: f32,
+}
+
+/// The whole scoring function · a floor, then a bounded sum of assembled terms.
+///
+/// ```text
+/// final = relevance × (1 + Σ wᵢ · fᵢ(variableᵢ))
+/// ```
+///
+/// ! The **form** is fixed and the **terms** are not. That split is deliberate:
+/// the multiplication by relevance is what encodes "factors rank, but only
+/// after relevance" (invariant 9), and it is the one part with nothing to gain
+/// from being configurable. Everything inside the sum is declared.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Composition {
+    pub relevance_floor: f32,
+    pub factors: Vec<FactorSpec>,
+}
+
+impl Composition {
+    /// `Σw` · what [`MAX_PRIOR_BOUND`](crate::MAX_PRIOR_BOUND) constrains.
+    ///
+    /// The floor is excluded: it is a threshold, ✗ a weight, and including it
+    /// would bound the prior by a number that never multiplies anything.
+    #[must_use]
+    pub fn weight_sum(&self) -> f32 {
+        self.factors.iter().map(|f| f.weight).sum()
+    }
+
+    /// `1 + Σw` · the most a candidate's metadata may multiply its relevance by.
+    #[must_use]
+    pub fn prior_bound(&self) -> f32 {
+        1.0 + self.weight_sum()
+    }
+
+    /// Whether any factor carries a weight · an all-zero composition is exactly
+    /// the identity on the fused order, which is what makes it safe to ship dark.
+    #[must_use]
+    pub fn is_inert(&self) -> bool {
+        self.relevance_floor <= 0.0 && self.factors.iter().all(|f| f.weight == 0.0)
+    }
+
+    /// The five factors this engine shipped before scoring was assembled, as a
+    /// declared composition.
+    ///
+    /// ! Exists so the migration is provable rather than argued: a test asserts
+    /// this scores **identically** to the hand-written `prior`, the same way
+    /// `config/vocabulary.id_regulation.json` is asserted to reproduce the
+    /// built-in tables. A composition layer that quietly changed a ranking would
+    /// invalidate every fitted weight in the repository.
+    #[must_use]
+    pub fn classic(w: &Weights) -> Self {
+        Self {
+            relevance_floor: w.relevance_floor,
+            factors: vec![
+                FactorSpec {
+                    name: "authority".to_owned(),
+                    variable: Variable::RegulationType,
+                    transform: Transform::Authority,
+                    weight: w.authority,
+                },
+                FactorSpec {
+                    name: "structural".to_owned(),
+                    variable: Variable::Article,
+                    transform: Transform::Structural,
+                    weight: w.structural,
+                },
+                FactorSpec {
+                    name: "completeness".to_owned(),
+                    variable: Variable::BodyLen,
+                    transform: Transform::Saturate { at: 400.0 },
+                    weight: w.completeness,
+                },
+                FactorSpec {
+                    name: "temporal".to_owned(),
+                    variable: Variable::Year,
+                    transform: Transform::Range,
+                    weight: w.temporal,
+                },
+                FactorSpec {
+                    name: "topical".to_owned(),
+                    variable: Variable::About,
+                    transform: Transform::MatchShare,
+                    weight: w.topical,
+                },
+            ],
+        }
+    }
+
+    /// Variables this composition weights that the candidate rows cannot supply.
+    ///
+    /// ! The same guard as [`Vocabulary::missing_for`], extended to assembled
+    /// factors. A weight on a variable no row carries is not a small effect, it
+    /// is no effect — and it is indistinguishable from a weight that was
+    /// measured and found not to help.
+    #[must_use]
+    pub fn missing_for<'a>(&'a self, v: &Vocabulary, available: &[&str]) -> Vec<&'a str> {
+        let mut out = Vec::new();
+        for f in &self.factors {
+            if f.weight <= 0.0 {
+                continue;
+            }
+            let absent = match (&f.variable, &f.transform) {
+                (_, Transform::Authority) => v.authority.is_empty(),
+                (_, Transform::Structural) => v.structural.is_empty(),
+                (Variable::Number(k) | Variable::Text(k), _) => {
+                    !available.contains(&k.as_str())
+                }
+                _ => false,
+            };
+            if absent && !out.contains(&f.name.as_str()) {
+                out.push(f.name.as_str());
+            }
+        }
+        out
+    }
+}
+
+/// Everything a transform may need beyond the candidate itself.
+///
+/// ! Carried as one struct rather than five arguments because the list grows
+/// every time a transform is added, and a positional call site is where the
+/// wrong `oldest`/`newest` pair gets passed silently.
+#[derive(Debug, Clone, Copy)]
+pub struct Context<'a> {
+    pub vocabulary: &'a Vocabulary,
+    pub query_terms: &'a [&'a str],
+    /// The pool's own span for [`Transform::Range`].
+    pub oldest: i32,
+    pub newest: i32,
+    /// The year a [`Transform::HalfLife`] measures age against.
+    ///
+    /// ! Injected, ✗ read from the clock. A factor that drifts with wall time
+    /// makes the same corpus score differently on two days, and no eval run is
+    /// then reproducible.
+    pub now: i32,
+}
+
+/// Evaluate one factor · `None` when the variable is absent.
+///
+/// ! `None`, never `0.0`. "The corpus does not record this" and "this scores
+/// lowest" are different claims, and collapsing them silently demotes every row
+/// an ingestion gap touched. A `None` term contributes nothing to the sum, which
+/// leaves the candidate ranked on the factors that *are* computable.
+#[must_use]
+pub fn evaluate(spec: &FactorSpec, f: &Facets<'_>, cx: &Context<'_>) -> Option<f32> {
+    let text = |v: &Variable| -> Option<&str> {
+        match v {
+            Variable::RegulationType => f.regulation_type,
+            Variable::Article => f.article,
+            Variable::Chapter => f.chapter,
+            Variable::About => f.about,
+            Variable::Body => f.body,
+            Variable::Text(k) => f
+                .strings
+                .iter()
+                .find(|(key, _)| key == k)
+                .map(|(_, val)| *val),
+            _ => None,
+        }
+        .filter(|s| !s.is_empty())
+    };
+    #[allow(clippy::cast_precision_loss)]
+    let number = |v: &Variable| -> Option<f32> {
+        match v {
+            Variable::BodyLen => Some(f.body_len as f32),
+            Variable::Year => f.year.map(|y| y as f32),
+            Variable::Number(k) => f
+                .numbers
+                .iter()
+                .find(|(key, _)| key == k)
+                .map(|(_, val)| *val),
+            _ => None,
+        }
+    };
+
+    let value = match &spec.transform {
+        // ! Reads the ladder through `authority`, which returns 0.0 for a label
+        // the corpus does not rank -- neutral under a multiplicative prior, ✗ a
+        // penalty. Ranking a document down for metadata nobody recorded would
+        // punish an ingestion gap as though it were a fact about the document.
+        Transform::Authority => {
+            let label = text(&spec.variable)?;
+            let scratch = Facets {
+                regulation_type: Some(label),
+                ..Facets::default()
+            };
+            Some(authority(&scratch, cx.vocabulary))
+        }
+        // The ladder reads article AND chapter, so it takes the whole candidate
+        // rather than one variable; `spec.variable` documents the primary field.
+        Transform::Structural => Some(structural(f, cx.vocabulary)),
+        Transform::HalfLife { years } => {
+            let year = number(&spec.variable)?;
+            #[allow(clippy::cast_precision_loss)]
+            let age = (cx.now as f32 - year).max(0.0);
+            let h = years.max(f32::EPSILON);
+            Some(h / (h + age))
+        }
+        Transform::Range => {
+            let value = number(&spec.variable)?;
+            #[allow(clippy::cast_precision_loss)]
+            if cx.newest > cx.oldest {
+                let span = (cx.newest - cx.oldest) as f32;
+                Some(((value - cx.oldest as f32) / span).clamp(0.0, 1.0))
+            } else {
+                Some(0.5)
+            }
+        }
+        Transform::Saturate { at } => {
+            let value = number(&spec.variable)?;
+            let at = at.max(f32::EPSILON);
+            Some(1.0 - (-value / at).exp())
+        }
+        Transform::MatchShare => {
+            let haystack = text(&spec.variable)?;
+            let scratch = Facets {
+                about: Some(haystack),
+                ..Facets::default()
+            };
+            Some(topical(&scratch, cx.query_terms, cx.vocabulary))
+        }
+        Transform::Present => {
+            if text(&spec.variable).is_some() || number(&spec.variable).is_some() {
+                Some(1.0)
+            } else {
+                None
+            }
+        }
+        Transform::AtLeast { min } => {
+            let value = number(&spec.variable)?;
+            Some(if value >= *min { 1.0 } else { 0.0 })
+        }
+    }?;
+
+    // ! Clamped, and it must be. A declared `saturate` with a negative `at`, or
+    // a `Number` enrichment outside its documented range, would otherwise let
+    // one term exceed 1.0 and break the bound every other check relies on.
+    Some(value.clamp(0.0, 1.0))
+}
+
+/// The bounded prior a candidate's metadata earns · `Σ wᵢ·fᵢ`.
+#[must_use]
+pub fn composed_prior(f: &Facets<'_>, c: &Composition, cx: &Context<'_>) -> f32 {
+    c.factors
+        .iter()
+        .filter(|s| s.weight != 0.0)
+        .filter_map(|s| evaluate(s, f, cx).map(|v| s.weight * v))
+        .sum()
+}
+
+/// Per-factor contributions for one candidate · what the response publishes.
+///
+/// ! An assembled scorer makes "why did this rank here" much harder to answer
+/// than five compiled functions did, and the answer has to be in the output
+/// rather than in a reviewer's head. `None` is reported as absent, ✗ as zero.
+#[must_use]
+pub fn contributions<'a>(
+    f: &Facets<'_>,
+    c: &'a Composition,
+    cx: &Context<'_>,
+) -> Vec<(&'a str, Option<f32>)> {
+    c.factors
+        .iter()
+        .map(|s| (s.name.as_str(), evaluate(s, f, cx)))
+        .collect()
+}
+
+/// Apply the floor, then rank on `relevance × (1 + prior)`.
+///
+/// The composed twin of [`rescore`], and the one the pipeline calls.
+pub fn rescore_composed<T: Copy>(
+    pool: &mut Vec<(f32, Facets<'_>, T)>,
+    c: &Composition,
+    cx: &Context<'_>,
+) {
+    if c.is_inert() {
+        return;
+    }
+    if c.relevance_floor > 0.0 && !cx.query_terms.is_empty() {
+        let kept: Vec<_> = pool
+            .iter()
+            .filter(|(_, f, _)| {
+                coverage(f.body.unwrap_or_default(), cx.query_terms, cx.vocabulary)
+                    >= c.relevance_floor
+            })
+            .copied()
+            .collect();
+        // ! Never empty on account of the floor. "This corpus cannot answer the
+        // question" is the domain gate's decision (invariant 13); a silent
+        // second refusal here would be indistinguishable from it.
+        if kept.is_empty() {
+            pool.truncate(1);
+        } else {
+            *pool = kept;
+        }
+    }
+
+    // ! Recomputed over the SURVIVORS, matching `rescore`. `Range` is relative
+    // to the pool it ranks, so measuring it before the floor would score against
+    // candidates that are no longer in the answer.
+    let years: Vec<i32> = pool.iter().filter_map(|(_, f, _)| f.year).collect();
+    let cx = Context {
+        oldest: years.iter().copied().min().unwrap_or(0),
+        newest: years.iter().copied().max().unwrap_or(0),
+        ..*cx
+    };
+
+    pool.sort_by(|a, b| {
+        let sa = a.0 * (1.0 + composed_prior(&a.1, c, &cx));
+        let sb = b.0 * (1.0 + composed_prior(&b.1, c, &cx));
         sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal)
     });
 }
@@ -1248,5 +1652,314 @@ mod tests {
         };
         assert_eq!(v.tier("PERATURAN DAERAH KABUPATEN BANDUNG"), Some(7));
         assert_eq!(v.tier("PERATURAN DAERAH"), Some(3));
+    }
+
+    // -- composition ---------------------------------------------------------
+
+    fn cx<'a>(v: &'a Vocabulary, terms: &'a [&'a str]) -> Context<'a> {
+        Context {
+            vocabulary: v,
+            query_terms: terms,
+            oldest: 1945,
+            newest: 2026,
+            now: 2026,
+        }
+    }
+
+    /// A pool spanning several tiers, structures, lengths and years · enough for
+    /// two scorers to disagree if they are going to.
+    fn mixed_pool() -> Vec<(f32, Facets<'static>, u8)> {
+        vec![
+            (
+                0.016_f32,
+                Facets {
+                    regulation_type: Some("PERATURAN BUPATI"),
+                    article: Some("LAMPIRAN II"),
+                    about: Some("izin usaha pertambangan mineral"),
+                    body: Some("Pemegang izin usaha pertambangan wajib melaksanakan reklamasi"),
+                    year: Some(2019),
+                    body_len: 900,
+                    ..Facets::default()
+                },
+                1,
+            ),
+            (
+                0.014,
+                Facets {
+                    regulation_type: Some("UNDANG-UNDANG"),
+                    article: Some("Pasal 99"),
+                    about: Some("pertambangan mineral dan batubara"),
+                    body: Some("Pemegang izin usaha pertambangan wajib menyerahkan rencana reklamasi"),
+                    year: Some(2009),
+                    body_len: 240,
+                    ..Facets::default()
+                },
+                2,
+            ),
+            (
+                0.011,
+                Facets {
+                    regulation_type: Some("PERATURAN PEMERINTAH"),
+                    chapter: Some("PENJELASAN"),
+                    article: Some("Angka 4"),
+                    about: Some("reklamasi dan pascatambang"),
+                    body: Some("Yang dimaksud dengan reklamasi adalah kegiatan izin usaha"),
+                    year: Some(2010),
+                    body_len: 120,
+                    ..Facets::default()
+                },
+                3,
+            ),
+            (
+                0.009,
+                Facets {
+                    regulation_type: Some("SURAT EDARAN"),
+                    article: Some("Romawi I"),
+                    body: Some("Pemegang izin usaha pertambangan reklamasi wajib"),
+                    year: Some(2024),
+                    body_len: 60,
+                    ..Facets::default()
+                },
+                4,
+            ),
+        ]
+    }
+
+    #[test]
+    fn the_classic_composition_reproduces_the_hand_written_scorer_exactly() {
+        // ! The migration, asserted rather than argued. Every fitted weight in
+        // this repository was measured against `rescore`; a composition layer
+        // that quietly changed a ranking would invalidate all of them at once,
+        // and the change would look like a small refactor in the diff.
+        let vocab = v();
+        let terms = ["izin", "usaha", "pertambangan", "reklamasi"];
+        let weights = Weights::FITTED;
+        let composition = Composition::classic(&weights);
+
+        let mut compiled = mixed_pool();
+        let mut composed = mixed_pool();
+        rescore(&mut compiled, &weights, &terms, &vocab);
+        rescore_composed(&mut composed, &composition, &cx(&vocab, &terms));
+
+        assert_eq!(
+            compiled.iter().map(|x| x.2).collect::<Vec<_>>(),
+            composed.iter().map(|x| x.2).collect::<Vec<_>>(),
+            "composed ranking must match the compiled one"
+        );
+    }
+
+    #[test]
+    fn the_classic_composition_matches_term_by_term_not_just_in_order() {
+        // ! Order alone is a weak assertion on four candidates -- two scorers
+        // can agree on the order and disagree on every number. This compares the
+        // priors themselves, which is what the next factor gets added to.
+        let vocab = v();
+        let terms = ["izin", "usaha", "pertambangan", "reklamasi"];
+        let weights = Weights::FITTED;
+        let composition = Composition::classic(&weights);
+        let context = cx(&vocab, &terms);
+
+        for (_, facets, id) in mixed_pool() {
+            let compiled = prior(&facets, &weights, &terms, 1945, 2026, &vocab);
+            let composed = composed_prior(&facets, &composition, &context);
+            assert!(
+                (compiled - composed).abs() < 1e-6,
+                "candidate {id}: compiled {compiled} vs composed {composed}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_classic_composition_carries_the_same_bound() {
+        let c = Composition::classic(&Weights::FITTED);
+        assert!((c.prior_bound() - 2.00).abs() < 1e-6, "{}", c.prior_bound());
+    }
+
+    #[test]
+    fn an_all_zero_composition_is_the_identity_on_the_fused_order() {
+        // What makes an assembled scorer safe to ship dark.
+        let v = v();
+        let c = Composition::classic(&Weights::OFF);
+        let mut pool = mixed_pool();
+        let before: Vec<u8> = pool.iter().map(|x| x.2).collect();
+        rescore_composed(&mut pool, &c, &cx(&v, &[]));
+        assert_eq!(before, pool.iter().map(|x| x.2).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn a_factor_over_an_enrichment_value_needs_no_new_code() {
+        // ! The point of the whole layer. `citation_in_degree` is a column the
+        // engine has never heard of; scoring by it is four lines of declaration.
+        let v = v();
+        let c = Composition {
+            relevance_floor: 0.0,
+            factors: vec![FactorSpec {
+                name: "citations".to_owned(),
+                variable: Variable::Number("citation_in_degree".to_owned()),
+                transform: Transform::Saturate { at: 20.0 },
+                weight: 1.0,
+            }],
+        };
+
+        let cited: &[(&str, f32)] = &[("citation_in_degree", 40.0)];
+        let ignored: &[(&str, f32)] = &[("citation_in_degree", 0.0)];
+        let mut pool = vec![
+            (0.010_f32, Facets { numbers: ignored, ..Facets::default() }, 1_u8),
+            (0.009, Facets { numbers: cited, ..Facets::default() }, 2),
+        ];
+        rescore_composed(&mut pool, &c, &cx(&v, &[]));
+
+        assert_eq!(pool[0].2, 2, "the heavily cited chunk must be lifted");
+    }
+
+    #[test]
+    fn an_absent_enrichment_value_contributes_nothing_rather_than_zero() {
+        // ! `None`, never 0.0. "The corpus does not record this" and "this scores
+        // lowest" are different claims, and collapsing them demotes every row an
+        // ingestion gap touched. A candidate missing the value must rank on the
+        // factors that ARE computable, ✗ be penalised for the gap.
+        let v = v();
+        let spec = FactorSpec {
+            name: "citations".to_owned(),
+            variable: Variable::Number("citation_in_degree".to_owned()),
+            transform: Transform::Saturate { at: 20.0 },
+            weight: 1.0,
+        };
+        let bare = Facets::default();
+        assert_eq!(evaluate(&spec, &bare, &cx(&v, &[])), None);
+
+        let c = Composition { relevance_floor: 0.0, factors: vec![spec] };
+        assert!(composed_prior(&bare, &c, &cx(&v, &[])).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn every_transform_stays_inside_the_unit_interval() {
+        // ! This is what makes `Sigma w` the bound, and it is why the transform
+        // set is closed rather than an expression language. Values are pushed
+        // well past their documented ranges on purpose.
+        let v = v();
+        let huge: &[(&str, f32)] = &[("x", 1e9), ("neg", -500.0)];
+        let f = Facets {
+            regulation_type: Some("UNDANG-UNDANG DASAR"),
+            article: Some("Pasal 1"),
+            about: Some("izin usaha"),
+            year: Some(3000),
+            body_len: usize::MAX,
+            numbers: huge,
+            ..Facets::default()
+        };
+        let cx = cx(&v, &["izin"]);
+
+        for (variable, transform) in [
+            (Variable::RegulationType, Transform::Authority),
+            (Variable::Article, Transform::Structural),
+            (Variable::Year, Transform::HalfLife { years: 25.0 }),
+            (Variable::Year, Transform::Range),
+            (Variable::BodyLen, Transform::Saturate { at: 400.0 }),
+            (Variable::Number("x".to_owned()), Transform::Saturate { at: 0.0 }),
+            (Variable::Number("neg".to_owned()), Transform::Saturate { at: 1.0 }),
+            (Variable::About, Transform::MatchShare),
+            (Variable::About, Transform::Present),
+            (Variable::Number("x".to_owned()), Transform::AtLeast { min: 1.0 }),
+        ] {
+            let spec = FactorSpec {
+                name: "t".to_owned(),
+                variable,
+                transform: transform.clone(),
+                weight: 1.0,
+            };
+            if let Some(value) = evaluate(&spec, &f, &cx) {
+                assert!(
+                    (0.0..=1.0).contains(&value),
+                    "{transform:?} produced {value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_half_life_does_not_drift_with_the_wall_clock() {
+        // ! `now` is injected. A factor that reads the clock makes the same
+        // corpus score differently on two days, and no eval run is reproducible.
+        let v = v();
+        let spec = FactorSpec {
+            name: "recency".to_owned(),
+            variable: Variable::Year,
+            transform: Transform::HalfLife { years: 25.0 },
+            weight: 1.0,
+        };
+        let f = Facets { year: Some(2001), ..Facets::default() };
+
+        let a = evaluate(&spec, &f, &Context { now: 2026, ..cx(&v, &[]) });
+        let b = evaluate(&spec, &f, &Context { now: 2026, ..cx(&v, &[]) });
+        let later = evaluate(&spec, &f, &Context { now: 2051, ..cx(&v, &[]) });
+
+        assert_eq!(a, b);
+        assert!(later < a, "an older document decays");
+        assert!((a.expect("value") - 0.5).abs() < 1e-6, "25 years = half");
+    }
+
+    #[test]
+    fn a_weight_on_a_variable_no_row_supplies_is_reported() {
+        // The startup guard, extended to assembled factors.
+        let v = v();
+        let c = Composition {
+            relevance_floor: 0.3,
+            factors: vec![
+                FactorSpec {
+                    name: "citations".to_owned(),
+                    variable: Variable::Number("citation_in_degree".to_owned()),
+                    transform: Transform::Saturate { at: 20.0 },
+                    weight: 0.5,
+                },
+                FactorSpec {
+                    name: "authority".to_owned(),
+                    variable: Variable::RegulationType,
+                    transform: Transform::Authority,
+                    weight: 0.5,
+                },
+            ],
+        };
+
+        assert_eq!(c.missing_for(&v, &[]), vec!["citations"]);
+        assert!(c.missing_for(&v, &["citation_in_degree"]).is_empty());
+        // And a factor weighted 0.0 asks nothing of the corpus.
+        let mut off = c.clone();
+        off.factors[0].weight = 0.0;
+        assert!(off.missing_for(&v, &[]).is_empty());
+    }
+
+    #[test]
+    fn contributions_report_absence_as_absence() {
+        // ! An assembled scorer makes "why did this rank here" much harder to
+        // answer than five compiled functions did, so the answer goes in the
+        // output. A missing value must read as missing, ✗ as a zero score.
+        let v = v();
+        let c = Composition {
+            relevance_floor: 0.0,
+            factors: vec![
+                FactorSpec {
+                    name: "authority".to_owned(),
+                    variable: Variable::RegulationType,
+                    transform: Transform::Authority,
+                    weight: 0.5,
+                },
+                FactorSpec {
+                    name: "citations".to_owned(),
+                    variable: Variable::Number("citation_in_degree".to_owned()),
+                    transform: Transform::Saturate { at: 20.0 },
+                    weight: 0.5,
+                },
+            ],
+        };
+        let f = Facets {
+            regulation_type: Some("UNDANG-UNDANG"),
+            ..Facets::default()
+        };
+
+        let got = contributions(&f, &c, &cx(&v, &[]));
+        assert_eq!(got[0].0, "authority");
+        assert!(got[0].1.is_some());
+        assert_eq!(got[1], ("citations", None));
     }
 }

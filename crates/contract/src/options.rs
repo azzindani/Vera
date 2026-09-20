@@ -20,6 +20,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::algorithms::FactorEntry;
+
 /// Which retrieval arms run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -140,6 +142,13 @@ pub struct AppliedOptions {
     /// The registry key that ranked this request.
     pub profile: String,
     pub factor_weights: FactorWeights,
+    /// The scoring function that actually ran.
+    ///
+    /// ! Echoed in full, because with assembly the weights alone no longer say
+    /// what happened: two algorithms can share a weight vector and read
+    /// different variables through different shapes. A ranking that cannot be
+    /// reproduced from the response is not evidence.
+    pub composition: Vec<FactorEntry>,
     pub expand: Vec<Expansion>,
     /// Set when the caller supplied raw `factor_weights`, **or** named an
     /// algorithm carrying no `fitted` block.
@@ -256,6 +265,14 @@ impl SearchOptions {
         // algorithm makes the same claim, so both raise the one flag.
         let experimental = self.factor_weights.is_some() || !algo.is_fitted();
         let factor_weights = self.factor_weights.unwrap_or(algo.factors);
+        // ! Raw weights override an assembled composition too, and reduce to the
+        // five-term form. A caller passing `factor_weights` is asking for the
+        // shorthand; silently keeping the algorithm's extra factors would make
+        // the response's own echo wrong about what ranked it.
+        let composition = match (&algo.composition, self.factor_weights) {
+            (Some(entries), None) => entries.clone(),
+            _ => crate::algorithms::classic_composition(&factor_weights),
+        };
 
         // ! The algorithm's own expansions are a floor, ✗ a replacement. An
         // algorithm fitted WITH siblings admitted is a different measurement
@@ -275,6 +292,7 @@ impl SearchOptions {
             candidate_pool,
             profile: name,
             factor_weights,
+            composition,
             expand,
             experimental,
             clamped,
@@ -318,6 +336,7 @@ mod tests {
                     structural: 0.5,
                     ..W
                 },
+                composition: None,
                 expand: vec![Expansion::Siblings],
             },
         );

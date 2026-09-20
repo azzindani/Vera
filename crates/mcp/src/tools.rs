@@ -303,6 +303,7 @@ mod tests {
                 description: "Not fitted.".to_owned(),
                 fitted: None,
                 factors: w,
+                composition: None,
                 expand: Vec::new(),
             },
         );

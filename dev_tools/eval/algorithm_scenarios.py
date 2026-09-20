@@ -221,6 +221,51 @@ def group_a(h: Http) -> None:
         str(clamped)[:120],
     )
 
+    # A11 -- ! the composition layer, proved on the deployment. `balanced_composed`
+    # declares the same five terms `balanced` compiles, written out. If assembly
+    # changed a ranking it would invalidate every fitted weight in the repository
+    # at once, and the change would look like a refactor in the diff.
+    if "balanced_composed" in names:
+        a = h.tool("search_knowledge", query=QUERY, profile="balanced")
+        b = h.tool("search_knowledge", query=QUERY, profile="balanced_composed")
+        ids_a = [x["id"] for x in a.get("results", [])]
+        ids_b = [x["id"] for x in b.get("results", [])]
+        record(
+            "A",
+            "a declared composition ranks identically to the compiled shorthand",
+            PASS if ids_a and ids_a == ids_b else FAIL,
+            f"compiled {ids_a[:3]} · composed {ids_b[:3]}",
+        )
+
+        # A12 -- and the response says what actually scored it. With assembly the
+        # weights alone no longer say what happened: two algorithms can share a
+        # weight vector and read different variables through different shapes.
+        declared = b.get("applied", {}).get("composition", [])
+        names_out = [f.get("name") for f in declared]
+        shapes = {f.get("transform", {}).get("kind") for f in declared}
+        record(
+            "A",
+            "the response echoes the composition that ranked it",
+            PASS if len(declared) == 5 and "authority" in names_out and shapes else FAIL,
+            f"{len(declared)} terms · {sorted(k for k in shapes if k)}",
+        )
+    else:
+        for name in (
+            "a declared composition ranks identically to the compiled shorthand",
+            "the response echoes the composition that ranked it",
+        ):
+            record("A", name, SKIP, "balanced_composed not in this registry")
+
+    # A13 -- the five-term shorthand is echoed as a composition too, so a caller
+    # never has to know which form the algorithm was written in.
+    r = h.tool("search_knowledge", query=QUERY, profile="balanced")
+    shorthand = r.get("applied", {}).get("composition", [])
+    record(
+        "A",
+        "the shorthand form is echoed as a composition as well",
+        PASS if len(shorthand) == 5 else FAIL,
+        f"{[f.get('name') for f in shorthand]}",
+    )
 
 # ---------------------------------------------------------------------------
 # B / C · configurations that must kill the process
@@ -298,6 +343,72 @@ REFUSALS = [
             }
         },
         ["ALGORITHMS_PATH"],
+    ),
+    (
+        "B4",
+        "a composition weighting an enrichment key no row supplies refuses to start",
+        # ! The extension point's guard. `citation_in_degree` is a column nothing
+        # populates yet; weighting it must kill the process rather than scoring
+        # 0.0 on every row -- which is indistinguishable from a weight measured
+        # and found not to help.
+        {"ALGORITHMS_PATH": "/cfg/unbound_variable.json"},
+        {
+            "unbound_variable.json": {
+                "algorithms": {
+                    "balanced": {
+                        "description": "d",
+                        "factors": {
+                            "relevance_floor": 0.3,
+                            "authority": 0.0,
+                            "structural": 0.0,
+                            "temporal": 0.0,
+                            "completeness": 0.0,
+                            "topical": 0.0,
+                        },
+                        "composition": [
+                            {
+                                "name": "citations",
+                                "variable": "number:citation_in_degree",
+                                "transform": {"kind": "saturate", "at": 20.0},
+                                "weight": 0.5,
+                            }
+                        ],
+                    }
+                }
+            }
+        },
+        ["citations"],
+    ),
+    (
+        "B5",
+        "a misspelled variable refuses to start rather than scoring nothing",
+        {"ALGORITHMS_PATH": "/cfg/bad_variable.json"},
+        {
+            "bad_variable.json": {
+                "algorithms": {
+                    "balanced": {
+                        "description": "d",
+                        "factors": {
+                            "relevance_floor": 0.3,
+                            "authority": 0.0,
+                            "structural": 0.0,
+                            "temporal": 0.0,
+                            "completeness": 0.0,
+                            "topical": 0.0,
+                        },
+                        "composition": [
+                            {
+                                "name": "authority",
+                                "variable": "regulaton_type",
+                                "transform": {"kind": "authority"},
+                                "weight": 0.5,
+                            }
+                        ],
+                    }
+                }
+            }
+        },
+        ["regulaton_type"],
     ),
     (
         "C1",

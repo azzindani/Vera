@@ -189,6 +189,24 @@ fn log_canary(chunk_id: &str, got: f32) {
     eprintln!("[vera] canary ok · chunk {chunk_id} round-trip cosine {got:.5}");
 }
 
+/// The year an absolute-recency transform measures age against.
+///
+/// ! A constant, ✗ `SystemTime::now()`. `Transform::HalfLife` is the only factor
+/// shape that can drift with the wall clock, and a scorer that returns different
+/// numbers tomorrow for the same corpus makes every eval run unreproducible —
+/// which is the property `EVAL.md` §4 spent the most effort recovering. Ravel
+/// injects the same value for the factors it computes at ingest.
+const CORPUS_NOW: i32 = 2026;
+
+/// Enrichment keys a candidate row can supply · **empty**.
+///
+/// ! Empty is the honest value, ✗ a placeholder. Ravel computes enrichment at
+/// ingest and no pipeline stage stores it, so `Facets::numbers` and
+/// `Facets::strings` bind nothing. A composition weighting `number:<key>`
+/// therefore refuses to start — which is the correct answer today and the line
+/// that changes when the sidecar ships.
+const ENRICHMENT_KEYS: &[&str] = &[];
+
 /// Everything `assemble` needs to build the response.
 ///
 /// A struct rather than eight positional arguments: at that width the compiler
@@ -223,6 +241,123 @@ struct Assembly<'a> {
     exact_matches: Vec<ExactMatch>,
     progress: Vec<String>,
     applied: contract::AppliedOptions,
+}
+
+/// Refuse to serve when any loaded algorithm weights a factor the live
+/// vocabulary cannot evaluate.
+///
+/// ! Extracted from `Pipeline::new` because it grew past what one function
+/// should hold, and because the check has to reason about BOTH scoring forms —
+/// the five-term shorthand and an assembled composition. Guarding only the
+/// shorthand is a green check for something that does not run.
+fn guard_vocabulary(cfg: &Config, vocab_source: &'static str) -> Result<(), StartupError> {
+    let mut unusable: Vec<String> = Vec::new();
+    let mut blamed: Vec<&str> = Vec::new();
+    for (name, algo) in &cfg.algorithms.algorithms {
+        let missing: Vec<String> = algo.composition.as_ref().map_or_else(
+            || {
+                cfg.vocabulary
+                    .missing_for(&weights_from_contract(&algo.factors))
+                    .into_iter()
+                    .map(str::to_owned)
+                    .collect()
+            },
+            |entries| {
+                composition_from_contract(algo.factors.relevance_floor, entries)
+                    .missing_for(&cfg.vocabulary, ENRICHMENT_KEYS)
+                    .into_iter()
+                    .map(str::to_owned)
+                    .collect()
+            },
+        );
+        if !missing.is_empty() && !blamed.contains(&name.as_str()) {
+            blamed.push(name);
+        }
+        for f in missing {
+            if !unusable.contains(&f) {
+                unusable.push(f);
+            }
+        }
+    }
+    if unusable.is_empty() {
+        return Ok(());
+    }
+    // ! Names the ALGORITHMS as well as the factors. "authority is unusable"
+    // sends an operator to the environment; "`balanced` weights authority"
+    // sends them to the file that says so.
+    Err(StartupError::FactorWithoutVocabulary {
+        algorithms: blamed
+            .iter()
+            .map(|n| format!("`{n}`"))
+            .collect::<Vec<_>>()
+            .join(", "),
+        factors: unusable
+            .iter()
+            .map(|f| format!("`{f}`"))
+            .collect::<Vec<_>>()
+            .join(", "),
+        plural: if unusable.len() == 1 { "it" } else { "them" },
+        from_where: vocab_source,
+    })
+}
+
+/// A declared composition -> the engine's.
+///
+/// ! Two types again, for the third time and the same reason: `engine` carries
+/// no serde and `contract` carries no logic. The mapping is dull on purpose —
+/// everything that can be wrong about a composition was rejected at load
+/// (`contract::algorithms::check_composition`), so this cannot fail.
+fn composition_from_contract(
+    floor: f32,
+    entries: &[contract::FactorEntry],
+) -> engine::Composition {
+    engine::Composition {
+        relevance_floor: floor,
+        factors: entries
+            .iter()
+            .map(|e| engine::FactorSpec {
+                name: e.name.clone(),
+                variable: variable_from(&e.variable),
+                transform: transform_from(&e.transform),
+                weight: e.weight,
+            })
+            .collect(),
+    }
+}
+
+fn variable_from(v: &str) -> engine::Variable {
+    let v = v.trim();
+    if let Some(key) = v.strip_prefix("number:") {
+        return engine::Variable::Number(key.to_owned());
+    }
+    if let Some(key) = v.strip_prefix("text:") {
+        return engine::Variable::Text(key.to_owned());
+    }
+    match v {
+        "article" => engine::Variable::Article,
+        "chapter" => engine::Variable::Chapter,
+        "about" => engine::Variable::About,
+        "body" => engine::Variable::Body,
+        "body_len" => engine::Variable::BodyLen,
+        "year" => engine::Variable::Year,
+        // ! `regulation_type` and anything else the loader already accepted.
+        // A name that reaches here unknown was validated, so the fallback is
+        // the commonest column rather than a panic on a checked invariant.
+        _ => engine::Variable::RegulationType,
+    }
+}
+
+fn transform_from(t: &contract::TransformSpec) -> engine::Transform {
+    match *t {
+        contract::TransformSpec::Authority => engine::Transform::Authority,
+        contract::TransformSpec::Structural => engine::Transform::Structural,
+        contract::TransformSpec::HalfLife { years } => engine::Transform::HalfLife { years },
+        contract::TransformSpec::Range => engine::Transform::Range,
+        contract::TransformSpec::Saturate { at } => engine::Transform::Saturate { at },
+        contract::TransformSpec::MatchShare => engine::Transform::MatchShare,
+        contract::TransformSpec::Present => engine::Transform::Present,
+        contract::TransformSpec::AtLeast { min } => engine::Transform::AtLeast { min },
+    }
 }
 
 /// `engine::Weights` -> the wire shape. Two types on purpose: `engine` holds
@@ -291,42 +426,7 @@ impl Pipeline {
         }
         let cfg = cfg;
 
-        // ! The guard, here rather than in Settings::validate, because the corpus is
-        // only known now. A weight of 0.5 on a factor whose table is empty is not a
-        // small effect -- it is NO effect, and it is indistinguishable from a weight
-        // that was measured and found not to help.
-        let mut unusable: Vec<&str> = Vec::new();
-        let mut blamed: Vec<&str> = Vec::new();
-        for (name, algo) in &cfg.algorithms.algorithms {
-            let missing = cfg.vocabulary.missing_for(&weights_from_contract(&algo.factors));
-            if !missing.is_empty() && !blamed.contains(&name.as_str()) {
-                blamed.push(name);
-            }
-            for f in missing {
-                if !unusable.contains(&f) {
-                    unusable.push(f);
-                }
-            }
-        }
-        if !unusable.is_empty() {
-            // ! Names the ALGORITHMS as well as the factors. "authority is
-            // unusable" sends an operator to the environment; "`balanced` and
-            // `sanction` weight authority" sends them to the file that says so.
-            return Err(StartupError::FactorWithoutVocabulary {
-                algorithms: blamed
-                    .iter()
-                    .map(|n| format!("`{n}`"))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                factors: unusable
-                    .iter()
-                    .map(|f| format!("`{f}`"))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                plural: if unusable.len() == 1 { "it" } else { "them" },
-                from_where: vocab_source,
-            });
-        }
+        guard_vocabulary(&cfg, vocab_source)?;
         eprintln!(
             "[vera] scoring vocabulary \u{b7} {vocab_source} \u{b7} {} authority labels, \
              {} structural rules, {} stopwords",
@@ -873,12 +973,26 @@ impl Pipeline {
             .enumerate()
             .map(|(i, c)| (c.relevance, Self::facets_of(&c.row), i))
             .collect();
-        let mut weights = weights_from_contract(&applied.factor_weights);
+        let mut composition = composition_from_contract(
+            applied.factor_weights.relevance_floor,
+            &applied.composition,
+        );
         if !apply_floor {
-            weights.relevance_floor = 0.0;
+            composition.relevance_floor = 0.0;
             progress.push("relevance floor skipped · the query names a regulation".into());
         }
-        engine::rescore(&mut scored, &weights, &term_refs, vocab);
+        // ! `now` is injected, ✗ read from the clock inside the transform. A
+        // half-life that drifts with wall time makes the same corpus score
+        // differently on two days and no eval run is reproducible. The pool's
+        // own span for `range` is recomputed inside, over the survivors.
+        let cx = engine::Context {
+            vocabulary: vocab,
+            query_terms: &term_refs,
+            oldest: 0,
+            newest: 0,
+            now: CORPUS_NOW,
+        };
+        engine::rescore_composed(&mut scored, &composition, &cx);
 
         let kept = scored.len();
         let order: Vec<usize> = scored.iter().map(|(_, _, i)| *i).collect();
@@ -912,6 +1026,14 @@ impl Pipeline {
             about: row.about.as_deref(),
             body: Some(&row.body),
             body_len: row.body.len(),
+            // ! Empty, and the emptiness is load bearing. Ravel computes
+            // enrichment at ingest and no pipeline stage stores it, so there is
+            // nothing to bind yet -- and a composition weighting `number:<key>`
+            // is REFUSED AT STARTUP rather than scoring 0.0 on every row
+            // (`engine::Composition::missing_for`). When Ravel ships the
+            // sidecar, this is the one line that changes.
+            numbers: &[],
+            strings: &[],
         }
     }
 

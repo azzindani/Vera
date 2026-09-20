@@ -111,6 +111,56 @@ pub struct Fitted {
     pub note: Option<String>,
 }
 
+
+/// How one assembled factor turns a stored value into a number in `0.0..=1.0`.
+///
+/// ! A closed set, ✗ an expression language, and the reason is
+/// [`MAX_PRIOR_BOUND`]. `Σw` bounds the prior only if every term is at most 1;
+/// given a formula as text you cannot compute that by inspection, and invariant
+/// 9 stops being arithmetic. The grammar is constrained so the assembly can be
+/// free.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum TransformSpec {
+    /// The corpus's authority ladder · `tier / authority_scale`.
+    Authority,
+    /// The corpus's structural ladder · annex versus operative text.
+    Structural,
+    /// Recency decaying with age · `years / (years + age)`. Absolute, so two
+    /// identical candidates score the same whatever else was retrieved.
+    HalfLife { years: f32 },
+    /// Position within the pool's own span of this variable · 0.5 when flat.
+    Range,
+    /// Saturating growth · `1 - e^(-x/at)`. Past `at`, more is not more.
+    Saturate { at: f32 },
+    /// Share of the query's content terms this text contains.
+    MatchShare,
+    /// 1.0 when the value is present and non-empty, otherwise absent.
+    Present,
+    /// 1.0 when the value is at least `min`, else 0.0.
+    AtLeast { min: f32 },
+}
+
+/// One factor in an assembled scoring function.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FactorEntry {
+    /// Published beside its contribution in the response. A factor whose
+    /// contribution cannot be seen is one that cannot be debugged, and assembly
+    /// makes that failure much easier to reach than five compiled functions did.
+    pub name: String,
+    /// Which stored value to read.
+    ///
+    /// A bare column — `regulation_type`, `article`, `chapter`, `about`, `body`,
+    /// `body_len`, `year` — or `number:<key>` / `text:<key>` for an enrichment
+    /// value the engine has never heard of. The second form is the point: a
+    /// corpus that gains `citation_in_degree` gets a factor over it by adding
+    /// four lines here, ✗ by shipping a binary.
+    pub variable: String,
+    pub transform: TransformSpec,
+    pub weight: f32,
+}
+
 /// A named way to rank.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -126,6 +176,19 @@ pub struct Algorithm {
     #[serde(default)]
     pub fitted: Option<Fitted>,
     pub factors: FactorWeights,
+    /// An assembled scoring function · **wins over `factors` when present**.
+    ///
+    /// ! `factors` is the five-term shorthand and stays the default, because
+    /// every fitted weight in this repository was measured against it and
+    /// `Composition::classic` reproduces it term for term. `composition` is the
+    /// general form: any variable, any bounded shape, any number of terms.
+    ///
+    /// The combination rule is **not** configurable and is not meant to be.
+    /// `relevance × (1 + Σ wᵢ·fᵢ)` is what encodes "factors rank, but only after
+    /// relevance"; it is the one part of the formula with nothing to gain from
+    /// being declared and everything to lose (invariant 9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub composition: Option<Vec<FactorEntry>>,
     /// Expansions this algorithm turns on by default. Still reported per
     /// result via `expanded_from`; an algorithm cannot make an expanded chunk
     /// look retrieved.
@@ -135,9 +198,16 @@ pub struct Algorithm {
 
 impl Algorithm {
     /// `1 + Σw` · the most a candidate's metadata can multiply its relevance by.
+    ///
+    /// ! Reads whichever form this algorithm actually uses. A bound computed
+    /// from `factors` while the engine ranks on `composition` is a check on
+    /// something that does not run.
     #[must_use]
     pub fn prior_bound(&self) -> f32 {
-        1.0 + weight_sum(&self.factors)
+        1.0 + self.composition.as_ref().map_or_else(
+            || weight_sum(&self.factors),
+            |c| c.iter().map(|f| f.weight).sum(),
+        )
     }
 
     /// Offered to the agent in the tool schema?
@@ -145,6 +215,50 @@ impl Algorithm {
     pub const fn is_fitted(&self) -> bool {
         self.fitted.is_some()
     }
+}
+
+/// The five-term shorthand, written out as an assembled composition.
+///
+/// ! The bridge that keeps one code path. `factors` is what every fitted weight
+/// in this repository was measured against, and the engine now ranks on a
+/// composition — so the shorthand has to *become* one rather than being scored
+/// by a second, parallel implementation that could drift from it.
+/// `engine::Composition::classic` is asserted to match the compiled scorer term
+/// for term; this is the same list on the wire side.
+#[must_use]
+pub fn classic_composition(w: &FactorWeights) -> Vec<FactorEntry> {
+    vec![
+        FactorEntry {
+            name: "authority".to_owned(),
+            variable: "regulation_type".to_owned(),
+            transform: TransformSpec::Authority,
+            weight: w.authority,
+        },
+        FactorEntry {
+            name: "structural".to_owned(),
+            variable: "article".to_owned(),
+            transform: TransformSpec::Structural,
+            weight: w.structural,
+        },
+        FactorEntry {
+            name: "completeness".to_owned(),
+            variable: "body_len".to_owned(),
+            transform: TransformSpec::Saturate { at: 400.0 },
+            weight: w.completeness,
+        },
+        FactorEntry {
+            name: "temporal".to_owned(),
+            variable: "year".to_owned(),
+            transform: TransformSpec::Range,
+            weight: w.temporal,
+        },
+        FactorEntry {
+            name: "topical".to_owned(),
+            variable: "about".to_owned(),
+            transform: TransformSpec::MatchShare,
+            weight: w.topical,
+        },
+    ]
 }
 
 /// `Σw`, excluding the floor · the floor is a threshold, ✗ a weight, and adding
@@ -258,6 +372,7 @@ impl Registry {
                     ),
                 }),
                 factors: default,
+                composition: None,
                 expand: Vec::new(),
             },
         );
@@ -291,8 +406,20 @@ impl Registry {
         }
         for (name, algo) in &self.algorithms {
             check_name(name)?;
-            check_weights(name, &algo.factors)?;
-            check_bound(name, &algo.factors)?;
+            if let Some(entries) = &algo.composition {
+                check_composition(name, algo.factors.relevance_floor, entries)?;
+            } else {
+                check_weights(name, &algo.factors)?;
+            }
+            // ! The bound is checked against whichever form runs, so this stays
+            // one call rather than two branches that could disagree.
+            if algo.prior_bound() > MAX_PRIOR_BOUND + f32::EPSILON {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                return Err(RegistryError::PriorTooWide {
+                    name: name.clone(),
+                    bound_centi: (algo.prior_bound() * 100.0).round() as u32,
+                });
+            }
 
         }
         Ok(())
@@ -384,17 +511,112 @@ fn check_weights(name: &str, w: &FactorWeights) -> Result<(), RegistryError> {
     Ok(())
 }
 
-fn check_bound(name: &str, w: &FactorWeights) -> Result<(), RegistryError> {
-    let bound = 1.0 + weight_sum(w);
-    if bound > MAX_PRIOR_BOUND + f32::EPSILON {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        return Err(RegistryError::PriorTooWide {
-            name: name.to_owned(),
-            bound_centi: (bound * 100.0).round() as u32,
-        });
+// ! `check_bound` used to live here and is gone. The bound is now checked
+// through `Algorithm::prior_bound`, which reads whichever form the algorithm
+// actually uses -- a bound computed from `factors` while the engine ranks on
+// `composition` is a check on something that does not run.
+
+/// Known bare column names · anything else must carry a `number:`/`text:` prefix.
+///
+/// ! Checked at load. A misspelled `regulaton_type` would otherwise resolve to
+/// nothing on every row, and a factor that silently contributes nothing is
+/// indistinguishable from one measured and found not to help — which is the
+/// exact bug this project shipped once with `topical` against NULL.
+const COLUMNS: &[&str] = &[
+    "regulation_type",
+    "article",
+    "chapter",
+    "about",
+    "body",
+    "body_len",
+    "year",
+];
+
+fn check_composition(
+    name: &str,
+    floor: f32,
+    entries: &[FactorEntry],
+) -> Result<(), RegistryError> {
+    let bad = |field: &'static str, why: String| RegistryError::BadWeight {
+        name: name.to_owned(),
+        field,
+        why,
+    };
+    if !floor.is_finite() || !(0.0..=1.0).contains(&floor) {
+        return Err(bad(
+            "relevance_floor",
+            format!("{floor} is outside 0.0..=1.0 · it is a share of the query's content terms"),
+        ));
+    }
+    if entries.is_empty() {
+        return Err(bad(
+            "composition",
+            "declared but empty · omit it to use the five-term `factors` form".to_owned(),
+        ));
+    }
+    let mut seen: Vec<&str> = Vec::new();
+    for e in entries {
+        if e.name.trim().is_empty() {
+            return Err(bad("composition", "a factor with no name".to_owned()));
+        }
+        // ! Names are published per result as contributions, so a duplicate
+        // makes the explanation ambiguous exactly where it is needed most.
+        if seen.contains(&e.name.as_str()) {
+            return Err(bad(
+                "composition",
+                format!("`{}` declared twice · contributions are reported by name", e.name),
+            ));
+        }
+        seen.push(&e.name);
+
+        if !e.weight.is_finite() || e.weight < 0.0 {
+            return Err(bad(
+                "composition",
+                format!("`{}` has weight {} · must be finite and non-negative", e.name, e.weight),
+            ));
+        }
+        let v = e.variable.trim();
+        let known = COLUMNS.contains(&v)
+            || v.strip_prefix("number:").is_some_and(|k| !k.is_empty())
+            || v.strip_prefix("text:").is_some_and(|k| !k.is_empty());
+        if !known {
+            return Err(bad(
+                "composition",
+                format!(
+                    "`{}` reads `{v}`, which is neither a known column ({}) nor prefixed \
+                     `number:` / `text:` for an enrichment value",
+                    e.name,
+                    COLUMNS.join(", ")
+                ),
+            ));
+        }
+        // ! A shape parameter that cannot work. `saturate` at 0 divides by zero
+        // and `half_life` at 0 makes every document infinitely old; both would
+        // produce a plausible-looking number rather than an error.
+        let shape = match &e.transform {
+            TransformSpec::Saturate { at } => Some(("saturate.at", *at)),
+            TransformSpec::HalfLife { years } => Some(("half_life.years", *years)),
+            TransformSpec::AtLeast { min } => {
+                if min.is_finite() {
+                    None
+                } else {
+                    Some(("at_least.min", *min))
+                }
+            }
+            _ => None,
+        };
+        if let Some((what, value)) = shape
+            && (!value.is_finite() || value <= 0.0)
+        {
+            return Err(bad(
+                "composition",
+                format!("`{}` declares {what} = {value} · must be finite and positive", e.name),
+            ));
+        }
     }
     Ok(())
 }
+
 
 #[cfg(test)]
 mod tests {
