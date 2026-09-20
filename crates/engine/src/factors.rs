@@ -83,50 +83,242 @@
 //! top-scoring bounded configuration uses it, so it is kept where it costs
 //! nothing and dropped from where it cost 2.5 points.
 //!
-/// The tier of an Indonesian regulation, 1–10. `None` for a type the corpus
-/// does not contain.
+/// What a corpus declares about its own labels, so the factor functions above
+/// it stay general.
 ///
-/// A lookup, ✗ a model: Indonesian regulation is a strict published hierarchy.
-/// These ten types are the complete set in the corpus, verified with
-/// `SELECT DISTINCT regulation_type FROM chunks`.
+/// # Why this is data
 ///
-/// Ordering follows UU 12/2011: the Art 7 ladder (UU → PP → Perpres → Perda
-/// Provinsi → Perda Kab/Kota), with Art 8 instruments — a governor's,
-/// regent's or mayor's own regulation — placed **below** the Perda they
-/// implement rather than above it.
+/// `authority`, `structural` and the term splitter used to compile in three
+/// Indonesian tables — ten `UNDANG-UNDANG`/`PERATURAN …` literals, the strings
+/// `LAMPIRAN`/`PENJELASAN`/`PASAL`, and 25 Indonesian function words. Vera is
+/// not a legal engine; Indonesian regulation is the corpus it was **first**
+/// built for, the way `Qwen3-Embedding` is the model it was first built for.
+/// Invariant 2 already settles the model: the corpus declares it and the
+/// engine matches. Scoring vocabulary is the same claim and had the same
+/// answer missing.
 ///
-/// ! An earlier table had `PERATURAN BUPATI` (3) above `PERATURAN DAERAH KOTA`
-/// (2), which inverts legislation and the executive regulation implementing
-/// it. Corrected here — and **the eval cannot tell the difference**: fitted
-/// against both tables, Recall@5 is identical (57.5% in-sample, 47.5%
-/// leave-one-out), and a coarse national-vs-local split does at least as well
-/// as either. At n=40 the fine ordering is not evidence-backed; it is here
-/// because a table that states something legally false is wrong regardless of
-/// whether this eval set can detect it (`docs/EVAL.md` §5).
-#[must_use]
-pub fn tier(regulation_type: &str) -> Option<u8> {
-    // Matched case-insensitively on the trimmed value; ingestion is consistent
-    // today, and a stray space silently scoring 0.0 would be invisible.
-    Some(match regulation_type.trim().to_uppercase().as_str() {
-        "UNDANG-UNDANG" => 8,
-        "PERATURAN PEMERINTAH" => 7,
-        "PERATURAN PRESIDEN" => 6,
-        // An instruction binds the officials it addresses, ✗ the public. High
-        // issuer, low normativity — below a Perpres, above regional law.
-        "INSTRUKSI PRESIDEN" => 5,
-        "PERATURAN DAERAH PROVINSI" => 4,
-        // ! A governor's regulation implements provincial legislation; it does
-        // not outrank it. Same for a regent's or mayor's against their Perda.
-        "PERATURAN GUBERNUR" | "PERATURAN DAERAH KABUPATEN" | "PERATURAN DAERAH KOTA" => 3,
-        "PERATURAN BUPATI" | "PERATURAN WALIKOTA" => 2,
-        _ => return None,
-    })
+/// ! On a corpus these tables do not describe, every one of them fails
+/// **silently and neutrally**: `authority` returns 0.0 for every row,
+/// `structural` returns its default for every row, and the weights an operator
+/// set do nothing at all. That is the exact shape of the `topical`-against-NULL
+/// bug this project already shipped once — a weight that cannot act is
+/// indistinguishable from a weight of zero, and only a check on the *input*
+/// catches it. [`Vocabulary::missing_for`] is that check.
+///
+/// ! Also: `identity.authority` in Ravel's `id_regulation@1.0.yaml` is the
+/// **same table**, already declared beside the corpus. Two copies in two repos
+/// that must agree are two copies that will eventually disagree, and the copy
+/// beside the corpus is the one that can be right for a corpus.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Vocabulary {
+    /// Source tier per label, uppercased. Higher binds harder.
+    ///
+    /// Legal: `UNDANG-UNDANG` → 8. It generalises to any corpus with a source
+    /// hierarchy — venue rank for papers, `STD`/`PROPOSED`/`INFORMATIONAL` for
+    /// RFCs, normative versus informative for standards.
+    pub authority: Vec<(String, u8)>,
+    /// What [`Vocabulary::authority`] normalises against · the top of the
+    /// declared scale, ✗ the top present in this particular corpus.
+    pub max_tier: f32,
+    /// Ordered · **first match wins**, so the most specific rule goes first.
+    pub structural: Vec<StructuralRule>,
+    /// Score for a chunk no [`StructuralRule`] matched. Neither promoted nor
+    /// penalised: a corpus that labels nothing ranks on the other factors.
+    pub structural_default: f32,
+    /// Function words dropped before term overlap is measured. They occur in
+    /// nearly every chunk, so counting them makes every candidate look equally
+    /// relevant.
+    pub stopwords: Vec<String>,
+    /// Shortest term kept. Below this a token carries no discriminative power
+    /// in any language this has been measured on.
+    pub min_term_chars: usize,
 }
 
-/// The highest tier in the published hierarchy (`UUD 1945`), so that `tier`
-/// normalises into `0.0..=1.0` against the scale rather than against whatever
-/// this particular corpus happens to hold.
-const MAX_TIER: f32 = 10.0;
+/// Which stored label a [`StructuralRule`] reads.
+///
+/// ! Faithful to what shipped, ✗ tidied. The original checked `LAMPIRAN`
+/// against article **or** chapter, `PENJELASAN` against chapter only and
+/// `PASAL` against article only. Collapsing those to "check both" would move
+/// results, and the shipped weights were fitted against this behaviour.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Field {
+    Article,
+    Chapter,
+    Either,
+}
+
+/// One rule in the structural ladder: is this the operative body, or an annex?
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructuralRule {
+    /// Uppercased. The caller uppercases the stored label before comparing, so
+    /// a corpus whose casing is inconsistent still matches.
+    pub label: String,
+    pub field: Field,
+    /// `true` compares with `starts_with`, `false` with `contains`.
+    ///
+    /// ! Not cosmetic. `PASAL` is a prefix rule because "Pasal 9 dihapus" —
+    /// an amending clause — contains the word without being one, which is the
+    /// same distinction Ravel's profile makes with `marker_only`.
+    pub prefix: bool,
+    pub score: f32,
+}
+
+impl Vocabulary {
+    /// The vocabulary of the corpus this engine was first built for.
+    ///
+    /// ! A **fallback, ✗ a default** — [`Vocabulary::is_builtin`] is reported
+    /// at startup so an operator running a different corpus finds out before a
+    /// weight silently does nothing, rather than after.
+    ///
+    /// The authority ladder follows UU 12/2011: the Art 7 ladder
+    /// (UU → PP → Perpres → Perda Provinsi → Perda Kab/Kota), with Art 8
+    /// instruments — a governor's, regent's or mayor's own regulation — placed
+    /// **below** the Perda they implement.
+    ///
+    /// ! An earlier table had `PERATURAN BUPATI` (3) above `PERATURAN DAERAH
+    /// KOTA` (2), inverting legislation and the regulation implementing it.
+    /// Corrected — and **the eval cannot tell the difference**: fitted against
+    /// both, Recall@5 is identical (57.5% in-sample, 47.5% leave-one-out), and
+    /// a coarse national-vs-local split does at least as well. At n=40 the fine
+    /// ordering is not evidence-backed; it is here because a table stating
+    /// something legally false is wrong whether or not this eval set can detect
+    /// it (`docs/EVAL.md` §5).
+    #[must_use]
+    pub fn id_regulation() -> Self {
+        let tiers: &[(&str, u8)] = &[
+            ("UNDANG-UNDANG", 8),
+            ("PERATURAN PEMERINTAH", 7),
+            ("PERATURAN PRESIDEN", 6),
+            // An instruction binds the officials it addresses, ✗ the public.
+            // High issuer, low normativity.
+            ("INSTRUKSI PRESIDEN", 5),
+            ("PERATURAN DAERAH PROVINSI", 4),
+            ("PERATURAN GUBERNUR", 3),
+            ("PERATURAN DAERAH KABUPATEN", 3),
+            ("PERATURAN DAERAH KOTA", 3),
+            ("PERATURAN BUPATI", 2),
+            ("PERATURAN WALIKOTA", 2),
+        ];
+        Self {
+            authority: tiers
+                .iter()
+                .map(|(k, v)| ((*k).to_owned(), *v))
+                .collect(),
+            // ! The top of the published hierarchy (UUD 1945 = 9, and 10 leaves
+            // headroom), ✗ the top present in this corpus. Normalising against
+            // what happens to be loaded would make the same chunk score
+            // differently in a corpus that merely lacks a constitution.
+            max_tier: 10.0,
+            structural: vec![
+                // ! 80,121 of 355,621 indexable chunks are LAMPIRAN — 22.5% of
+                // the corpus is annex material: tables, forms and schedules
+                // that are rarely the answer to a question about obligations.
+                StructuralRule {
+                    label: "LAMPIRAN".to_owned(),
+                    field: Field::Either,
+                    prefix: false,
+                    score: 0.0,
+                },
+                // Elucidation sits between the two: it explains a clause
+                // authoritatively without being one.
+                StructuralRule {
+                    label: "PENJELASAN".to_owned(),
+                    field: Field::Chapter,
+                    prefix: false,
+                    score: 0.3,
+                },
+                StructuralRule {
+                    label: "PASAL".to_owned(),
+                    field: Field::Article,
+                    prefix: true,
+                    score: 1.0,
+                },
+            ],
+            structural_default: 0.5,
+            stopwords: STOP_ID.iter().map(|s| (*s).to_owned()).collect(),
+            min_term_chars: 3,
+        }
+    }
+
+    /// Whether this is the compiled-in fallback rather than something the
+    /// corpus declared.
+    #[must_use]
+    pub fn is_builtin(&self) -> bool {
+        *self == Self::id_regulation()
+    }
+
+    /// The tier of a label · `None` for one this vocabulary does not describe.
+    ///
+    /// Matched case-insensitively on the trimmed value; a stray space silently
+    /// scoring 0.0 would be invisible.
+    ///
+    /// ! Longest match wins, so `PERATURAN DAERAH KABUPATEN` beats `PERATURAN
+    /// DAERAH` — the same rule Ravel's profile states as "ordered longest-first".
+    /// Relying on declaration order would make a correct table depend on how it
+    /// was typed.
+    #[must_use]
+    pub fn tier(&self, label: &str) -> Option<u8> {
+        let want = label.trim().to_uppercase();
+        self.authority
+            .iter()
+            .filter(|(k, _)| want == *k || want.starts_with(k.as_str()))
+            .max_by_key(|(k, _)| k.len())
+            .map(|(_, t)| *t)
+    }
+
+    /// Names the factors this vocabulary cannot evaluate, given weights that
+    /// ask it to.
+    ///
+    /// ! The guard that makes a missing table loud. A weight of 0.5 on a factor
+    /// whose table is empty is not a small effect — it is **no effect**, and it
+    /// looks exactly like a weight that was measured and found not to help.
+    #[must_use]
+    pub fn missing_for(&self, w: &Weights) -> Vec<&'static str> {
+        let mut out = Vec::new();
+        if w.authority > 0.0 && self.authority.is_empty() {
+            out.push("authority");
+        }
+        if w.structural > 0.0 && self.structural.is_empty() {
+            out.push("structural");
+        }
+        out
+    }
+}
+
+/// Indonesian function words · the fallback vocabulary's stop list.
+///
+/// ! `dapat`, `harus`, `wajib` and `tidak` are here because they occur in
+/// nearly every chunk and carry no discriminative power **as terms**. That is
+/// correct for term overlap and is exactly why a separate `modality` factor is
+/// worth having: the pairing "query asks for an obligation ∧ chunk states an
+/// obligation" is discriminative even though neither word is.
+const STOP_ID: &[&str] = &[
+    "yang",
+    "dan",
+    "atau",
+    "untuk",
+    "dengan",
+    "pada",
+    "dari",
+    "dalam",
+    "oleh",
+    "apakah",
+    "bagaimana",
+    "berapa",
+    "siapa",
+    "adalah",
+    "itu",
+    "ini",
+    "ke",
+    "di",
+    "tidak",
+    "dapat",
+    "harus",
+    "wajib",
+    "jika",
+    "akan",
+    "sebagai",
+];
 
 /// The metadata a candidate carries into scoring.
 ///
@@ -155,10 +347,11 @@ pub struct Facets<'a> {
 /// penalty. Ranking a document down for metadata the corpus never recorded
 /// would punish an ingestion gap as though it were a legal fact.
 #[must_use]
-pub fn authority(f: &Facets<'_>) -> f32 {
+pub fn authority(f: &Facets<'_>, v: &Vocabulary) -> f32 {
+    let max = if v.max_tier > 0.0 { v.max_tier } else { 1.0 };
     f.regulation_type
-        .and_then(tier)
-        .map_or(0.0, |t| f32::from(t) / MAX_TIER)
+        .and_then(|l| v.tier(l))
+        .map_or(0.0, |t| f32::from(t) / max)
 }
 
 /// Is this an operative clause, or an annex?
@@ -171,19 +364,28 @@ pub fn authority(f: &Facets<'_>) -> f32 {
 /// `PENJELASAN` (elucidation) sits between the two: it explains a clause
 /// authoritatively without being one.
 #[must_use]
-pub fn structural(f: &Facets<'_>) -> f32 {
+pub fn structural(f: &Facets<'_>, v: &Vocabulary) -> f32 {
     let article = f.article.unwrap_or_default().to_uppercase();
     let chapter = f.chapter.unwrap_or_default().to_uppercase();
-
-    if article.contains("LAMPIRAN") || chapter.contains("LAMPIRAN") {
-        0.0
-    } else if chapter.contains("PENJELASAN") {
-        0.3
-    } else if article.starts_with("PASAL") {
-        1.0
-    } else {
-        0.5
+    let hit = |text: &str, r: &StructuralRule| {
+        if r.prefix {
+            text.starts_with(&r.label)
+        } else {
+            text.contains(&r.label)
+        }
+    };
+    // First match wins, so the most specific rule is declared first.
+    for r in &v.structural {
+        let matched = match r.field {
+            Field::Article => hit(&article, r),
+            Field::Chapter => hit(&chapter, r),
+            Field::Either => hit(&article, r) || hit(&chapter, r),
+        };
+        if matched {
+            return r.score;
+        }
     }
+    v.structural_default
 }
 
 /// Is this a whole provision, or a fragment?
@@ -225,14 +427,14 @@ pub fn temporal(f: &Facets<'_>, oldest: i32, newest: i32) -> f32 {
 /// already matched on. It is computed and left unweighted rather than deleted,
 /// since a corpus with richer subject metadata would change that.
 #[must_use]
-pub fn topical(f: &Facets<'_>, query_terms: &[&str]) -> f32 {
+pub fn topical(f: &Facets<'_>, query_terms: &[&str], v: &Vocabulary) -> f32 {
     if query_terms.is_empty() {
         return 0.0;
     }
     // ! Whole terms, ✗ substrings. `about.contains("pajak")` is also true of
     // "PERPAJAKAN", and this weight was fitted against a token-set intersection
     // that says false. A looser rule inflates a score the fit never measured.
-    let about = content_terms(f.about.unwrap_or_default());
+    let about = content_terms(f.about.unwrap_or_default(), v);
     let matched = query_terms
         .iter()
         .filter(|t| about.iter().any(|a| a == *t))
@@ -243,35 +445,6 @@ pub fn topical(f: &Facets<'_>, query_terms: &[&str]) -> f32 {
     }
 }
 
-/// Indonesian function words. They appear in nearly every chunk, so counting
-/// them would make every candidate look equally relevant.
-const STOP: &[&str] = &[
-    "yang",
-    "dan",
-    "atau",
-    "untuk",
-    "dengan",
-    "pada",
-    "dari",
-    "dalam",
-    "oleh",
-    "apakah",
-    "bagaimana",
-    "berapa",
-    "siapa",
-    "adalah",
-    "itu",
-    "ini",
-    "ke",
-    "di",
-    "tidak",
-    "dapat",
-    "harus",
-    "wajib",
-    "jika",
-    "akan",
-    "sebagai",
-];
 
 /// The content words of a text · lowercased, longer than three characters,
 /// function words removed.
@@ -281,11 +454,14 @@ const STOP: &[&str] = &[
 /// (`dev_tools/eval/fit_factors.py::terms`) and the two disagree on short
 /// words, so using the wrong one would apply a threshold nothing measured.
 #[must_use]
-pub fn content_terms(text: &str) -> Vec<String> {
+pub fn content_terms(text: &str, v: &Vocabulary) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut cur = String::new();
     let flush = |cur: &mut String, out: &mut Vec<String>| {
-        if cur.chars().count() > 3 && !STOP.contains(&cur.as_str()) && !out.contains(cur) {
+        if cur.chars().count() > v.min_term_chars
+            && !v.stopwords.iter().any(|w| w == cur)
+            && !out.contains(cur)
+        {
             out.push(cur.clone());
         }
         cur.clear();
@@ -309,11 +485,11 @@ pub fn content_terms(text: &str) -> Vec<String> {
 /// was fitted against **this** measure and the two live on different scales.
 /// Swapping one in without refitting would apply a threshold nothing measured.
 #[must_use]
-pub fn coverage(text: &str, query_terms: &[&str]) -> f32 {
+pub fn coverage(text: &str, query_terms: &[&str], v: &Vocabulary) -> f32 {
     if query_terms.is_empty() {
         return 1.0;
     }
-    let have = content_terms(text);
+    let have = content_terms(text, v);
     let matched = query_terms
         .iter()
         .filter(|t| have.iter().any(|h| h == *t))
@@ -393,12 +569,19 @@ impl Default for Weights {
 /// cannot invent relevance that retrieval did not find — only reorder within
 /// what it did.
 #[must_use]
-pub fn prior(f: &Facets<'_>, w: &Weights, query_terms: &[&str], oldest: i32, newest: i32) -> f32 {
-    w.authority * authority(f)
-        + w.structural * structural(f)
+pub fn prior(
+    f: &Facets<'_>,
+    w: &Weights,
+    query_terms: &[&str],
+    oldest: i32,
+    newest: i32,
+    v: &Vocabulary,
+) -> f32 {
+    w.authority * authority(f, v)
+        + w.structural * structural(f, v)
         + w.completeness * completeness(f)
         + w.temporal * temporal(f, oldest, newest)
-        + w.topical * topical(f, query_terms)
+        + w.topical * topical(f, query_terms, v)
 }
 
 /// Apply the relevance floor, then rescore what survives, best first.
@@ -416,7 +599,12 @@ pub fn prior(f: &Facets<'_>, w: &Weights, query_terms: &[&str], oldest: i32, new
 ///
 /// Ties break on the incoming order, so an all-zero [`Weights`] is exactly the
 /// identity — `sort_by` is stable.
-pub fn rescore<T: Copy>(pool: &mut Vec<(f32, Facets<'_>, T)>, w: &Weights, query_terms: &[&str]) {
+pub fn rescore<T: Copy>(
+    pool: &mut Vec<(f32, Facets<'_>, T)>,
+    w: &Weights,
+    query_terms: &[&str],
+    v: &Vocabulary,
+) {
     if *w == Weights::OFF {
         return;
     }
@@ -428,7 +616,7 @@ pub fn rescore<T: Copy>(pool: &mut Vec<(f32, Facets<'_>, T)>, w: &Weights, query
         let kept: Vec<_> = pool
             .iter()
             .filter(|(_, f, _)| {
-                coverage(f.body.unwrap_or_default(), query_terms) >= w.relevance_floor
+                coverage(f.body.unwrap_or_default(), query_terms, v) >= w.relevance_floor
             })
             .copied()
             .collect();
@@ -447,8 +635,8 @@ pub fn rescore<T: Copy>(pool: &mut Vec<(f32, Facets<'_>, T)>, w: &Weights, query
     let newest = years.iter().copied().max().unwrap_or(0);
 
     pool.sort_by(|a, b| {
-        let sa = a.0 * (1.0 + prior(&a.1, w, query_terms, oldest, newest));
-        let sb = b.0 * (1.0 + prior(&b.1, w, query_terms, oldest, newest));
+        let sa = a.0 * (1.0 + prior(&a.1, w, query_terms, oldest, newest, v));
+        let sb = b.0 * (1.0 + prior(&b.1, w, query_terms, oldest, newest, v));
         sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal)
     });
 }
@@ -456,6 +644,13 @@ pub fn rescore<T: Copy>(pool: &mut Vec<(f32, Facets<'_>, T)>, w: &Weights, query
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The corpus this engine was first built for · the tests below assert on
+    /// Indonesian labels because that is the vocabulary they declare, ✗ because
+    /// the engine knows them.
+    fn v() -> Vocabulary {
+        Vocabulary::id_regulation()
+    }
 
     fn facets(reg: &'static str, article: &'static str) -> Facets<'static> {
         Facets {
@@ -478,9 +673,9 @@ mod tests {
 
     #[test]
     fn the_hierarchy_orders_national_above_local() {
-        assert!(tier("UNDANG-UNDANG") > tier("PERATURAN PEMERINTAH"));
-        assert!(tier("PERATURAN PEMERINTAH") > tier("PERATURAN PRESIDEN"));
-        assert!(tier("PERATURAN PRESIDEN") > tier("PERATURAN DAERAH PROVINSI"));
+        assert!(v().tier("UNDANG-UNDANG") > v().tier("PERATURAN PEMERINTAH"));
+        assert!(v().tier("PERATURAN PEMERINTAH") > v().tier("PERATURAN PRESIDEN"));
+        assert!(v().tier("PERATURAN PRESIDEN") > v().tier("PERATURAN DAERAH PROVINSI"));
     }
 
     #[test]
@@ -489,9 +684,9 @@ mod tests {
         // PERATURAN DAERAH KOTA (2) -- and the old test asserted the error. A
         // Perda is legislation; a Perbup is the regent's own regulation under
         // it, and cannot outrank it.
-        assert!(tier("PERATURAN DAERAH PROVINSI") > tier("PERATURAN GUBERNUR"));
-        assert!(tier("PERATURAN DAERAH KOTA") > tier("PERATURAN WALIKOTA"));
-        assert!(tier("PERATURAN DAERAH KABUPATEN") > tier("PERATURAN BUPATI"));
+        assert!(v().tier("PERATURAN DAERAH PROVINSI") > v().tier("PERATURAN GUBERNUR"));
+        assert!(v().tier("PERATURAN DAERAH KOTA") > v().tier("PERATURAN WALIKOTA"));
+        assert!(v().tier("PERATURAN DAERAH KABUPATEN") > v().tier("PERATURAN BUPATI"));
     }
 
     #[test]
@@ -501,20 +696,20 @@ mod tests {
             regulation_type: Some("SURAT EDARAN"),
             ..Facets::default()
         };
-        assert!((authority(&f) - 0.0).abs() < f32::EPSILON);
-        assert_eq!(tier("SURAT EDARAN"), None);
+        assert!((authority(&f, &v()) - 0.0).abs() < f32::EPSILON);
+        assert_eq!(v().tier("SURAT EDARAN"), None);
     }
 
     #[test]
     fn the_hierarchy_lookup_tolerates_case_and_padding() {
-        assert_eq!(tier("  undang-undang  "), Some(8));
+        assert_eq!(v().tier("  undang-undang  "), Some(8));
     }
 
     #[test]
     fn an_annex_scores_below_an_article() {
         assert!(
-            structural(&facets("UNDANG-UNDANG", "Pasal 8"))
-                > structural(&facets("UNDANG-UNDANG", "LAMPIRAN I"))
+            structural(&facets("UNDANG-UNDANG", "Pasal 8"), &v())
+                > structural(&facets("UNDANG-UNDANG", "LAMPIRAN I"), &v())
         );
     }
 
@@ -526,7 +721,7 @@ mod tests {
             ..Facets::default()
         };
         // The chapter must win: a "Pasal" inside an annex is annex material.
-        assert!((structural(&f) - 0.0).abs() < f32::EPSILON);
+        assert!((structural(&f, &v()) - 0.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -558,7 +753,7 @@ mod tests {
             (0.9_f32, facets("PERATURAN DAERAH KOTA", "LAMPIRAN I"), 1_u8),
             (0.8, facets("UNDANG-UNDANG", "Pasal 8"), 2),
         ];
-        rescore(&mut pool, &Weights::OFF, &[]);
+        rescore(&mut pool, &Weights::OFF, &[], &v());
         assert_eq!(pool.iter().map(|p| p.2).collect::<Vec<_>>(), vec![1, 2]);
     }
 
@@ -573,7 +768,7 @@ mod tests {
             ),
             (0.85, facets("UNDANG-UNDANG", "Pasal 8"), 2),
         ];
-        rescore(&mut pool, &ordering_only(), &[]);
+        rescore(&mut pool, &ordering_only(), &[], &v());
         assert_eq!(pool[0].2, 2, "the statute should lead");
     }
 
@@ -600,7 +795,7 @@ mod tests {
             ),
             (1.0, facets("UNDANG-UNDANG", "Pasal 8"), 2),
         ];
-        rescore(&mut pool, &w, &[]);
+        rescore(&mut pool, &w, &[], &v());
         assert_eq!(pool[0].2, 1, "a gap wider than the bound must hold");
 
         // And the honest converse, which is why the floor exists.
@@ -614,7 +809,7 @@ mod tests {
 
     #[test]
     fn content_terms_keeps_only_words_that_carry_meaning() {
-        let t = content_terms("Dalam Peraturan ini yang dimaksud dengan izin usaha");
+        let t = content_terms("Dalam Peraturan ini yang dimaksud dengan izin usaha", &v());
         // Function words and anything of three characters or fewer are gone.
         assert!(!t.iter().any(|x| x == "yang"), "{t:?}");
         assert!(!t.iter().any(|x| x == "dengan"), "{t:?}");
@@ -627,7 +822,7 @@ mod tests {
     fn content_terms_are_deduplicated() {
         // Coverage is set semantics: a query term repeated in the body counts
         // once, or a long chunk would score higher for saying the same thing.
-        let t = content_terms("pajak pajak pajak daerah");
+        let t = content_terms("pajak pajak pajak daerah", &v());
         assert_eq!(t.iter().filter(|x| *x == "pajak").count(), 1, "{t:?}");
     }
 
@@ -639,18 +834,18 @@ mod tests {
         let body = "Pemegang izin usaha pertambangan wajib melaksanakan pengelolaan";
         let q = ["izin", "usaha", "pertambangan", "reklamasi"];
         assert!(
-            (coverage(body, &q) - 0.75).abs() < 1e-6,
+            (coverage(body, &q, &v()) - 0.75).abs() < 1e-6,
             "{}",
-            coverage(body, &q)
+            coverage(body, &q, &v())
         );
-        assert!((coverage("teks pendek", &["izin"]) - 0.0).abs() < f32::EPSILON);
+        assert!(coverage("teks pendek", &["izin"], &v()).abs() < f32::EPSILON);
     }
 
     #[test]
     fn an_empty_query_never_filters_anything() {
         // A query of only function words has no content terms. Filtering on
         // zero terms would reject the whole pool.
-        assert!((coverage("apa pun", &[]) - 1.0).abs() < f32::EPSILON);
+        assert!((coverage("apa pun", &[], &v()) - 1.0).abs() < f32::EPSILON);
     }
 
     fn with_body(body: &'static str) -> Facets<'static> {
@@ -684,6 +879,7 @@ mod tests {
             &mut pool,
             &Weights::FITTED,
             &["izin", "usaha", "pertambangan"],
+            &v(),
         );
         assert_eq!(pool.len(), 1, "the unrelated candidate must be dropped");
         assert_eq!(pool[0].2, 2);
@@ -703,6 +899,7 @@ mod tests {
             &mut pool,
             &Weights::FITTED,
             &["izin", "usaha", "pertambangan"],
+            &v(),
         );
         assert_eq!(pool.len(), 1, "one survivor, never zero");
     }
@@ -715,7 +912,7 @@ mod tests {
             (0.010_f32, with_body("tidak berkaitan sama sekali"), 1_u8),
             (0.009, with_body("izin usaha pertambangan"), 2),
         ];
-        rescore(&mut pool, &Weights::OFF, &["izin"]);
+        rescore(&mut pool, &Weights::OFF, &["izin"], &v());
         assert_eq!(pool.len(), 2);
         assert_eq!(pool[0].2, 1, "OFF must not reorder either");
     }
@@ -728,9 +925,9 @@ mod tests {
         let body = "izin usaha pertambangan wajib memenuhi persyaratan";
         let q = ["izin", "usaha", "reklamasi", "jaminan"];
         assert!(
-            coverage(body, &q) >= Weights::FITTED.relevance_floor,
+            coverage(body, &q, &v()) >= Weights::FITTED.relevance_floor,
             "coverage {} fell below the floor",
-            coverage(body, &q)
+            coverage(body, &q, &v())
         );
     }
 
@@ -779,12 +976,12 @@ mod tests {
             .0;
         let mut seen = 0;
         for line in body.lines() {
-            let Some((k, v)) = line.trim().trim_end_matches(',').split_once(':') else {
+            let Some((k, raw)) = line.trim().trim_end_matches(',').split_once(':') else {
                 continue;
             };
             let name = k.trim().trim_matches('"');
-            let want: u8 = v.trim().parse().expect("tier must be an integer");
-            assert_eq!(tier(name), Some(want), "{name} disagrees with the fitter");
+            let want: u8 = raw.trim().parse().expect("tier must be an integer");
+            assert_eq!(v().tier(name), Some(want), "{name} disagrees with the fitter");
             seen += 1;
         }
         assert_eq!(seen, 10, "the corpus contains ten regulation types");
@@ -802,7 +999,7 @@ mod tests {
         };
         let w = Weights::FITTED;
         let total = w.authority + w.structural + w.temporal + w.completeness + w.topical;
-        let p = prior(&best, &w, &["pajak"], 1945, 2018);
+        let p = prior(&best, &w, &["pajak"], 1945, 2018, &v());
         assert!(p <= total + f32::EPSILON, "prior {p} exceeded {total}");
     }
 
@@ -849,7 +1046,7 @@ mod tests {
             ),
         ];
         for (f, expected) in cases {
-            let got = prior(&f, &w, &[], 2005, 2011);
+            let got = prior(&f, &w, &[], 2005, 2011, &v());
             assert!(
                 (got - expected).abs() < 1e-5,
                 "prior {got} != python {expected}"
@@ -872,9 +1069,9 @@ mod tests {
             about: Some("KETENAGALISTRIKAN DAN ENERGI"),
             ..Facets::default()
         };
-        assert!((topical(&f, &["energi"]) - 1.0).abs() < f32::EPSILON);
-        assert!((topical(&f, &["energi", "pajak"]) - 0.5).abs() < f32::EPSILON);
-        assert!((topical(&f, &[]) - 0.0).abs() < f32::EPSILON);
+        assert!((topical(&f, &["energi"], &v()) - 1.0).abs() < f32::EPSILON);
+        assert!((topical(&f, &["energi", "pajak"], &v()) - 0.5).abs() < f32::EPSILON);
+        assert!((topical(&f, &[], &v()) - 0.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -887,11 +1084,11 @@ mod tests {
             ..Facets::default()
         };
         assert!(
-            (topical(&f, &["pajak"]) - 0.0).abs() < f32::EPSILON,
+            (topical(&f, &["pajak"], &v()) - 0.0).abs() < f32::EPSILON,
             "substring match leaked in: {}",
-            topical(&f, &["pajak"])
+            topical(&f, &["pajak"], &v())
         );
-        assert!((topical(&f, &["perpajakan"]) - 1.0).abs() < f32::EPSILON);
+        assert!((topical(&f, &["perpajakan"], &v()) - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -902,6 +1099,122 @@ mod tests {
             about: None,
             ..Facets::default()
         };
-        assert!((topical(&f, &["energi"]) - 0.0).abs() < f32::EPSILON);
+        assert!((topical(&f, &["energi"], &v()) - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn nothing_indonesian_is_compiled_into_the_factor_functions() {
+        // ! The regression this guards. `authority` and `structural` held ten
+        // `UNDANG-UNDANG`/`PERATURAN ...` literals and the strings LAMPIRAN /
+        // PENJELASAN / PASAL. On any corpus those tables do not describe, every
+        // factor evaluated neutrally and the operator's weights did nothing --
+        // silently, which is the same shape as `topical` shipping at 0.25
+        // against a column the engine never selected.
+        //
+        // A vocabulary that knows only English labels must rank them, and must
+        // NOT rank the Indonesian ones.
+        let v = Vocabulary {
+            authority: vec![
+                ("INTERNET STANDARD".to_owned(), 5),
+                ("PROPOSED STANDARD".to_owned(), 3),
+            ],
+            max_tier: 5.0,
+            structural: vec![
+                StructuralRule {
+                    label: "APPENDIX".to_owned(),
+                    field: Field::Either,
+                    prefix: false,
+                    score: 0.0,
+                },
+                StructuralRule {
+                    label: "SECTION".to_owned(),
+                    field: Field::Article,
+                    prefix: true,
+                    score: 1.0,
+                },
+            ],
+            structural_default: 0.5,
+            stopwords: vec!["the".to_owned(), "and".to_owned()],
+            min_term_chars: 2,
+        };
+
+        let std_doc = Facets {
+            regulation_type: Some("Internet Standard"),
+            article: Some("Section 4.2"),
+            ..Facets::default()
+        };
+        let appendix = Facets {
+            regulation_type: Some("Proposed Standard"),
+            article: Some("Appendix B"),
+            ..Facets::default()
+        };
+        assert!(authority(&std_doc, &v) > authority(&appendix, &v));
+        assert!(structural(&std_doc, &v) > structural(&appendix, &v));
+
+        // And the Indonesian labels are now just unknown strings.
+        let uu = Facets {
+            regulation_type: Some("UNDANG-UNDANG"),
+            article: Some("Pasal 9"),
+            ..Facets::default()
+        };
+        assert!(
+            (authority(&uu, &v) - 0.0).abs() < f32::EPSILON,
+            "an unknown label is neutral, ✗ penalised"
+        );
+        assert!((structural(&uu, &v) - v.structural_default).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn the_term_splitter_takes_its_stop_list_from_the_corpus() {
+        // Indonesian function words are not universal function words. An
+        // English corpus that kept them would waste term slots, and an
+        // Indonesian corpus that dropped "the" would not notice.
+        let en = Vocabulary {
+            stopwords: vec!["the".to_owned(), "and".to_owned()],
+            min_term_chars: 2,
+            ..Vocabulary::default()
+        };
+        let terms = content_terms("the tax and the penalty", &en);
+        assert_eq!(terms, vec!["tax".to_owned(), "penalty".to_owned()]);
+
+        // The same text under the Indonesian vocabulary keeps "the" (not a
+        // stop word there) but drops it for length: min_term_chars is 3.
+        let id = Vocabulary::id_regulation();
+        assert!(!content_terms("the tax and the penalty", &id).contains(&"the".to_owned()));
+    }
+
+    #[test]
+    fn a_weight_the_vocabulary_cannot_evaluate_is_reported() {
+        // ! The guard that turns a silent no-op into a startup refusal.
+        let empty = Vocabulary::default();
+        assert_eq!(
+            empty.missing_for(&Weights::FITTED),
+            vec!["authority", "structural"]
+        );
+        // Zero weights ask nothing of the vocabulary, so nothing is missing.
+        assert!(empty.missing_for(&Weights::OFF).is_empty());
+        // The corpus that declares its tables is clean at any weight.
+        assert!(
+            Vocabulary::id_regulation()
+                .missing_for(&Weights::FITTED)
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn the_longest_matching_label_wins_not_the_first_declared() {
+        // ! `PERATURAN DAERAH KABUPATEN` must beat `PERATURAN DAERAH`, and a
+        // correct table must not depend on the order someone typed it in.
+        // Ravel's profile states the same rule as "ordered longest-first".
+        let v = Vocabulary {
+            authority: vec![
+                ("PERATURAN DAERAH".to_owned(), 3),
+                ("PERATURAN DAERAH KABUPATEN".to_owned(), 7),
+            ],
+            max_tier: 10.0,
+            ..Vocabulary::default()
+        };
+        assert_eq!(v.tier("PERATURAN DAERAH KABUPATEN BANDUNG"), Some(7));
+        assert_eq!(v.tier("PERATURAN DAERAH"), Some(3));
     }
 }

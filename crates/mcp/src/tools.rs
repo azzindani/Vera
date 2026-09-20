@@ -1,4 +1,4 @@
-//! The agent-facing tool surface · five read-only tools.
+//! The agent-facing tool surface · six read-only tools.
 //!
 //! ! `search_knowledge` takes a **query and nothing else**. There is no
 //! `domain` parameter and the schema sets `additionalProperties: false`
@@ -19,7 +19,12 @@ use serde_json::{Value, json};
 /// each read once.
 #[must_use]
 #[allow(clippy::too_many_lines)]
-pub fn definitions() -> Vec<Value> {
+pub fn definitions(registry: &contract::Registry) -> Vec<Value> {
+    // ! Generated from the loaded registry, ✗ a literal. The schema an agent
+    // reads and the algorithms the engine will accept are then the same list by
+    // construction: an operator who adds one to the file cannot end up with an
+    // engine that serves a name it never offers.
+    let offered: Vec<&str> = registry.offered();
     vec![
         json!({
             "name": "list_domains",
@@ -69,8 +74,8 @@ pub fn definitions() -> Vec<Value> {
                         "type": "string",
                         // ! Only fitted profiles are listed. An unfitted profile
                         // is a raw weight vector with a friendly name.
-                        "enum": ["balanced"],
-                        "description": "Fitted ranking intent. Pick intent, not numbers."
+                        "enum": offered,
+                        "description": "Fitted ranking intent. Pick intent, not numbers — call list_algorithms for what each one is for. If a ranking does not fit the question, call again with a different one rather than reinterpreting these results."
                     },
                     "expand": {
                         "type": "array",
@@ -101,6 +106,26 @@ pub fn definitions() -> Vec<Value> {
             },
             "annotations": {
                 "title": "Search knowledge",
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
+            }
+        }),
+        json!({
+            "name": "list_algorithms",
+            // ! Introspection, like `list_domains`: names and what they are
+            // for, zero content. It exists because `profile` is only useful to
+            // a caller that can find out what the names mean, and an enum in a
+            // schema carries no such thing.
+            "description": "Ranking algorithms this engine serves, and what each is for.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+            },
+            "annotations": {
+                "title": "List algorithms",
                 "readOnlyHint": true,
                 "destructiveHint": false,
                 "idempotentHint": true,
@@ -259,8 +284,33 @@ mod tests {
         assert_eq!(e["success"], json!(false));
     }
 
+    /// A registry with one fitted algorithm and one without, so the schema
+    /// tests exercise the filter rather than a list of length one.
+    fn reg() -> contract::Registry {
+        let w = contract::FactorWeights {
+            relevance_floor: 0.3,
+            authority: 0.5,
+            structural: 0.25,
+            temporal: 0.0,
+            completeness: 0.0,
+            topical: 0.25,
+        };
+        let mut r = contract::Registry::builtin(w);
+        r.algorithms.insert(
+            "unmeasured".to_owned(),
+            contract::Algorithm {
+                note: None,
+                description: "Not fitted.".to_owned(),
+                fitted: None,
+                factors: w,
+                expand: Vec::new(),
+            },
+        );
+        r
+    }
+
     fn tool(name: &str) -> Value {
-        definitions()
+        definitions(&reg())
             .into_iter()
             .find(|t| t["name"] == name)
             .unwrap_or_else(|| panic!("{name} missing"))
@@ -270,7 +320,8 @@ mod tests {
     fn the_surface_stays_within_eight_tools() {
         // CLAUDE.md §6 caps the surface. More tools means more ways for an
         // agent to pick the wrong one.
-        assert!(definitions().len() <= 8, "{}", definitions().len());
+        let n = definitions(&reg()).len();
+        assert!(n <= 8, "{n}");
     }
 
     #[test]
@@ -312,8 +363,48 @@ mod tests {
     fn only_fitted_profiles_are_offered() {
         // ! An unfitted profile is a raw weight vector with a friendly name.
         // Listing one invites an agent to select an intent nothing measured.
+        // The registry passed in holds two; exactly one is fitted.
         let s = &tool("search_knowledge")["inputSchema"];
         assert_eq!(s["properties"]["profile"]["enum"], json!(["balanced"]));
+    }
+
+    #[test]
+    fn the_offered_profiles_come_from_the_registry_not_a_literal() {
+        // ! The failure this prevents: an operator adds a fitted algorithm to
+        // ALGORITHMS_PATH, the engine accepts it, and the schema never mentions
+        // it — so no agent ever selects the thing that was just fitted.
+        let mut r = reg();
+        r.algorithms.get_mut("unmeasured").expect("present").fitted = Some(contract::Fitted {
+            recall_at_5: 0.6,
+            recall_at_10: None,
+            mrr: None,
+            n: 44,
+            harness: "dev_tools/eval/e2e.py".to_owned(),
+            note: None,
+        });
+        let defs = definitions(&r);
+        let s = &defs
+            .iter()
+            .find(|t| t["name"] == "search_knowledge")
+            .expect("search_knowledge")["inputSchema"];
+        assert_eq!(
+            s["properties"]["profile"]["enum"],
+            json!(["balanced", "unmeasured"])
+        );
+    }
+
+    #[test]
+    fn the_schema_tells_the_agent_to_retry_rather_than_reinterpret() {
+        // ! This sentence IS the escalation design. There is no consensus, no
+        // viewpoint vote and no in-engine effort tier; a ranking that does not
+        // fit is a second call. An agent that never learns that will instead
+        // argue with the results it got.
+        let s = &tool("search_knowledge")["inputSchema"];
+        let d = s["properties"]["profile"]["description"]
+            .as_str()
+            .unwrap_or("");
+        assert!(d.contains("call again"), "{d}");
+        assert!(d.contains("list_algorithms"), "{d}");
     }
 
     #[test]
@@ -338,7 +429,7 @@ mod tests {
 
     #[test]
     fn every_tool_forbids_unknown_properties() {
-        for t in definitions() {
+        for t in definitions(&reg()) {
             assert_eq!(
                 t["inputSchema"]["additionalProperties"],
                 json!(false),
@@ -350,7 +441,7 @@ mod tests {
 
     #[test]
     fn every_tool_has_a_short_description() {
-        for t in definitions() {
+        for t in definitions(&reg()) {
             let d = t["description"].as_str().expect("description");
             assert!(!d.is_empty());
             assert!(

@@ -52,29 +52,18 @@ impl Mode {
     }
 }
 
-/// A fitted intent for the factor layer.
-///
-/// ! The agent selects **intent**; Vera keeps the **numbers**
-/// (`TOOL_SURFACE.md` §5). Fitting these weights took 625 combinations against
-/// 40 labelled cases, and the in-sample peak flattered itself by ten points. An
-/// agent has no way to run that fit, so a raw weight vector from a caller is a
-/// guess that also makes the same query return different rankings on different
-/// calls.
-///
-/// ! A profile is fitted, ✗ chosen. One that does not beat [`Balanced`] on the
-/// query shapes it targets does not ship — and until it is fitted it is not
-/// listed in the tool schema, because an unfitted profile is a raw weight
-/// vector with a friendly name.
-///
-/// [`Balanced`]: Profile::Balanced
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Profile {
-    /// The general case · `authority 0.5 · structural 0.25 · completeness 0.25`,
-    /// fitted by `dev_tools/eval/fit_factors.py` (+7.5 points leave-one-out).
-    #[default]
-    Balanced,
-}
+// ! `Profile` was an enum here with one variant, `Balanced`. It is now a
+// registry key — see [`crate::algorithms`]. Adding a way to rank meant editing
+// this file, `tools.rs` and `main.rs` and shipping a new binary, which is the
+// same mistake as compiling in a model width (invariant 2). A ranking strategy
+// is a property of the corpus, fitted against its eval set, so it is declared
+// beside the corpus.
+//
+// What did **not** change is the rule the enum existed to enforce: the agent
+// selects **intent**, Vera keeps the **numbers** (`TOOL_SURFACE.md` §5).
+// Fitting took 3,125 combinations against 40 labelled cases and the in-sample
+// peak flattered itself by five points; an agent has no way to run that fit.
+// The registry keeps the numbers server-side and offers only fitted names.
 
 /// Explicit factor weights · **experimental**.
 ///
@@ -118,7 +107,14 @@ pub struct SearchOptions {
     /// `CANDIDATE_POOL`, and floored at the effective `top_k` — a pool smaller
     /// than the answer silently caps the reply (`SCORING.md` §7).
     pub candidate_pool: Option<usize>,
-    pub profile: Option<Profile>,
+    /// A key into the algorithm registry. `None` means
+    /// [`DEFAULT_ALGORITHM`](crate::algorithms::DEFAULT_ALGORITHM).
+    ///
+    /// ! An unknown name is an **error**, ✗ a fallback to the default. A caller
+    /// that misspells `sanction` and is silently served `balanced` gets a wrong
+    /// answer wearing a correct one's clothes, and its ranking is then
+    /// unreproducible.
+    pub profile: Option<String>,
     pub factor_weights: Option<FactorWeights>,
     /// Empty by default · see [`Expansion`].
     pub expand: Option<Vec<Expansion>>,
@@ -141,10 +137,16 @@ pub struct AppliedOptions {
     pub mode: Mode,
     pub top_k: usize,
     pub candidate_pool: usize,
-    pub profile: Profile,
+    /// The registry key that ranked this request.
+    pub profile: String,
     pub factor_weights: FactorWeights,
     pub expand: Vec<Expansion>,
-    /// Set when the caller supplied raw `factor_weights` rather than a profile.
+    /// Set when the caller supplied raw `factor_weights`, **or** named an
+    /// algorithm carrying no `fitted` block.
+    ///
+    /// ! Both cases are the same claim to a caller — "nobody measured this
+    /// ranking" — so they set the same flag rather than two the client has to
+    /// learn to check separately.
     pub experimental: bool,
     /// Every place the request was narrowed to a server ceiling, in the caller's
     /// words. Empty when nothing was clamped.
@@ -155,13 +157,50 @@ pub struct AppliedOptions {
     pub clamped: Vec<String>,
 }
 
+/// A request that cannot be served as written.
+///
+/// ! One variant, deliberately. Every *numeric* overreach narrows silently-
+/// but-reported into [`AppliedOptions::clamped`]; only naming something that
+/// does not exist is fatal, because there is no nearest sensible value for it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResolveError {
+    /// The caller named an algorithm the registry does not define.
+    UnknownProfile {
+        asked: String,
+        /// Every name the registry does define · the `hint` the caller needs to
+        /// correct itself without reading the server's configuration.
+        available: Vec<String>,
+    },
+}
+
+impl std::fmt::Display for ResolveError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownProfile { asked, available } => write!(
+                f,
+                "no algorithm named `{asked}` · this engine serves: {}",
+                available.join(", ")
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ResolveError {}
+
 impl SearchOptions {
-    /// Resolve a request against the server's ceilings and defaults.
+    /// Resolve a request against the server's ceilings and its registry.
     ///
     /// Narrows only. A caller asking for more than the server allows gets the
     /// server's value and a line in [`AppliedOptions::clamped`] saying so.
-    #[must_use]
-    pub fn resolve(&self, ceilings: Ceilings, default_weights: FactorWeights) -> AppliedOptions {
+    ///
+    /// # Errors
+    /// [`ResolveError::UnknownProfile`] when the caller names an algorithm the
+    /// registry does not define. Not a fallback: see [`SearchOptions::profile`].
+    pub fn resolve(
+        &self,
+        ceilings: Ceilings,
+        registry: &crate::algorithms::Registry,
+    ) -> Result<AppliedOptions, ResolveError> {
         let mut clamped = Vec::new();
 
         let top_k = match self.top_k {
@@ -202,53 +241,100 @@ impl SearchOptions {
             candidate_pool = top_k;
         }
 
-        let experimental = self.factor_weights.is_some();
-        let profile = self.profile.unwrap_or_default();
-        let factor_weights = self.factor_weights.unwrap_or(match profile {
-            Profile::Balanced => default_weights,
-        });
-        // ! De-duplicated. Asking for the same expansion twice must cost what
-        // asking once costs; a repeated entry would run the walk again.
-        let mut expand = self.expand.clone().unwrap_or_default();
+        let name = self
+            .profile
+            .clone()
+            .unwrap_or_else(|| crate::algorithms::DEFAULT_ALGORITHM.to_owned());
+        let algo = registry
+            .get(&name)
+            .ok_or_else(|| ResolveError::UnknownProfile {
+                asked: name.clone(),
+                available: registry.names().into_iter().map(str::to_owned).collect(),
+            })?;
+
+        // Raw weights win over the algorithm's, and say so. An unfitted
+        // algorithm makes the same claim, so both raise the one flag.
+        let experimental = self.factor_weights.is_some() || !algo.is_fitted();
+        let factor_weights = self.factor_weights.unwrap_or(algo.factors);
+
+        // ! The algorithm's own expansions are a floor, ✗ a replacement. An
+        // algorithm fitted WITH siblings admitted is a different measurement
+        // from the same weights without them, so a caller that names it and
+        // passes no `expand` must get what was fitted.
+        let mut expand = algo.expand.clone();
+        expand.extend(self.expand.clone().unwrap_or_default());
+        // ! Sorted before dedup. `dedup` only removes ADJACENT duplicates, so
+        // `[siblings, citations, siblings]` kept the walk twice — and asking
+        // for the same expansion twice must cost what asking once costs.
+        expand.sort_unstable_by_key(|e| format!("{e:?}"));
         expand.dedup();
 
-        AppliedOptions {
+        Ok(AppliedOptions {
             mode: self.mode.unwrap_or_default(),
             top_k,
             candidate_pool,
-            profile,
+            profile: name,
             factor_weights,
             expand,
             experimental,
             clamped,
-        }
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::algorithms::{Algorithm, Fitted, Registry};
 
     const CEIL: Ceilings = Ceilings {
         top_k: 10,
         candidate_pool: 60,
     };
     const W: FactorWeights = FactorWeights {
-        relevance_floor: 0.4,
-        authority: 1.0,
-        structural: 0.5,
+        relevance_floor: 0.3,
+        authority: 0.5,
+        structural: 0.25,
         temporal: 0.0,
         completeness: 0.0,
         topical: 0.25,
     };
 
+    fn reg() -> Registry {
+        Registry::builtin(W)
+    }
+
+    /// A registry with a second, unfitted algorithm · what the per-query-type
+    /// work of `SCORING.md` §4 looks like before it is fitted.
+    fn reg_plus() -> Registry {
+        let mut r = Registry::builtin(W);
+        r.algorithms.insert(
+            "sanction".to_owned(),
+            Algorithm {
+                note: None,
+                description: "Penalty and prohibition questions.".to_owned(),
+                fitted: None,
+                factors: FactorWeights {
+                    structural: 0.5,
+                    ..W
+                },
+                expand: vec![Expansion::Siblings],
+            },
+        );
+        r
+    }
+
+    fn resolve(o: &SearchOptions) -> AppliedOptions {
+        o.resolve(CEIL, &reg()).expect("resolves")
+    }
+
     #[test]
     fn passing_nothing_yields_the_measured_defaults() {
-        let a = SearchOptions::default().resolve(CEIL, W);
+        let a = resolve(&SearchOptions::default());
         assert_eq!(a.mode, Mode::Hybrid);
         assert_eq!(a.top_k, 10);
         assert_eq!(a.candidate_pool, 60);
-        assert_eq!(a.profile, Profile::Balanced);
+        assert_eq!(a.profile, crate::algorithms::DEFAULT_ALGORITHM);
         assert_eq!(a.factor_weights, W);
         assert!(!a.experimental);
         assert!(a.clamped.is_empty());
@@ -256,23 +342,21 @@ mod tests {
 
     #[test]
     fn a_caller_may_narrow_a_limit() {
-        let a = SearchOptions {
+        let a = resolve(&SearchOptions {
             top_k: Some(3),
             ..SearchOptions::default()
-        }
-        .resolve(CEIL, W);
+        });
         assert_eq!(a.top_k, 3);
         assert!(a.clamped.is_empty(), "narrowing is not clamping");
     }
 
     #[test]
     fn a_caller_may_not_widen_one() {
-        let a = SearchOptions {
+        let a = resolve(&SearchOptions {
             top_k: Some(500),
             candidate_pool: Some(100_000),
             ..SearchOptions::default()
-        }
-        .resolve(CEIL, W);
+        });
         assert_eq!(a.top_k, 10);
         assert_eq!(a.candidate_pool, 60);
         assert_eq!(a.clamped.len(), 2, "{:?}", a.clamped);
@@ -282,34 +366,31 @@ mod tests {
     fn every_clamp_is_reported_not_silent() {
         // A caller asking for 500 and receiving 10 must see why without
         // reading the server's configuration.
-        let a = SearchOptions {
+        let a = resolve(&SearchOptions {
             top_k: Some(500),
             ..SearchOptions::default()
-        }
-        .resolve(CEIL, W);
+        });
         assert!(a.clamped[0].contains("500"), "{:?}", a.clamped);
         assert!(a.clamped[0].contains("10"), "{:?}", a.clamped);
     }
 
     #[test]
     fn a_pool_smaller_than_the_answer_is_raised_to_it() {
-        let a = SearchOptions {
+        let a = resolve(&SearchOptions {
             top_k: Some(10),
             candidate_pool: Some(2),
             ..SearchOptions::default()
-        }
-        .resolve(CEIL, W);
+        });
         assert_eq!(a.candidate_pool, 10);
         assert!(!a.clamped.is_empty());
     }
 
     #[test]
     fn zero_results_is_raised_rather_than_returning_nothing() {
-        let a = SearchOptions {
+        let a = resolve(&SearchOptions {
             top_k: Some(0),
             ..SearchOptions::default()
-        }
-        .resolve(CEIL, W);
+        });
         assert_eq!(a.top_k, 1);
     }
 
@@ -319,16 +400,86 @@ mod tests {
             authority: 1.0,
             ..W
         };
-        let a = SearchOptions {
+        let a = resolve(&SearchOptions {
             factor_weights: Some(mine),
             ..SearchOptions::default()
-        }
-        .resolve(CEIL, W);
+        });
         assert!(a.experimental);
-        assert_eq!(
-            a.factor_weights, mine,
-            "the effective weights must be echoed"
-        );
+        assert_eq!(a.factor_weights, mine, "the effective weights must be echoed");
+    }
+
+    #[test]
+    fn a_named_algorithm_supplies_its_own_weights() {
+        let a = SearchOptions {
+            profile: Some("sanction".to_owned()),
+            ..SearchOptions::default()
+        }
+        .resolve(CEIL, &reg_plus())
+        .expect("resolves");
+        assert_eq!(a.profile, "sanction");
+        assert!((a.factor_weights.structural - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn an_unfitted_algorithm_is_experimental_even_without_raw_weights() {
+        // ! Same claim to the caller as raw weights -- "nobody measured this
+        // ranking" -- so it raises the same flag rather than a second one.
+        let a = SearchOptions {
+            profile: Some("sanction".to_owned()),
+            ..SearchOptions::default()
+        }
+        .resolve(CEIL, &reg_plus())
+        .expect("resolves");
+        assert!(a.experimental);
+    }
+
+    #[test]
+    fn an_algorithms_own_expansions_survive_a_caller_passing_none() {
+        // An algorithm fitted WITH siblings admitted is a different measurement
+        // from the same weights without them.
+        let a = SearchOptions {
+            profile: Some("sanction".to_owned()),
+            ..SearchOptions::default()
+        }
+        .resolve(CEIL, &reg_plus())
+        .expect("resolves");
+        assert_eq!(a.expand, vec![Expansion::Siblings]);
+    }
+
+    #[test]
+    fn asking_for_an_expansion_twice_costs_what_asking_once_costs() {
+        // ! `dedup` alone only removes ADJACENT duplicates. The algorithm
+        // contributes `siblings` and so does the caller, and they are not
+        // adjacent once more expansions exist.
+        let a = SearchOptions {
+            profile: Some("sanction".to_owned()),
+            expand: Some(vec![Expansion::Siblings, Expansion::Siblings]),
+            ..SearchOptions::default()
+        }
+        .resolve(CEIL, &reg_plus())
+        .expect("resolves");
+        assert_eq!(a.expand, vec![Expansion::Siblings]);
+    }
+
+    #[test]
+    fn an_unknown_algorithm_is_refused_rather_than_silently_defaulted() {
+        // ! The failure this prevents: a caller misspells `sanction`, is served
+        // `balanced`, and reports a ranking it cannot reproduce.
+        let err = SearchOptions {
+            profile: Some("sanctions".to_owned()),
+            ..SearchOptions::default()
+        }
+        .resolve(CEIL, &reg_plus())
+        .expect_err("a misspelled profile must not fall back");
+        match err {
+            ResolveError::UnknownProfile { ref available, .. } => {
+                assert!(available.contains(&"sanction".to_owned()), "{available:?}");
+            }
+        }
+        // The message alone has to be enough to correct the call.
+        let msg = err.to_string();
+        assert!(msg.contains("sanctions"), "{msg}");
+        assert!(msg.contains("balanced"), "{msg}");
     }
 
     #[test]
@@ -352,9 +503,25 @@ mod tests {
         let o = SearchOptions {
             mode: Some(Mode::Keyword),
             top_k: Some(5),
+            profile: Some("balanced".to_owned()),
             ..SearchOptions::default()
         };
         let s = serde_json::to_string(&o).expect("serialize");
         assert_eq!(serde_json::from_str::<SearchOptions>(&s).expect("parse"), o);
+    }
+
+    #[test]
+    fn a_fitted_block_is_what_makes_an_algorithm_offerable() {
+        let mut r = reg_plus();
+        assert_eq!(r.offered(), vec!["balanced"]);
+        r.algorithms.get_mut("sanction").expect("sanction").fitted = Some(Fitted {
+            recall_at_5: 0.60,
+            recall_at_10: None,
+            mrr: None,
+            n: 44,
+            harness: "dev_tools/eval/e2e.py".to_owned(),
+            note: None,
+        });
+        assert_eq!(r.offered(), vec!["balanced", "sanction"]);
     }
 }

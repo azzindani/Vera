@@ -1,0 +1,83 @@
+{
+  "_comment": [
+    "The scoring vocabulary of the Indonesian regulation corpus · VOCABULARY_PATH.",
+    "",
+    "! This file is the corpus's, not the engine's. Vera is a retrieval engine,",
+    "not a legal one: `authority` asks how binding a source is, `structural`",
+    "asks whether a chunk is operative text or an appendix, and neither question",
+    "is Indonesian. Only the answers below are.",
+    "",
+    "! It duplicates `identity.authority` in Ravel's",
+    "registry/profiles/id_regulation@1.0.yaml, which is the copy that should",
+    "win. The destination for this data is `corpus_meta`, written by Ravel from",
+    "that profile at ingest, beside the model and pooling the corpus already",
+    "declares. Until that schema change lands this file is how the capability is",
+    "reachable -- and while two copies exist they can drift, which is exactly the",
+    "argument for finishing the move.",
+    "",
+    "! Loading this file reproduces the compiled-in fallback exactly. It is here",
+    "as the worked example and as the migration's first step, not because the",
+    "current deployment needs it.",
+    "",
+    "Authority follows UU 12/2011: the Art 7 ladder (UU > PP > Perpres > Perda",
+    "Provinsi > Perda Kab/Kota), with Art 8 instruments -- a governor's,",
+    "regent's or mayor's own regulation -- BELOW the Perda they implement.",
+    "! Fitted against both this table and one that inverts that last pair,",
+    "Recall@5 is identical (57.5% in-sample, 47.5% leave-one-out at n=40). The",
+    "fine ordering is NOT evidence-backed here. It is correct anyway, because a",
+    "table stating something legally false is wrong whether or not a 40-case",
+    "eval set can detect it (docs/EVAL.md §5).",
+    "",
+    "max_tier is 10 and no entry reaches it: the scale is the published",
+    "hierarchy (UUD 1945 = 9), not the set of types this corpus happens to hold.",
+    "Normalising against what is loaded would make the same chunk score",
+    "differently in a corpus that merely lacks a constitution."
+  ],
+
+  "authority": {
+    "UNDANG-UNDANG": 8,
+    "PERATURAN PEMERINTAH": 7,
+    "PERATURAN PRESIDEN": 6,
+    "INSTRUKSI PRESIDEN": 5,
+    "PERATURAN DAERAH PROVINSI": 4,
+    "PERATURAN GUBERNUR": 3,
+    "PERATURAN DAERAH KABUPATEN": 3,
+    "PERATURAN DAERAH KOTA": 3,
+    "PERATURAN BUPATI": 2,
+    "PERATURAN WALIKOTA": 2
+  },
+  "max_tier": 10,
+
+  "structural": [
+    {
+      "_note": "80,121 of 355,621 indexable chunks are LAMPIRAN -- 22.5% of the corpus is annex material: tables, forms and schedules that are rarely the answer to a question about obligations.",
+      "label": "LAMPIRAN",
+      "field": "either",
+      "prefix": false,
+      "score": 0.0
+    },
+    {
+      "_note": "Elucidation explains a clause authoritatively without being one, so it sits between an annex and an article.",
+      "label": "PENJELASAN",
+      "field": "chapter",
+      "prefix": false,
+      "score": 0.3
+    },
+    {
+      "_note": "A prefix rule, not a substring one. 'Pasal 9 dihapus' is an amending clause that contains the word without being one -- the same distinction Ravel's profile makes with marker_only.",
+      "label": "PASAL",
+      "field": "article",
+      "prefix": true,
+      "score": 1.0
+    }
+  ],
+  "structural_default": 0.5,
+
+  "_note": "! `dapat`, `harus`, `wajib` and `tidak` are here because they occur in nearly every chunk and carry no discriminative power AS TERMS. That is correct for term overlap, and is precisely why a separate modality factor is worth building: 'query asks for an obligation AND chunk states an obligation' is discriminative even though neither word is.",
+  "stopwords": [
+    "yang", "dan", "atau", "untuk", "dengan", "pada", "dari", "dalam", "oleh",
+    "apakah", "bagaimana", "berapa", "siapa", "adalah", "itu", "ini", "ke",
+    "di", "tidak", "dapat", "harus", "wajib", "jika", "akan", "sebagai"
+  ],
+  "min_term_chars": 3
+}

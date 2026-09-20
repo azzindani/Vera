@@ -1,0 +1,81 @@
+{
+  "_comment": [
+    "The algorithm registry · docs/SCORING.md §4, loaded via ALGORITHMS_PATH.",
+    "",
+    "Two rules govern what may be added here, and both are enforced at startup",
+    "by contract::algorithms rather than by review:",
+    "",
+    "  1. `1 + Σ(authority, structural, temporal, completeness, topical)` may",
+    "     not exceed 2.00. The fused pool's own relevance spans 2.56x median but",
+    "     only 1.31x at its narrowest, so a wider prior can reorder the pool on",
+    "     metadata alone -- authority without relevance, invariant 9.",
+    "  2. An entry with no `fitted` block loads as experimental: reachable by",
+    "     name, absent from the tool schema's enum. The agent is never OFFERED a",
+    "     weight vector nobody measured.",
+    "",
+    "! Only two entries here carry numbers, because only two have been measured.",
+    "The per-query-type set of SCORING.md §4 is not shipped as a pile of",
+    "plausible guesses; it arrives when fit_factors.py has run per type.",
+    "",
+    "! An unknown key anywhere in this file kills the process at startup. That is",
+    "deliberate: a typo that silently does nothing is the same defect class as",
+    "`topical` shipping at 0.25 while the engine evaluated it against NULL."
+  ],
+
+  "algorithms": {
+    "balanced": {
+      "description": "The general case. Ranks on text, then lets an instrument's authority and structure reorder within what retrieval found. Start here.",
+      "fitted": {
+        "recall_at_5": 0.545,
+        "recall_at_10": 0.591,
+        "mrr": 0.454,
+        "n": 44,
+        "harness": "dev_tools/eval/e2e.py",
+        "note": "Three identical runs in situ. ! Fitted BEFORE the 2026-09-19 re-embed, on a corpus where the dense arm contributed 0.0%, so it is fitted to a retrieval mix that no longer exists and must be refitted (docs/SCORING.md §9). Σw = 1.0, prior bound 2.00x."
+      },
+      "factors": {
+        "relevance_floor": 0.3,
+        "authority": 0.5,
+        "structural": 0.25,
+        "temporal": 0.0,
+        "completeness": 0.0,
+        "topical": 0.25
+      },
+      "expand": []
+    },
+
+    "literal": {
+      "description": "No metadata prior at all: the arms' own fused order, unmodified. For a question where the wording is the answer, or to see what the retrieval layer alone believes.",
+      "fitted": {
+        "recall_at_5": 0.5,
+        "recall_at_10": 0.523,
+        "mrr": 0.36,
+        "n": 44,
+        "harness": "dev_tools/eval/e2e.py",
+        "note": "The same binary with factor_weights zeroed, measured alongside `balanced` (docs/SCORING.md §9). Worse on all three metrics on THIS eval set, and it is the honest baseline: every point `balanced` claims is the difference between these two rows. Shares `balanced`'s staleness."
+      },
+      "factors": {
+        "relevance_floor": 0.0,
+        "authority": 0.0,
+        "structural": 0.0,
+        "temporal": 0.0,
+        "completeness": 0.0,
+        "topical": 0.0
+      },
+      "expand": []
+    },
+
+    "balanced_expanded": {
+      "description": "EXPERIMENTAL. `balanced`, plus sibling clauses of the regulations that ranked. For when the right law is clearly being found but the wrong clause of it is coming back.",
+      "factors": {
+        "relevance_floor": 0.3,
+        "authority": 0.5,
+        "structural": 0.25,
+        "temporal": 0.0,
+        "completeness": 0.0,
+        "topical": 0.25
+      },
+      "expand": ["siblings"]
+    }
+  }
+}

@@ -85,6 +85,20 @@ pub struct Config {
     /// ! `Weights::OFF` is exactly the identity on the fused order, so this
     /// layer can be disabled in production without a rebuild.
     pub factor_weights: engine::Weights,
+    /// What the corpus's own labels mean · the tables `authority`,
+    /// `structural` and the term splitter read (`engine::Vocabulary`).
+    ///
+    /// ! Data, ✗ constants. Vera is not a legal engine; Indonesian regulation
+    /// is the corpus it was first built for, and these tables belong beside the
+    /// corpus for the same reason the model width does (invariant 2).
+    pub vocabulary: engine::Vocabulary,
+    /// Every algorithm a caller may name (`contract::algorithms`).
+    ///
+    /// ! Held here rather than looked up per request. It is validated once, at
+    /// startup, like every other limit (invariant 12) — an algorithm whose
+    /// prior out-spans the pool must kill the process, ✗ fail the one request
+    /// that happens to name it.
+    pub algorithms: contract::Registry,
 }
 
 impl Default for Config {
@@ -149,6 +163,13 @@ impl Default for Config {
             // Fitted, ✗ chosen: dev_tools/eval/fit_factors.py, +7.5 points
             // leave-one-out over the text arm.
             factor_weights: engine::Weights::FITTED,
+            // ! Derived from `factor_weights` immediately above, ✗ a second
+            // copy of the fitted numbers. Two literals that must agree are two
+            // literals that will eventually disagree.
+            vocabulary: engine::Vocabulary::id_regulation(),
+            algorithms: contract::Registry::builtin(weights_to_contract(
+                &engine::Weights::FITTED,
+            )),
         }
     }
 }
@@ -398,6 +419,13 @@ impl Pipeline {
         })
     }
 
+    /// The algorithms this engine will accept, for the tool schema and for
+    /// `list_algorithms`.
+    #[must_use]
+    pub const fn algorithms(&self) -> &contract::Registry {
+        &self.cfg.algorithms
+    }
+
     /// The server's ceilings · what a caller may narrow toward, never past.
     fn ceilings(&self) -> contract::Ceilings {
         contract::Ceilings {
@@ -422,10 +450,7 @@ impl Pipeline {
         query: &str,
         opts: &contract::SearchOptions,
     ) -> Result<SearchResponse, PipelineError> {
-        let applied = opts.resolve(
-            self.ceilings(),
-            weights_to_contract(&self.cfg.factor_weights),
-        );
+        let applied = opts.resolve(self.ceilings(), &self.cfg.algorithms)?;
         let mut progress = Vec::new();
         for line in &applied.clamped {
             progress.push(format!("clamped: {line}"));
@@ -514,7 +539,8 @@ impl Pipeline {
         // ! The floor is skipped for a named regulation, exactly as the
         // domain gate is. See `apply_factors`.
         let apply_floor = exact_matches.is_empty();
-        Self::apply_factors(&mut ranked, query, &applied, apply_floor, &mut progress);
+        let vocab = &self.cfg.vocabulary;
+        Self::apply_factors(&mut ranked, query, &applied, apply_floor, &mut progress, vocab);
 
         // ! Expansion runs AFTER ranking, ✗ before. Its seeds are the
         // candidates that actually ranked; walking the whole pool would be a
@@ -593,13 +619,17 @@ impl Pipeline {
         apply_floor: bool,
         progress: &mut Vec<String>,
     ) -> Result<(), PipelineError> {
-        let floor = self.cfg.factor_weights.relevance_floor;
+        // ! The REQUEST's floor, ✗ the server's. Admission and rescoring have
+        // to use one threshold: an algorithm declaring 0.5 that admitted its
+        // siblings at the server's 0.3 would let in candidates its own rescore
+        // then drops, paying for a walk whose results cannot survive it.
+        let floor = applied.factor_weights.relevance_floor;
         let admitted = self.admit_siblings(query, ranked, floor, progress).await?;
         if admitted.is_empty() {
             return Ok(());
         }
         ranked.extend(admitted);
-        Self::apply_factors(ranked, query, applied, apply_floor, progress);
+        Self::apply_factors(ranked, query, applied, apply_floor, progress, &self.cfg.vocabulary);
         Ok(())
     }
 
@@ -758,13 +788,14 @@ impl Pipeline {
         applied: &contract::AppliedOptions,
         apply_floor: bool,
         progress: &mut Vec<String>,
+        vocab: &engine::Vocabulary,
     ) {
         let before = ranked.first().map(|c| c.row.id.clone());
         // ! `content_terms`, ✗ `bm25::tokenize`. The relevance floor was fitted
         // against the former — words longer than three characters with function
         // words removed — and the two tokenisers disagree on short words, so
         // the wrong one applies a threshold nothing measured.
-        let terms = engine::factors::content_terms(query);
+        let terms = engine::factors::content_terms(query, vocab);
         let term_refs: Vec<&str> = terms.iter().map(String::as_str).collect();
 
         let scored_len_before = ranked.len();
@@ -778,7 +809,7 @@ impl Pipeline {
             weights.relevance_floor = 0.0;
             progress.push("relevance floor skipped · the query names a regulation".into());
         }
-        engine::rescore(&mut scored, &weights, &term_refs);
+        engine::rescore(&mut scored, &weights, &term_refs, vocab);
 
         let kept = scored.len();
         let order: Vec<usize> = scored.iter().map(|(_, _, i)| *i).collect();
@@ -1144,6 +1175,14 @@ pub enum PipelineError {
 
     #[error(transparent)]
     Embed(#[from] embed::EmbedError),
+
+    /// The caller named an algorithm this engine does not serve.
+    ///
+    /// ! A request error, ✗ a startup one: the registry was valid, the name was
+    /// not. It carries the full list so the `hint` can tell the agent what it
+    /// may name instead.
+    #[error(transparent)]
+    Options(#[from] contract::ResolveError),
 }
 
 /// The most precise locator ingest recorded · never a placeholder.

@@ -14,6 +14,7 @@ mod identifier;
 mod pipeline;
 mod protocol;
 mod tools;
+mod vocabulary;
 
 use std::sync::Arc;
 
@@ -48,6 +49,31 @@ enum ConfigError {
         value: String,
         kind: &'static str,
     },
+    /// `VOCABULARY_PATH` names a file that cannot be read, or one whose
+    /// contents the engine will not score with.
+    #[error("VOCABULARY_PATH={path} · {why}")]
+    Vocabulary { path: String, why: String },
+    /// A factor carries a weight the loaded vocabulary cannot evaluate.
+    ///
+    /// ! Fatal, and this is the whole point of declaring a vocabulary. A
+    /// weight of 0.5 on a factor whose table is empty is not a small effect,
+    /// it is NO effect -- and it is indistinguishable from a weight that was
+    /// measured and found not to help. This project already shipped that bug
+    /// once, with `topical` fitted at 0.25 against a column the engine never
+    /// selected.
+    #[error(
+        "factor(s) {factors} carry a non-zero weight, but the loaded scoring vocabulary          declares no table for them · set FACTOR_{upper}=0, or declare the table in          VOCABULARY_PATH. A weight that cannot act is not a small effect, it is none."
+    )]
+    FactorWithoutVocabulary { factors: String, upper: String },
+    /// `ALGORITHMS_PATH` names a file that cannot be read, or one whose contents
+    /// are not a registry this engine will serve.
+    ///
+    /// ! Fatal, like every other configuration fault. An algorithm whose prior
+    /// out-spans the candidate pool ranks on metadata alone (invariant 9), and
+    /// the request that would reveal it is whichever one happens to name it —
+    /// possibly weeks later. Refuse at startup, where a rollout can still see.
+    #[error("ALGORITHMS_PATH={path} · {why}")]
+    Algorithms { path: String, why: String },
 }
 
 /// A variable that must be set. There is no sensible default for any of these:
@@ -74,6 +100,74 @@ fn parsed<T: std::str::FromStr>(
             kind,
         }),
     }
+}
+
+/// The corpus's scoring vocabulary · a file when `VOCABULARY_PATH` names one,
+/// otherwise the tables of the corpus this engine was first built for.
+///
+/// ! Unset is supported and **reported**. An operator serving a corpus that is
+/// not Indonesian regulation gets a line at startup saying which vocabulary is
+/// in use, because the failure it prevents is silent: every factor evaluates
+/// neutrally and the weights do nothing.
+fn load_vocabulary() -> Result<engine::Vocabulary, ConfigError> {
+    let Some(path) = std::env::var("VOCABULARY_PATH")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+    else {
+        return Ok(engine::Vocabulary::id_regulation());
+    };
+    let path = path.trim();
+    let body = std::fs::read_to_string(path).map_err(|e| ConfigError::Vocabulary {
+        path: path.to_owned(),
+        why: e.to_string(),
+    })?;
+    vocabulary::VocabularyFile::load(&body).map_err(|e| ConfigError::Vocabulary {
+        path: path.to_owned(),
+        why: e.to_string(),
+    })
+}
+
+/// The algorithm registry · a file when `ALGORITHMS_PATH` names one, otherwise
+/// exactly today's behaviour under the name every caller already gets.
+///
+/// ! Unset is a supported deployment, ✗ a degraded one. A corpus with one
+/// fitted way to rank needs no file, and requiring one would mean every
+/// deployment carries a copy of numbers the binary already has.
+fn load_algorithms(env_weights: &engine::Weights) -> Result<contract::Registry, ConfigError> {
+    let fallback = contract::Registry::builtin(contract::FactorWeights {
+        relevance_floor: env_weights.relevance_floor,
+        authority: env_weights.authority,
+        structural: env_weights.structural,
+        temporal: env_weights.temporal,
+        completeness: env_weights.completeness,
+        topical: env_weights.topical,
+    });
+    let Some(path) = std::env::var("ALGORITHMS_PATH")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+    else {
+        // ! Validated too. `builtin` is assembled from the FACTOR_* variables,
+        // so an operator can push the prior bound past MAX_PRIOR_BOUND without
+        // ever writing a registry file -- and `.env.example` itself shipped
+        // values summing to 2.75x while this was unchecked. A rule enforced on
+        // one of two construction paths is not enforced.
+        fallback.validate().map_err(|e| ConfigError::Algorithms {
+            path: "<FACTOR_* environment>".to_owned(),
+            why: e.to_string(),
+        })?;
+        return Ok(fallback);
+    };
+    let path = path.trim();
+    let body = std::fs::read_to_string(path).map_err(|e| ConfigError::Algorithms {
+        path: path.to_owned(),
+        why: e.to_string(),
+    })?;
+    // ! `parse` validates. A Registry that exists has been checked, so nothing
+    // downstream re-checks it and nothing downstream can forget to.
+    contract::Registry::parse(&body).map_err(|e| ConfigError::Algorithms {
+        path: path.to_owned(),
+        why: e.to_string(),
+    })
 }
 
 /// Which transport the process serves on.
@@ -118,7 +212,7 @@ struct Settings {
 impl Settings {
     fn from_env() -> Result<Self, ConfigError> {
         let d = Config::default();
-        let s = Self {
+        let mut s = Self {
             // ! No defaults. Each names something the process cannot guess, and
             // a wrong guess fails silently rather than loudly: the wrong
             // vocabulary compares unrelated sparse dimensions, and the wrong
@@ -204,8 +298,16 @@ impl Settings {
                     )?,
                     topical: parsed("FACTOR_TOPICAL", "number", d.factor_weights.topical)?,
                 },
+                vocabulary: load_vocabulary()?,
+                // Replaced below, once the env weights above are known.
+                algorithms: d.algorithms.clone(),
             },
         };
+        // ! After the struct, because the fallback registry is built FROM the
+        // weights the environment just resolved. Reading ALGORITHMS_PATH first
+        // would make `balanced` mean the compiled-in fit even where the
+        // operator had overridden FACTOR_AUTHORITY.
+        s.pipeline.algorithms = load_algorithms(&s.pipeline.factor_weights)?;
         s.validate()?;
         Ok(s)
     }
@@ -249,6 +351,36 @@ impl Settings {
                 kind: "pool at least as large as TOP_K",
             });
         }
+        // ! A weight the vocabulary cannot evaluate. Checked against EVERY
+        // algorithm, not just the server default: an operator who declares a
+        // vocabulary without a structural ladder and an algorithm that leans on
+        // `structural` has written two files that disagree, and the request
+        // that reveals it is whichever one names that algorithm.
+        let mut unusable: Vec<&'static str> = Vec::new();
+        for algo in self.pipeline.algorithms.algorithms.values() {
+            for f in self
+                .pipeline
+                .vocabulary
+                .missing_for(&engine::Weights {
+                    relevance_floor: algo.factors.relevance_floor,
+                    authority: algo.factors.authority,
+                    structural: algo.factors.structural,
+                    temporal: algo.factors.temporal,
+                    completeness: algo.factors.completeness,
+                    topical: algo.factors.topical,
+                })
+            {
+                if !unusable.contains(&f) {
+                    unusable.push(f);
+                }
+            }
+        }
+        if !unusable.is_empty() {
+            return Err(ConfigError::FactorWithoutVocabulary {
+                factors: unusable.join(", "),
+                upper: unusable.join("/FACTOR_").to_uppercase(),
+            });
+        }
         // ! All three weights at zero fuses nothing and returns nothing, which
         // looks exactly like a corpus with no matches.
         let weights =
@@ -287,6 +419,29 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         s.bm25_vocab.display(),
         s.transport,
         s.statement_timeout
+    );
+
+    // ! Which scoring vocabulary is in use, always. `authority` and
+    // `structural` read tables that describe ONE corpus; on a corpus they do
+    // not describe, both evaluate neutrally for every row and the operator's
+    // weights do nothing at all. That failure is silent, so the line is not.
+    let vocab = &s.pipeline.vocabulary;
+    log!(
+        "scoring vocabulary \u{b7} {} \u{b7} {} authority labels, {} structural rules, {} stopwords",
+        if vocab.is_builtin() {
+            "BUILT-IN id_regulation (set VOCABULARY_PATH for your own corpus)"
+        } else {
+            "declared by VOCABULARY_PATH"
+        },
+        vocab.authority.len(),
+        vocab.structural.len(),
+        vocab.stopwords.len()
+    );
+    log!(
+        "algorithms \u{b7} {} loaded, {} offered to the agent \u{b7} default `{}`",
+        s.pipeline.algorithms.algorithms.len(),
+        s.pipeline.algorithms.offered().len(),
+        contract::DEFAULT_ALGORITHM
     );
 
     // +2: the pool serves `max_concurrency` searches plus the startup canary
@@ -438,7 +593,7 @@ impl Server {
             }
             protocol::Route::ToolsList => Some(protocol::ok(
                 id.as_ref(),
-                &json!({ "tools": tools::definitions() }),
+                &json!({ "tools": tools::definitions(self.pipe.algorithms()) }),
             )),
             protocol::Route::ToolsCall(params) => {
                 // ! The permit is taken BEFORE dispatch and dropped after, so
@@ -489,6 +644,7 @@ async fn dispatch(pipe: &Pipeline, params: &Value, limits: Limits) -> Value {
 
     match name {
         "list_domains" => list_domains(pipe),
+        "list_algorithms" => list_algorithms(pipe),
         "search_knowledge" => search_knowledge(pipe, &args).await,
         "read_chunk" => read_chunk(pipe, &args, limits).await,
         "get_provenance" => get_provenance(pipe, &args, limits).await,
@@ -514,6 +670,44 @@ fn list_domains(pipe: &Pipeline) -> Value {
             ),
         }],
         "progress": ["listed 1 domain"],
+        "token_estimate": 0,
+    }))
+}
+
+/// What each algorithm is for, and what it scored.
+///
+/// ! Lists the **unfitted** ones too, marked. `tools/list` offers only fitted
+/// names because an offer is a recommendation; this is introspection, and
+/// hiding an algorithm the engine will accept would leave a caller unable to
+/// find out why a name it was told about works.
+fn list_algorithms(pipe: &Pipeline) -> Value {
+    let reg = pipe.algorithms();
+    let rows: Vec<Value> = reg
+        .algorithms
+        .iter()
+        .map(|(name, a)| {
+            json!({
+                "name": name,
+                "description": a.description,
+                // The bound is the one number a caller can act on: it says how
+                // far metadata may move a result away from the arms' own order.
+                "prior_bound": a.prior_bound(),
+                "relevance_floor": a.factors.relevance_floor,
+                "expand": a.expand,
+                "fitted": a.fitted,
+                // ! Stated per row, ✗ inferred from `fitted` being null. An
+                // agent should not have to know that rule to read this.
+                "experimental": !a.is_fitted(),
+            })
+        })
+        .collect();
+    let n = rows.len();
+    tools::sized(json!({
+        "success": true,
+        "op": "list_algorithms",
+        "default": contract::DEFAULT_ALGORITHM,
+        "algorithms": rows,
+        "progress": [format!("listed {n} algorithms")],
         "token_estimate": 0,
     }))
 }

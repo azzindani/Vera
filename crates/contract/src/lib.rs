@@ -9,15 +9,19 @@
 //! Field names here are the **wire format** an agent parses, fixed by
 //! `docs/OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
 
+pub mod algorithms;
 pub mod contract;
 pub mod options;
 
+pub use algorithms::{
+    Algorithm, DEFAULT_ALGORITHM, Fitted, MAX_PRIOR_BOUND, Registry, RegistryError,
+};
 pub use contract::{
     Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
     Source, SummaryPayload, citation_block,
 };
 pub use options::{
-    AppliedOptions, Ceilings, Expansion, FactorWeights, Mode, Profile, SearchOptions,
+    AppliedOptions, Ceilings, Expansion, FactorWeights, Mode, ResolveError, SearchOptions,
 };
 
 /// A stored chunk: body plus the provenance captured at ingest.
