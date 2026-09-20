@@ -129,6 +129,9 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
    canary re-embeds a stored chunk and refuses to serve if the space does not reproduce.
 3. **Routing accelerates; the global arms guarantee.** Semantic routing may miss, so the
    sparse and text arms scan globally and an exact identifier bypasses routing entirely.
+   Measured at 14× the corpus: the dense arm goes 46 → 57 ms while sparse goes 150 →
+   6,282 ms. Routing is proven; **the global arms are what does not scale**, and that is
+   the accepted cost of the guarantee, ✗ an oversight (`docs/HARDWARE.md` §6).
 4. **OOM is impossible by construction, and the reason is measured.** The engine's
    resident set is **~13 MB, flat** (14/12/14 MB at `CLUSTER_BATCH` 1/2/5) because it
    never materialises the corpus: every arm returns `(id, score)` rows under a `LIMIT`,

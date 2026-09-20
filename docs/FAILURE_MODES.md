@@ -92,6 +92,26 @@ guarantee nobody tests.
 
 ---
 
+## 5b. Extra cores buy nothing, silently
+
+`search_arms` (`crates/mcp/src/pipeline.rs`) awaits the three arms one after
+another. They are independent read-only queries with no data dependency, so a
+box with spare cores runs one of them at a time and the other cores idle. Nothing
+reports this; the server is simply slower than its hardware.
+
+It costs little at 355K, where the arms are 649 ms combined. At 5M they are
+12,853 ms and sparse and text are within 3% of each other, so `sum` against `max`
+is **roughly half the total** (`HARDWARE.md` §6).
+
+**Not yet stopped.** `tokio::try_join!` is the change. It is left undone
+deliberately rather than forgotten: three concurrent statements per request times
+`MAX_CONCURRENCY` multiplies the load on Postgres, which on the 2-core target
+profile is the contended process. It needs the pool size, `max_connections` and
+the concurrency ceiling moved together, and measuring — which is exactly the
+shape of `CLAUDE.md` §5.7, design for the small box and let a bigger one benefit.
+
+---
+
 ## 6. Peak RAM as a function of probe width
 
 Loading all probed clusters at once makes peak memory scale with `CLUSTERS_PROBED` — a

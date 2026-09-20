@@ -313,40 +313,119 @@ in any case (`README.md`).
 
 ---
 
-## 6. Scaling
+## 6. Scaling · measured at 14x, ✗ extrapolated
 
-What grows with the corpus, and what does not:
+The corpus was replicated to **5.0M indexable rows / 23 GB** in a separate
+database and every arm timed against it on the same hardware
+(`dev_tools/eval/scale_probe.py --factor 14`, then
+`dev_tools/eval/arm_latency.py`). 2 cores, Postgres capped at 6,336 MB — an 8 GB
+box after the OS, embedder and engine. 12 queries, median of 3 after a warm run.
 
-| | scales with n | why |
+| arm | 355,621 rows | 4,978,694 rows | ratio | |
+|---|---|---|---|---|
+| layer-2 routing | 6 ms | 85 ms | 14.2× | linear in `k`, and `k ∝ n` |
+| **dense** | 46 ms | **57 ms** | **1.24×** | **flat — routing works** |
+| sparse | 150 ms | 6,282 ms | **41.9×** | worse than linear |
+| text | 446 ms | 6,428 ms | 14.4× | linear |
+| **total (sequential)** | **649 ms** | **12,853 ms** | 19.8× | |
+
+**The central claim is confirmed.** 14× the corpus moved the dense arm by 11 ms.
+Layers 1-3 do what `ARCHITECTURE.md` §2 says they do, and it is no longer an
+argument from how the SQL is written.
+
+! **Sparse is worse than this document used to predict.** It was described as
+"linear · global scan", which implied 14× — it is **41.9×**. At 355K the `sparse`
+column (115 MB) sits in cache; at 5M it is 1.6 GB and is read from disk on every
+query, so it pays linear growth *plus* a cache-miss penalty. Any extrapolation
+that assumed linearity for this arm was optimistic by ~3×.
+
+! **Routing is not free at scale either.** `k ∝ n` means 2,478 centroids at 5M
+and ~50,000 at 100M; the scan over them is linear in `k`. 85 ms is nothing, and
+1.7 s at 100M would not be. Hierarchical routing — centroids over centroids —
+is the fix, and is neither designed nor built.
+
+### What this predicts for 10M
+
+Doubling from 5M, where both global arms are already out of cache and their
+marginal cost is disk-bandwidth-bound, so linear should hold from here:
+
+| | 10M, 8 GB box |
+|---|---|
+| sequential, as `pipeline.rs` runs the arms today | **~26 s** |
+| with the arms run concurrently | **~13 s** |
+| disk | ~46 GB |
+
+! **Extrapolated, ✗ measured.** 5M is measured; 10M is this table doubled. The
+assumption is that sparse stops super-scaling once it is fully out of cache,
+which is plausible and unverified. Run `scale_probe.py --factor 28` to settle it.
+
+! **The arms run sequentially** (`pipeline.rs`, `search_arms`) — three awaits in
+a row over three independent read-only queries. Sparse and text are within 3% of
+each other and together are 99% of the time, so `tokio::try_join!` would take the
+total from `sum` to `max`: roughly half. That is the largest single latency win
+available at scale, and it is the reason a 4-core box currently buys almost
+nothing per query.
+
+### What grows with the corpus, and what does not
+
+| | scales with n | measured |
 |---|---|---|
-| engine RAM | **no** | `CLUSTER_BATCH` clusters at a time, and clusters are held near 2,000 rows whatever `n` is |
-| dense arm latency | **no** | routing probes 5 clusters regardless of corpus size |
-| sparse arm latency | yes | global scan |
-| text arm latency | yes | global scan |
-| disk | yes | ~6.8 KB per chunk |
+| engine RAM | **no** | ~13 MB flat (§2) |
+| dense arm latency | **no** | 1.24× for 14× rows |
+| layer-2 routing | yes, linear in `k` | 14.2× |
+| sparse arm latency | **worse than linear** | 41.9× |
+| text arm latency | yes, linear | 14.4× |
+| disk | yes | ~4.8 KB per chunk |
 
-! The global arms are the wall, not memory. At 10 M chunks the text arm is
-~28× today's row count; RUM bought roughly a 2× head start, not immunity. The
-fix when it arrives is the one already applied to dense — partition it — at a
-recall cost that has not been measured.
+! The global arms are the wall, and now the wall has a number. The fix is the one
+already applied to dense — make them touch only what is relevant — at a recall
+cost that is still unmeasured. The text arm has the right structure already (RUM)
+and asks it badly: OR semantics matches a median of 62% of the corpus (§3). The
+sparse arm has **no index at all** and is a sequential scan of a `sparsevec`
+column; giving BM25 a posting-list index is a schema change, so it starts in
+Ravel (`README.md`).
 
-The dense row is the design's central claim and deserves the argument spelled
-out. Cluster count is `max(2, n // rows_per_cluster)`, target 2,000
-(`dev_tools/cluster_maint/kmeans.py:117`), so `k` grows with `n` and cluster
-*size* does not. A corpus ten times larger yields ten times as many clusters of
-roughly the same size; the probe still visits five of them. Ten times the corpus
-is ten times the disk, the same resident set, and the same dense latency. This
-is precisely what a global ANN index cannot offer: an HNSW graph is one
-structure over all `n` rows and has to be resident to beat a scan, which is why
-`ARCHITECTURE.md` §3 refuses one.
+! The replicated corpus is valid for **latency only**. Every answer chunk exists
+14 times and the centroids are copies, so recall and routing accuracy from it are
+meaningless — `scale_probe.py` says so in its own docstring.
 
-! Measured at 355,621 chunks, ✗ at 10 M. Two things are measured here — that `k`
-tracks `n` by construction, and that dense latency tracks probe width rather
-than corpus size (§3). What is **not** measured is whether the size skew holds:
-the target is 2,000 rows and the largest cluster is 11,448, and the worst-case
-budget above is built from that 5.6× ratio rather than from the mean. If a
-larger corpus clusters less evenly, the ratio grows and the bound grows with it.
-`dev_tools/cluster_maint/routing_recall.py` is what would surface it.
+---
+
+## 6b. Routing against a dedicated vector index
+
+The design's central bet — route to a few clusters rather than carry a global
+index — had never been measured against anyone. ParadeDB's `pg_search` builds a
+vector index alongside its BM25 one, so the same corpus and the same 39 labelled
+queries can answer it (`dev_tools/eval/pdb_vector_compare.py`), both databases
+capped at 6,336 MB on 2 cores.
+
+| | p50 | @5 | @20 | @50 | index |
+|---|---|---|---|---|---|
+| **Vera, routed (probe 5)** | **49 ms** | 64.1% | 71.8% | 79.5% | **none** |
+| Vera, flat scan | 948 ms | 69.2% | 82.1% | 89.7% | none |
+| ParadeDB IVF | 2,409 ms | 69.2% | 82.1% | 89.7% | 2,621 MB |
+
+**It is the same architecture.** Their build log says `ivf_build … centroids=910
+vectors=84945` and `paradedb.vector_info` reports type `ivf` — centroids plus
+posting lists, partitioned ~20× finer than Vera's (≈97 vectors per centroid
+against ≈2,000).
+
+**Their index is slower than no index.** 2,409 ms against a 948 ms flat scan for
+*identical* recall. On this hardware it is not competitive with brute force.
+
+**Routing is 49× faster and 10 points worse.** That is the trade this design
+makes, stated plainly: 2.8% of the corpus touched, −10.3 points @20 against the
+flat ceiling. It is an operating point, ✗ a defeat — and §6c is about whether it
+is the right one.
+
+! Their opclasses cover `vector` only — there is no `halfvec` entry in
+`pg_opclass`. At 1024 dims that is 1,392 MB against Vera's 696 MB, and the gap
+**compounds with width**: at the `halfvec(4096)` production target named in
+`dev_tools/pre_embed/schema.sql` it is 5.6 GB against 2.8 GB, with an index
+scaling past the whole 6,336 MB Postgres budget. The comparison above is at the
+width most favourable to them.
+
+! Measured on 39 queries. A 2.6% step is one query.
 
 ---
 
