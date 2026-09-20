@@ -1,4 +1,4 @@
-# Postgres + pgvector + RUM.
+# Postgres + pgvector + RUM + pg_search.
 #
 # ! RUM is built from source because no published image carries it. Without it
 # the engine still runs — SearchOps::has_rum() probes and falls back to ts_rank
@@ -48,3 +48,33 @@ COPY --from=rum-builder /usr/lib/postgresql/${PG_MAJOR}/lib/rum.so \
                         /usr/lib/postgresql/${PG_MAJOR}/lib/
 COPY --from=rum-builder /usr/share/postgresql/${PG_MAJOR}/extension/rum* \
                         /usr/share/postgresql/${PG_MAJOR}/extension/
+
+# pg_search · Tantivy as an index type, for the lexical arm (migration 0004).
+#
+# ! A .deb, ✗ a source build. pg_search is Rust on pgrx; compiling it needs a
+# toolchain and tens of minutes, and ParadeDB publish a package built for this
+# exact base — pgvector/pgvector:pg16 is bookworm.
+#
+# ! Pinned, like RUM above and for the same reason: a scorer that changes
+# quietly changes every ranking this corpus produces.
+#
+# ! Not fatal if it is absent. SearchOps::has_bm25() probes and falls back to
+# the sparsevec scan, so the arm still answers — measured 6,282 ms instead of
+# 1,858 ms at 5M (docs/HARDWARE.md §6).
+ARG PG_SEARCH_REF=0.25.9
+ARG PG_SEARCH_DEB=postgresql-16-pg-search_0.25.9-1PARADEDB-bookworm_amd64.deb
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl ca-certificates; \
+    curl -fsSL -o /tmp/pg_search.deb \
+      "https://github.com/paradedb/paradedb/releases/download/v${PG_SEARCH_REF}/${PG_SEARCH_DEB}"; \
+    apt-get install -y --no-install-recommends /tmp/pg_search.deb; \
+    rm -f /tmp/pg_search.deb; \
+    apt-get purge -y --auto-remove curl; \
+    rm -rf /var/lib/apt/lists/*
+
+# ! pg_search must be preloaded. Without this, CREATE EXTENSION in migration
+# 0004 fails with a message about shared_preload_libraries, which reads like a
+# bug rather than a configuration line nobody added.
+RUN echo "shared_preload_libraries = 'pg_search'" \
+      >> /usr/share/postgresql/postgresql.conf.sample

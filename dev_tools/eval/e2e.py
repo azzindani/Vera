@@ -192,8 +192,16 @@ def main():
         return os.environ.get(key, default)
 
     print(f"through {http or EXE}")
-    print(f"  weights  dense={w('DENSE_WEIGHT', '0.0')} "
-          f"sparse={w('SPARSE_WEIGHT', '1.0')} text={w('TEXT_WEIGHT', '1.0')}")
+    # ! In HTTP mode the weights belong to the SERVER, ✗ to this process, and
+    # nothing here can see them: `HttpServer.call` sends method and params only.
+    # Printing this shell's env next to a score measured by another process
+    # invites reading `dense=0.0` off a run where the server used 2.0 — which is
+    # exactly the misreading that the dense-arm defect survived on for weeks.
+    if http:
+        print("  weights  set on the server · not visible from here")
+    else:
+        print(f"  weights  dense={w('DENSE_WEIGHT', '0.0')} "
+              f"sparse={w('SPARSE_WEIGHT', '1.0')} text={w('TEXT_WEIGHT', '1.0')}")
     print(f"  n={n}   Recall@5 {100 * hit5 / n:.1f}%   "
           f"Recall@10 {100 * hit10 / n:.1f}%   MRR {sum(rr) / len(rr):.3f}")
     print(f"  gate     real refused {refused_real}/{n} · "

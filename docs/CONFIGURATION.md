@@ -191,6 +191,28 @@ only `e2e.py` scores what ships.
 
 ---
 
+## 5c. The lexical arm has two backends
+
+| | with `pg_search` | without |
+|---|---|---|
+| mechanism | Tantivy BM25, indexed | `sparsevec` inner product, **no index** |
+| 355K | 86 ms | 170 ms |
+| 5.1M | 1,858 ms | 6,282 ms |
+| needs | migration 0004 + the extension | `BM25_VOCAB` |
+
+Chosen at runtime by `SearchOps::has_bm25`, probed once and cached. Nothing is
+configured: an engine pointed at a database with the index uses it.
+
+! `BM25_VOCAB` stays **required**. It feeds the fallback, and a deployment that
+loses `pg_search` — a stock image, a volume restored elsewhere — must still
+answer. This is the same arrangement as GIN backing RUM (`HARDWARE.md` §5).
+
+! The vocabulary must still be the one the corpus was built with. The fallback
+compares vocabulary **positions**, so a mismatched file scores unrelated
+dimensions and returns plausible nonsense rather than failing.
+
+---
+
 ## 6. Gates
 
 | Variable | Default | Effect |

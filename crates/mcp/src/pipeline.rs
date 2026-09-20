@@ -362,6 +362,7 @@ impl Pipeline {
             let sparse = self
                 .ops
                 .sparse(
+                    query,
                     &sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim()),
                     i64::try_from(self.cfg.gate_sample).unwrap_or(i64::MAX),
                 )
@@ -566,6 +567,7 @@ impl Pipeline {
         let sparse = self
             .ops
             .sparse(
+                query,
                 &sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim()),
                 self.cfg.per_arm_k,
             )

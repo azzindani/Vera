@@ -77,6 +77,10 @@ pub struct SearchOps {
     /// Whether this corpus has the RUM index. Probed once, on first text
     /// search, then cached for the life of the process.
     rum: std::sync::OnceLock<bool>,
+    /// Whether this corpus has the `pg_search` BM25 index (migration 0004).
+    /// Same contract as `rum`: probed once, cached, and its absence costs
+    /// latency rather than answers.
+    bm25: std::sync::OnceLock<bool>,
 }
 
 impl SearchOps {
@@ -85,6 +89,7 @@ impl SearchOps {
         Self {
             pool,
             rum: std::sync::OnceLock::new(),
+            bm25: std::sync::OnceLock::new(),
         }
     }
 
@@ -109,6 +114,36 @@ impl SearchOps {
             .await?;
         let found: bool = row.get(0);
         let _ = self.rum.set(found);
+        Ok(found)
+    }
+
+    /// Whether `pg_search` and its index are present (migration 0004).
+    ///
+    /// ! The same optional-extension contract as `has_rum`, and for the same
+    /// reason: `pg_search` is not in stock Postgres, so CI and a fresh clone run
+    /// without it. Both paths are BM25 over the same text and return
+    /// substantially the same rows — measured 84.4% Jaccard at depth 100, and
+    /// fused recall identical at @20 and @50 (`dev_tools/eval/fused_bm25.py`) —
+    /// so falling back costs latency, ✗ answers.
+    ///
+    /// ! It costs a LOT of latency: 1,858 ms against 6,282 ms at 5M rows, and
+    /// the fallback is the worst-scaling arm in the system (41.9× for 14× the
+    /// rows, `docs/HARDWARE.md` §6). This probe is why that is a deployment
+    /// choice rather than a code change.
+    async fn has_bm25(&self) -> Result<bool, StoreError> {
+        if let Some(v) = self.bm25.get() {
+            return Ok(*v);
+        }
+        let c = self.client().await?;
+        let row = c
+            .query_one(
+                "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_search')
+                    AND EXISTS (SELECT 1 FROM pg_class WHERE relname = 'chunks_bm25')",
+                &[],
+            )
+            .await?;
+        let found: bool = row.get(0);
+        let _ = self.bm25.set(found);
         Ok(found)
     }
 
@@ -216,16 +251,51 @@ impl SearchOps {
         self.dense_in_clusters(&[cluster_id], query, k).await
     }
 
-    /// Sparse BM25 top-k over the whole corpus.
+    /// BM25 top-k over the whole corpus · the lexical arm.
     ///
-    /// Inner product, ✗ cosine: BM25 weights already encode length
-    /// normalisation and cosine would undo it. pgvector's `<#>` returns the
-    /// negative inner product, so the sign is flipped back here.
+    /// Two implementations of one arm, chosen by what the database has:
+    ///
+    /// - **`pg_search`** (migration 0004): Tantivy's BM25 served from a real
+    ///   index. Posting lists, ✗ a scan.
+    /// - **`sparsevec`**: BM25 weights precomputed by the corpus compiler and
+    ///   compared with pgvector's `<#>`. No index exists for this operator, so
+    ///   it walks every row.
+    ///
+    /// Inner product, ✗ cosine, on the fallback path: BM25 weights already
+    /// encode length normalisation and cosine would undo it. pgvector's `<#>`
+    /// returns the negative inner product, so the sign is flipped back.
+    ///
+    /// ! Both arguments are always supplied because the choice is made here,
+    /// ✗ by the caller. `literal` is cheap to build from a short query and is
+    /// discarded unused when the index is present; making the caller probe
+    /// first would leak a storage detail into the pipeline.
     ///
     /// # Errors
     /// Database failure.
-    pub async fn sparse(&self, literal: &str, k: i64) -> Result<Vec<Scored>, StoreError> {
+    pub async fn sparse(
+        &self,
+        query: &str,
+        literal: &str,
+        k: i64,
+    ) -> Result<Vec<Scored>, StoreError> {
         let c = self.client().await?;
+        if self.has_bm25().await? {
+            // ! `id @@@ ...` with `key_field = 'id'`, and `paradedb.score` takes
+            // that same column. Scoring a different column returns NULL rather
+            // than failing, which would rank everything equally and look like a
+            // bad corpus.
+            let rows = c
+                .query(
+                    "SELECT id, paradedb.score(id) AS score
+                     FROM chunks
+                     WHERE indexable AND id @@@ paradedb.match('body', $1)
+                     ORDER BY paradedb.score(id) DESC
+                     LIMIT $2",
+                    &[&query, &(k * OVERFETCH)],
+                )
+                .await?;
+            return Ok(settle(rows.iter().map(scored_f32).collect(), k));
+        }
         let rows = c
             .query(
                 "SELECT id, -(sparse <#> $1::text::sparsevec) AS score

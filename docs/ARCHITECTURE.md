@@ -190,6 +190,18 @@ side has not been measured.
 | sparse | `sparsevec` BM25 | global | term overlap, weighted by IDF |
 | text | `tsvector`, ordered by a RUM index | global | exact wording, phrases |
 
+! The **sparse arm has two implementations**, chosen by what the database has.
+With `pg_search` and migration 0004 it is Tantivy's BM25 served from an index;
+without them it is the original `sparsevec` scan, which has no index and walks
+every row. `SearchOps::has_bm25` probes once and caches, the same contract RUM
+has in the text arm.
+
+Measured on this corpus: **86 ms against 170 ms at 355K, and 1,858 ms against
+6,282 ms at 5M** — the fallback is the worst-scaling thing in the system
+(`HARDWARE.md` §6). Fused recall is identical at @20 and @50 and 2.5 points
+better at @5, so the index is faster **and** not worse
+(`dev_tools/eval/fused_bm25.py`).
+
 Fusion is **Reciprocal Rank Fusion over ranks, never scores** (`crates/engine/src/fusion.rs`).
 Scores from three arms are not commensurable — a cosine of 0.83 and a BM25 of 14.2 have
 no shared unit — and normalizing them invents one. Ranks are the only thing the three

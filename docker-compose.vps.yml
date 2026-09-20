@@ -39,6 +39,12 @@ services:
     cpuset: "${VPS_CPUSET:-0,1}"
     command:
       - postgres
+      # ! A compose `command` REPLACES the base file's, it does not merge with
+      # it. Every flag the base sets has to be repeated here or it is silently
+      # lost -- and losing this one makes migration 0004's CREATE EXTENSION fail
+      # only under the overlay, which is the hardest kind of bug to see.
+      - -c
+      - shared_preload_libraries=pg_search
       - -c
       - shared_buffers=512MB
       - -c

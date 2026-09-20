@@ -221,14 +221,18 @@ async fn the_sparse_arm_accepts_a_pgvector_literal() {
 
     // An empty query vector is legal and simply matches nothing meaningful;
     // it must not error, because a query of pure stopwords produces one.
-    let empty = store.sparse(&sparse_literal(&[], dim), 5).await;
+    //
+    // ! Empty on BOTH paths. `pg_search` takes the raw text, so the empty case
+    // there is an empty string, and Tantivy must treat that as "no match"
+    // rather than as a parse error -- the same contract the zero vector has.
+    let empty = store.sparse("", &sparse_literal(&[], dim), 5).await;
     assert!(
         empty.is_ok(),
         "empty sparse query must not error: {empty:?}"
     );
 
     let some = store
-        .sparse(&sparse_literal(&[(10, 1.0), (500, 1.0)], dim), 5)
+        .sparse("pajak", &sparse_literal(&[(10, 1.0), (500, 1.0)], dim), 5)
         .await
         .expect("sparse search");
     println!("sparse returned {} hits", some.len());

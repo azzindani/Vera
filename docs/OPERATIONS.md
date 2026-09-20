@@ -132,6 +132,32 @@ VERA_HTTP=http://localhost:8081 python dev_tools/eval/e2e.py
 
 ---
 
+## 5c. Turning on the BM25 index
+
+```bash
+docker compose build db && docker compose up -d db
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_bm25_index.sql
+docker compose restart engine     # has_bm25 is cached for the process's life
+```
+
+7 s on 355K rows, 95 s on 5.1M. The engine picks the index up on restart and
+needs no configuration change.
+
+! **`shared_preload_libraries` is the trap.** `pg_search` must be preloaded. The
+image writes it into `postgresql.conf.sample`, which only reaches a cluster
+`initdb` creates — an **existing** `pgdata` volume never sees it, and
+`CREATE EXTENSION` then fails with a message about preloading that reads like a
+broken package. Both compose files pass `-c shared_preload_libraries=pg_search`
+explicitly for exactly this case.
+
+! A compose `command:` **replaces** the base file's rather than merging, so the
+VPS overlay repeats every flag. Dropping one there breaks only the overlay.
+
+! Reversible. `DROP INDEX chunks_bm25` and restart: `has_bm25` probes false and
+the `sparsevec` fallback answers again, more slowly and with the same rows.
+
+---
+
 ## 6. Upgrading the corpus
 
 A new corpus is a new set of vectors, a new vocabulary and new centroids, and all three

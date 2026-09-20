@@ -20,12 +20,12 @@ name: vera
 
 services:
   db:
-    # ! Built, ✗ pulled: this image is pgvector plus RUM, which no published
-    # image carries. See docker/Dockerfile.db for why that matters.
+    # ! Built, ✗ pulled: this image is pgvector plus RUM plus pg_search, which
+    # no published image carries together. See docker/Dockerfile.db.
     build:
       context: .
       dockerfile: docker/Dockerfile.db
-    image: vera-db:pg16-rum
+    image: vera-db:pg16-rum-bm25
     container_name: vera-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
@@ -36,6 +36,13 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     command:
       - postgres
+      # ! pg_search must be preloaded (migration 0004). The image puts this
+      # in postgresql.conf.sample, which only reaches a cluster initdb
+      # creates -- an EXISTING pgdata volume never sees it, and CREATE
+      # EXTENSION then fails with a message about preloading that reads
+      # like a bug. Passing it here covers both cases.
+      - -c
+      - shared_preload_libraries=pg_search
       # Budget mirrors docs/HARDWARE.md even when the container is
       # unconstrained, so query plans resemble the target box's.
       - -c
