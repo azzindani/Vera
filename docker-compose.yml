@@ -98,11 +98,14 @@ services:
     image: vera-embed:cpu
     container_name: vera-embed
     environment:
-      # ! The pooling, the normalization and the dtype are the whole contract.
-      # bfloat16 is a PREREQUISITE, not a tuning choice: float32 needs 2,553 MB
-      # against the 1,280 MB the vps overlay budgets and is SIGKILLed by its
-      # first request (docs/HARDWARE.md §2).
-      DTYPE: ${EMBED_DTYPE:-bfloat16}
+      # ! The pooling, the normalization and the dtype are the whole contract,
+      # and dtype is also the largest LATENCY decision in the stack. Measured
+      # on CPU, one query: float32 333 ms, bfloat16 7,483 ms, float16 9,285 ms
+      # -- PyTorch has no optimised narrow-dtype kernels on CPU and upcasts
+      # per operation. End to end that is 864 ms against 10,251 ms p50.
+      # float32 is also the space this corpus was embedded in. It needs
+      # ~2.6 GB, which is why the vps overlay's embed budget was raised.
+      DTYPE: ${EMBED_DTYPE:-float32}
       MODEL_DIR: /data/model
     volumes:
       - ${MODEL_DIR:?set MODEL_DIR in .env}:/data/model:ro

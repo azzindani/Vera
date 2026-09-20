@@ -1,10 +1,12 @@
-# VPS emulation overlay · 2 vCPU / 4 GB.
+# VPS emulation overlay · 2 vCPU / 8 GB.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 #
-# ! Testing on 14 cores and 48 GB proves nothing about the target box. The OOM
-# guarantee (CLAUDE.md §5.4) and every latency number are claims about 2 vCPU /
-# 4 GB, so they are only under test with this overlay on.
+# ! Testing on 14 cores and 48 GB proves nothing about the target box. Every
+# latency number is a claim about 2 vCPU, so it is only under test with this
+# overlay on -- and `cpuset` is the half that matters. Constraining memory while
+# leaving the embedder free to use every core produced a p50 of 866 ms that was
+# published as a 2-vCPU figure for months and was nothing of the kind.
 #
 # cpuset pins db and engine to the SAME two host cores. A per-container `cpus:`
 # limit cannot express that: on the real VPS, Postgres and the engine contend
@@ -13,11 +15,21 @@
 #
 # The 4 GB budget, measured rather than guessed (see docs/HARDWARE.md §2):
 #
-#   embed   1280 MB   model weights measured at 1060 MB anon, + runtime
-#   db      1792 MB   shared_buffers 512 + work_mem + the rest as page cache
-#   engine   512 MB   ~13 MB measured. Vastly oversized, deliberately: see below
+#   embed   3072 MB   float32 weights measured at 2,553 MB anon, + runtime.
+#                     ! 1280 MB was budgeted here for months and fits NO usable
+#                     configuration: float32 is SIGKILLed by its first request,
+#                     and the narrow dtypes that do fit are 22x slower on CPU
+#                     (docs/HARDWARE.md §2).
+#   db      4096 MB   shared_buffers 512 + work_mem + the rest as page cache.
+#                     Measured peak 1,846 MB at 355K rows, 5,907 MB at 5.1M.
+#   engine   512 MB   14 MB at 355K, 42 MB at 5.1M. Oversized deliberately.
 #   ----------------
-#   total   3584 MB   leaving ~512 MB for the OS
+#   total   7680 MB   leaving ~512 MB for the OS
+#
+# ! THIS IS NO LONGER A 4 GB PROFILE. It was, while the embedder was budgeted at
+# 1,280 MB -- a figure that fits no usable configuration. The smallest box that
+# runs this stack correctly is 8 GB, and the file name is now wrong rather than
+# the numbers. Renaming it is a separate change; being honest about it is not.
 #
 # ! The engine line used to read "8.5 MB + 4 concurrent x 23.4 MB = 102 MB". That
 # was arithmetic and was never measured. Measured peak RSS is 14/12/14 MB across
@@ -68,13 +80,22 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1792M
+          memory: 4096M
 
   embed:
+    # ! THE EMBEDDER WAS NEVER PINNED HERE, and it is the largest CPU consumer
+    # in the stack. This overlay constrained memory on all three services and
+    # cores on two, so every "2 vCPU" latency figure it produced was measured
+    # with the embedder using the whole dev box. That is where the published
+    # 866 ms p50 came from.
+    cpuset: "${VPS_CPUSET:-0,1}"
     deploy:
       resources:
         limits:
-          memory: 1280M
+          # ! 3072M, not 1280M. float32 needs 2,553 MB anon and is the only
+          # dtype that is both correct for this corpus and fast on CPU
+          # (docs/HARDWARE.md §2).
+          memory: 3072M
 
   engine:
     cpuset: "${VPS_CPUSET:-0,1}"

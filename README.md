@@ -33,9 +33,9 @@ returns nothing rather than guessing.
 | Recall@20 / @50 | **82.1% / 87.2%** — the width an agent is actually handed |
 | Recall@5 | **56.8%** through the deployed server, `DENSE_WEIGHT=2.0` |
 | Routing | probing 5 of 177 clusters touches **2.8%** of the corpus for **93%** of flat-scan quality |
-| Memory, full stack | **2,253 MB** at 355K against a 3,584 MB budget; **6,316 MB** at 5.1M, which that budget does not cover (`docs/HARDWARE.md` §2) |
-| Embedder dtype | `bfloat16` is a **prerequisite**, ✗ an optimisation: `float32` needs 2,553 MB against the 1,280 MB budgeted and is OOM-killed on the first query |
-| Latency, 2 cores | **p50 10,251 ms at 355K · 18,527 ms at 5.1M** — 1.8× for 14× the corpus. Both cores saturate. 866 ms where the embedder is unpinned; quote the profile with the number. |
+| Memory, full stack | **4,019 MB** at 355K · the embedder is 2,580 MB of it, and the smallest box that runs this correctly is **8 GB**, ✗ 4 |
+| Latency, 2 cores | **p50 2,998 ms** at 355K, whole stack pinned, `DTYPE=float32` (`docs/HARDWARE.md` §3) |
+| Embedder dtype | `float32`. Narrow dtypes are a **22× latency loss** on CPU and quantization is refused by the canary at cosine 0.6356 — it changes the vector space |
 | Recall at 512 dims | **identical** to 1024 at @5/@10/@50, better at @20 — 347 MB reclaimable, designed ✗ built (`docs/EMBEDDING.md` §5e) |
 | Engine RAM | **14 MB at 355K · 42 MB at 5.1M** — per-request cost is flat, the floor is the hot centroid table and grows with `k ∝ n` (`docs/HARDWARE.md` §2) |
 | Whole stack | **2,253 MB at 355K · 6,316 MB at 5.1M** — Postgres is the ceiling, peaking at 5,907 MB of a 6,336 MB cap |

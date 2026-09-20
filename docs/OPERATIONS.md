@@ -132,26 +132,36 @@ VERA_HTTP=http://localhost:8081 python dev_tools/eval/e2e.py
 
 ---
 
-## 5b. Set `DTYPE=bfloat16` on the embedder
+## 5b. Leave `DTYPE=float32`, and give the embedder 3 GB
 
-```bash
-docker compose up -d embed      # with DTYPE=bfloat16 in the environment
-```
+`float32` is the default in `docker/Dockerfile.embed` and
+`docker-compose.yml`. Do not narrow it to save memory.
 
-**Not an optimisation — a prerequisite on any profile with a memory limit.**
-The embed server defaults to `float32`, which needs **2,553 MB** of anonymous
-memory. `docker-compose.vps.yml` budgets 1,280 MB, so the container sits at 97%
-of its limit at idle and is SIGKILLed (exit 137) by the first request. At
-`bfloat16` it needs **296 MB** and recall is not worse (`HARDWARE.md` §2).
+| | embed call | p50 end to end | `anon` |
+|---|---|---|---|
+| `float32` | **333 ms** | **2,998 ms** | 2,553 MB |
+| `bfloat16` | 7,483 ms | 10,251 ms | 296 MB |
+| `float16` | 9,285 ms | — | 1,409 MB |
 
-! Changing dtype changes the vector space, so the startup canary is what
-licenses this, ✗ the arithmetic. It passes on this corpus: a bfloat16 query
-reproduces a float32-embedded chunk above `CANARY_MIN_COSINE`. **Verify it on
-yours** — the engine refuses to serve if it does not, which is the check working.
+**A narrow dtype trades 2.3 GB for a 22× slowdown.** PyTorch has no optimised
+bf16/fp16 kernels on CPU and upcasts per operation. On any box with 3 GB to
+spare this is not a trade worth making — and `float32` is additionally the space
+this corpus was embedded in.
+
+! **`QUANTIZE=1` is refused by the canary.** `qint8` over `nn.Linear` really is
+180 ms, and it really does change the vector space: cosine **0.6356** against the
+required 0.9800. The engine will not start. The fp16 variant's apparent 4 ms is
+an HTTP 500. Do not reach for it.
+
+! This section previously said the opposite — that `bfloat16` was a prerequisite
+— because the embedder had been squeezed into a 1,280 MB budget that fits no
+usable configuration. The budget was the bug. `docker-compose.vps.yml` now
+allows 3,072 MB.
 
 ! `corpus_meta` does not record dtype, although the embed server calls it part
-of the contract. Nothing declares which dtype a corpus was built with; the
-canary catches a mismatch empirically. Closing that starts in Ravel.
+of the contract. Nothing declares which dtype a corpus was built with; the canary
+catches a mismatch empirically, which is how both quantized configurations above
+were caught. Closing that gap starts in Ravel.
 
 ---
 

@@ -115,24 +115,59 @@ earlier the same day. Nothing regressed: that run followed a `DROP DATABASE` and
 measured an unusually cold page cache. 2,253 MB is the honest steady state for a
 box that has been doing work, and is what a deployment will look like.
 
-### The embedder's dtype is the single largest memory decision
+### The embedder's dtype is the largest LATENCY decision in the stack
 
-| `DTYPE` | `anon` | Recall@5 | Recall@10 | MRR |
+Measured per embed call on 2 pinned cores, and end to end over the eval set:
+
+| `DTYPE` | embed | p50 e2e | `anon` | canary |
 |---|---|---|---|---|
-| `float32` (the default) | **2,553 MB** | 63.6% | 70.5% | 0.557 |
-| `bfloat16` | **296 MB** | 65.9% | 72.7% | 0.562 |
+| **`float32`** | **333 ms** | **2,998 ms** | 2,553 MB | passes |
+| `bfloat16` | 7,483 ms | 10,251 ms | 296 MB | passes |
+| `float16` | 9,285 ms | — | 1,409 MB | — |
+| `float32` + `QUANTIZE=1` | 180 ms | — | 2,940 MB | **REFUSED** · cosine 0.6356 |
+| `float16` + `QUANTIZE=1` | 4 ms | — | 2,752 MB | **REFUSED** · HTTP 500 |
 
-**8.6× less memory, and recall is not worse** — +2.3 points is one query on
-n=44, so read it as no measurable difference. The startup canary accepts it:
-the corpus was embedded at float32 and a bfloat16 query still reproduces the
-space above `CANARY_MIN_COSINE`.
+**Narrow dtypes are a 22× latency loss on CPU.** PyTorch has no optimised
+bf16/fp16 kernels there and upcasts per operation, so the "memory win" costs
+more than it saves on any box that has 3 GB. float32 is also the space this
+corpus was embedded in, which makes it the only option that is simultaneously
+correct and fast.
 
-! **At `float32` this stack cannot start on its own documented budget.** The
-embedder sits at 1,242 MB of a 1,280 MB limit at idle — 97% full — and is
-SIGKILLed (exit 137) by the first request. The 1,060 MB this section used to
-quote was measured on the old TEI container, which loaded fp16; the reference
-implementation adopted on 2026-09-19 defaults to `float32` and needs 2.4× that.
-Every figure above is at `DTYPE=bfloat16`.
+! **Quantization is not a substitute.** `qint8` over `nn.Linear` is genuinely
+180 ms, and the startup canary rejects it at **cosine 0.6356 against the
+required 0.9800** — it changes the vector space. The fp16 variant's 4 ms is an
+HTTP 500, not an embedding. Both were caught in seconds by the canary, which is
+what that check is for.
+
+! **The 1,280 MB this overlay budgeted for months fits no usable
+configuration.** float32 is SIGKILLed by its first request at that limit (97%
+full at idle, exit 137), and the dtypes that do fit are 22× slower. It is now
+3,072 MB, and the profile is no longer a 4 GB one.
+
+! Recall is unchanged across the dtypes that pass: 63.6% at float32 against
+65.9% at bfloat16 is one query on n=44.
+
+### What the dtype fix bought
+
+Same corpus, same hardware, same 44 queries — only `DTYPE` changed:
+
+| | `bfloat16` | `float32` |
+|---|---|---|
+| startup | 43.9 s | **15.1 s** |
+| first query (cold) | 13,219 ms | **4,155 ms** |
+| p50 | 10,251 ms | **2,998 ms** |
+| p95 | 11,790 ms | **3,344 ms** |
+| 12-concurrent burst | 17.8 s | **4.8 s** |
+| CPU, db / embed | 135% / 147% | **104% / 55%** |
+| stack memory | 2,253 MB | 4,019 MB |
+
+**3.4× faster for 1,766 MB.** And the cores stop saturating: 282% of an
+available 200% becomes 159%, so the stack has headroom for the first time.
+
+! This is the correction to a claim made earlier the same day. "The embedder
+saturates both cores, p50 10 s, CPU is the constraint" was measured on a
+`bfloat16` configuration introduced hours before to fix an OOM. The slowness was
+that change, ✗ the hardware. **Two cores serve this corpus in ~3 s.**
 
 ! `corpus_meta` records model, width, pooling and normalization — **but not
 dtype**, although `dev_tools/pre_embed/server.py` calls dtype part of the
@@ -245,22 +280,31 @@ number** — these differ by 15× across configurations that all call themselves
 
 | profile | p50 | p95 | max |
 |---|---|---|---|
-| dev box, embedder unpinned | **866 ms** | 1,459 ms | 1,701 ms |
-| **2 cores pinned · 355K** | **10,251 ms** | 11,790 ms | 14,036 ms |
-| **2 cores pinned · 5.1M** | **18,527 ms** | 24,604 ms | 27,541 ms |
-| sub-1 GB Postgres, embedder unpinned | 5,908 ms | 7,664 ms | — |
-| refused by domain gate · 355K / 5.1M | 6,953 / 8,651 ms | | |
-| first query after start · 355K / 5.1M | 13,219 / 23,190 ms | | |
-| startup: db + embedder load + canary | 39–44 s | | |
+| **2 cores pinned · 355K · `float32`** | **2,998 ms** | 3,344 ms | 3,551 ms |
+| 2 cores pinned · 355K · `bfloat16` | 10,251 ms | 11,790 ms | 14,036 ms |
+| 2 cores pinned · 5.1M · `bfloat16` | 18,527 ms | 24,604 ms | 27,541 ms |
+| dev box, nothing pinned | 866 ms | 1,459 ms | 1,701 ms |
+| refused by domain gate · `float32` | 2,593 ms | | |
+| first query after start · `float32` | 4,155 ms | | |
+| startup: db + embedder load + canary | 15 s | | |
 
-**14× the corpus costs 1.8× the latency.** That is far better than the per-arm
-figures predict (§6 measures 19.8× on the SQL alone) and it has two causes: the
-worst-scaling arm was replaced by an index (`pg_search`, migration 0004), and on
-2 pinned cores the embedder is a fixed ~7 s floor that database growth hides
-behind. Extrapolating, 10M lands near 25–30 s on this hardware.
+! **The 5.1M row has not been re-measured at `float32`.** It is a `bfloat16`
+figure and is therefore an upper bound — the dtype fix is worth ~3.4× at 355K
+and there is no reason it would not apply. Read it as "no worse than 18.5 s
+until re-run", ✗ as the number.
 
-! The 10,251 ms at 355K reproduces the 10,007 ms measured earlier the same day
-on a separate cold-start run, so the 2-core figure is stable to ~2%.
+**14× the corpus cost 1.8× the latency** when both were measured at `bfloat16`.
+That is far better than the per-arm SQL predicts (§6 measures 19.8×), for two
+reasons: `pg_search` replaced the arm that scaled 41.9×, and the embedder was a
+fixed floor that database growth hid behind. With that floor removed the ratio
+will be worse and the absolute numbers much better.
+
+! The 866 ms "dev box" row is what this document published as a **2 vCPU**
+figure for months. It was measured under an overlay that constrained memory on
+all three services and cores on only two — the embedder, the largest CPU
+consumer in the stack, was never pinned. Both halves are fixed:
+`docker-compose.vps.yml` now pins it, and `float32` makes the honest 2-core
+number 2,998 ms.
 
 ! **The 2-core row is the honest one for a 2 vCPU VPS**, and it is the only row
 measured with the embedder on the same cores as everything else
@@ -278,19 +322,20 @@ measurement.
 
 Peak CPU by phase, where 2 cores = 200%:
 
-| phase | | db | embed | engine |
-|---|---|---|---|---|
-| 44 sequential | 355K | 135% | 147% | 0% |
-| | 5.1M | **199%** | 146% | 0% |
-| 12 concurrent | 355K | 47% | **201%** | 0% |
-| | 5.1M | **200%** | **202%** | 0% |
+| phase | | db | embed | engine | total |
+|---|---|---|---|---|---|
+| 44 sequential · `float32` | 355K | 104% | **55%** | 1% | **159%** |
+| 44 sequential · `bfloat16` | 355K | 135% | 147% | 0% | 282% |
+| 44 sequential · `bfloat16` | 5.1M | 199% | 146% | 0% | 345% |
+| 12 concurrent · `float32` | 355K | 91% | 0% | 1% | 92% |
 
-**Both cores are saturated, and which process owns them shifts with scale.** At
-355K the embedder dominates; at 5.1M Postgres pins a full 200% and the two
-together demand roughly twice what the box has. The engine is 0–1% throughout.
+**At `float32` the box is no longer saturated.** 159% of an available 200%
+leaves real headroom, where `bfloat16` demanded 282% — more than the hardware
+has, which is why everything queued.
 
-This is a CPU wall, ✗ a memory one: §2 shows 2,253 MB of a 3,584 MB budget at
-355K while latency is already 10 s.
+! So "CPU is the constraint on 2 cores" was true only of a misconfiguration.
+Postgres is now the largest consumer (104%) and the embedder is 55%. The engine
+is 0–1% at every scale and every dtype.
 
 So the largest lever available is the embedder: quantization, fewer torch
 threads, or moving embedding off the box. None of the retrieval work in §6

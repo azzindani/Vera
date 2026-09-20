@@ -283,9 +283,8 @@ live engine never sees a half-updated index.
 11. agent  → writes prose, appends the citation block
 ```
 
-Measured p50 with the whole stack pinned to 2 cores: **10,251 ms at 355K** and
-**18,527 ms at 5.1M** — 1.8× for 14× the corpus. Both cores stay saturated, with
-the embedder dominating at 355K and Postgres pinning a full 200% at 5.1M. On a
-dev box that leaves the embedder unpinned the same queries are 866 ms. All of it
-is in `HARDWARE.md` §3 with the profile attached to each figure — a latency
-number without one means nothing here.
+Measured p50 with the whole stack pinned to 2 cores and `DTYPE=float32`:
+**2,998 ms at 355K**. The dtype is the largest single term — `bfloat16` makes the
+same queries 10,251 ms, because PyTorch has no optimised narrow-dtype kernels on
+CPU. `HARDWARE.md` §3 carries the profile with every figure; a latency number
+without one means nothing here.
