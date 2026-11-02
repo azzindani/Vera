@@ -1,0 +1,52 @@
+# Memory-pressure measurement overlay · a true ~4 GB box, swap OFF. See docs/HARDWARE.md §8.1.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml -f docker-compose.squeeze.yml up -d
+#
+# Layered AFTER the vps overlay: it keeps the 2-core pinning and shrinks the limits to db 800M / embed 2800M /
+# engine 64M (3.7 GB of limits). memswap_limit equals each limit so pressure shows up as an OOM-kill or as latency,
+# never as hidden swap. A compose `command` REPLACES the base one, so every flag is repeated.
+# ! A measurement harness, ✗ a deployment profile: at 355K it ran with the same latency and throughput as the 8 GB
+# profile; at 5.0M rows it is not usable (HARDWARE.md §8.2).
+
+services:
+  db:
+    cpuset: "0,1"
+    memswap_limit: 800M
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_search
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=400MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - max_connections=32
+      - -c
+      - max_parallel_workers_per_gather=1
+      - -c
+      - max_parallel_workers=2
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+  embed:
+    cpuset: "0,1"
+    memswap_limit: 2800M
+    deploy:
+      resources:
+        limits:
+          memory: 2800M
+  engine:
+    cpuset: "0,1"
+    memswap_limit: 64M
+    deploy:
+      resources:
+        limits:
+          memory: 64M

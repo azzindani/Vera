@@ -493,9 +493,14 @@ box after the OS, embedder and engine. 12 queries, median of 3 after a warm run.
 | text | 446 ms | 6,428 ms | 14.4× | linear |
 | **total (sequential)** | **649 ms** | **12,853 ms** | 19.8× | |
 
-**The central claim is confirmed.** 14× the corpus moved the dense arm by 11 ms.
+**The central claim is confirmed — for a WARM cache.** 14× the corpus moved the dense arm by 11 ms.
 Layers 1-3 do what `ARCHITECTURE.md` §2 says they do, and it is no longer an
 argument from how the SQL is written.
+
+! **This table is a warm-cache measurement.** It repeats the same 12 queries ("median of 3 after a
+warm run"), so the probed clusters' pages are resident. Re-measured 2026-11-02 with a different cluster
+set per query on the same 5.0M replica, the dense arm was **8.3 s, ✗ 57 ms**, until the vectors were stored
+in cluster order (**91 ms cold**). The routing is sound; the heap layout was not. See §8.2.
 
 ! **Sparse is worse than this document used to predict.** It was described as
 "linear · global scan", which implied 14× — it is **41.9×**. At 355K the `sparse`
@@ -692,4 +697,136 @@ docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 
 # memory, as the kernel sees it
 docker exec vera-db sh -c 'grep -E "^(anon|file|shmem|slab) " /sys/fs/cgroup/memory.stat'
+
+# concurrency + latency percentiles + peak CPU/memory per container (§8)
+python dev_tools/eval/load_test.py <label> <clients> <requests>
 ```
+
+! **Use `127.0.0.1`, ✗ `localhost`, in every harness on Windows.** Python resolving `localhost` costs about
+2 s per request there. The first 2026-11-02 run of this section read 3.0 s p50 for a stack that answers in
+0.9 s, and every `e2e.py` number taken against `http://localhost:8081` on such a machine carries the same
+2 s. `load_test.py` defaults to the IP literal.
+
+---
+
+## 8. Validation · limited hardware, concurrency, scale · 2026-11-02
+
+> Question asked: does this work on very limited hardware, on a large corpus, at a decent speed, under
+> concurrent load? Everything below was measured on one machine (i7-12700H, 20 threads, Docker Desktop VM with
+> 25 GB, NVMe), through the deployed HTTP server, with `dev_tools/eval/load_test.py`. The containers were
+> pinned to host cores `0,1` (`docker-compose.vps.yml`), which on this CPU is **one physical P-core's two
+> hardware threads** -- a 2-vCPU VPS is typically the same shape, but not identical.
+
+### 8.1 355K rows, two pinned cores
+
+| profile | single-client p50 | p95 / max | peak db | peak embed | engine |
+|---|---|---|---|---|---|
+| dev box, nothing pinned | **895 ms** | 1,268 / 1,381 | 1.8 GB | 2.7 GB | 17 MB |
+| 2 cores, `docker-compose.vps.yml` (8 GB limits) | **1,051 ms** | 2,586 / 3,773 | 2.0 GB | 2.66 GB | 12 MB |
+| 2 cores, **4 GB total**, swap off (`docker-compose.squeeze.yml`: db 800 MB, embed 2,800 MB, engine 64 MB) | **1,007 ms** | 1,548 / 1,648 | 0.26 GB | 2.65 GB | 11 MB |
+
+The first query after a restart took 4.2 s (8 GB profile). The last row is a real squeeze, ✗ the old
+"4 GB budget" table of §2: `memswap_limit` equals each limit so pressure cannot hide in swap, and
+**nothing was OOM-killed and nothing restarted**. The database fits because every arm reads through the
+page cache and a 355K corpus is 2.4 GB; the embedder is the one component with a hard floor (2.55 GB anon).
+
+Concurrency, 2 pinned cores, 8 GB profile (`MAX_CONCURRENCY=4`, `QUEUE_WAIT_MS=2000`):
+
+| clients | requests | served | refused (503) | served p50 | throughput |
+|---|---|---|---|---|---|
+| 1 | 40 | 40 | 0 | 1,051 ms | 0.89 /s |
+| 2 | 40 | 40 | 0 | 1,278 ms | 1.57 /s |
+| 4 | 48 | 48 | 0 | 2,432 ms | 1.65 /s |
+| 8 | 64 | 45 | 19 (30%) | 3,579 ms | 1.67 /s |
+| 12 | 72 | 29 | 43 (60%) | 3,722 ms | 1.61 /s |
+
+**Throughput plateaus at ~1.65 queries/s from two clients on** -- the two hardware threads are the limit
+(db 190% + embed 150% against 200% available), ~140,000 queries/day. Past four clients extra load becomes
+refusals, not latency, which is what invariant 6 promises. The 4 GB profile gave the same table (4 clients
+1.62 /s, 12 clients 43 of 72 refused). Unpinned, the same stack served 3.9 /s at 4 clients.
+
+! The embedder is ~250 ms of the ~1,000 ms (249 ms p50 for one query, measured on `127.0.0.1`). It uses
+`TORCH_THREADS=2` by default and scales with cores (352 / 219 / 155 / 126 ms at 1 / 2 / 4 / 8 threads), so
+the plateau moves with the box.
+
+### 8.2 5.0M rows (the replica of §6), same two cores
+
+| profile | single-client p50 | p90 | 4 clients | 12 clients |
+|---|---|---|---|---|
+| 4 GB total, swap off | **18.5 s** | 26.6 s | 23.5 s p50, 0.20 /s | 32 of 36 refused |
+| 8 GB (`docker-compose.vps.yml`) | **17.2 s** | 21.1 s | 28.7 s p50, 0.13 /s | 32 of 36 refused |
+
+It serves correctly and nothing was killed, but this is **not interactive**, and doubling memory bought ~7%.
+Per stage, one query at a time, different clusters each time, 4 GB-class cache:
+
+| stage | p50 | |
+|---|---|---|
+| query embedding | 279 ms | CPU, fixed |
+| layer-2 routing (2,478 centroids) | 4 ms | linear in `k` |
+| **dense, 5 probed clusters** | **8,347 ms** | cold: ~1.4 s per cluster, ~5,000 page reads for 2,085 rows |
+| `pg_search` | 9,622 ms | cache thrash under a 4 GB cap; **1.6 s** with the cache to itself |
+| tsvector (`text`) | 6,537 ms | matches ~62% of rows |
+
+Three things this corrects:
+
+1. **Dense is flat only when cached.** Warm, the same cluster costs 17 ms at 355K and at 5.0M. Cold, it
+   costs ~1.4 s. A cluster's ~2,000 rows are scattered over the heap and each drags TOAST chunks (35,808
+   buffers touched for 2,085 rows), because `kmeans.py` assigns `cluster_id` after ingest. The §6 table
+   repeated 12 queries, so it measured the warm case.
+2. **The arms evict each other.** BM25 (1.2 GB), RUM (1.4 GB) and the dense pages of a probe (~1.4 GB) are
+   larger than a 4 GB database cache together. `pg_search` read 9.6 s when interleaved with dense scans and
+   1.6 s alone.
+3. **The text arm is the biggest single term and is avoidable** -- see §8.3.
+
+### 8.3 What fixes it · measured on the replica, ✗ built into the engine
+
+`dev_tools/eval/cluster_layout.py` and `dev_tools/eval/lexical_prune.py`.
+
+| change | before | after | cost / risk |
+|---|---|---|---|
+| **Store vectors in cluster order** (side table, `dense` PLAIN, `ORDER BY cluster_id, id`) | dense arm, cold, 5 clusters: **5,477 ms** (warm 58) | **91 ms** (warm 20) | +13 GB at 5M (a second copy); a migration + `store/` change; re-sort on re-cluster |
+| **Prune query terms by IDF** before the tsvector arm (keep IDF ≥ 2) | **6,208 ms** warm at 5.0M | **1,443 ms** | hit@20 unchanged (63.6% → 63.6%), hit@5 40.9% → 43.2% on 44 labels |
+| prune to IDF ≥ 3 | | 1,199 ms | hit@20 59.1% |
+| prune to the 3-4 rarest terms | | 120-404 ms | **hit@20 25-41% -- do not** |
+| prune the `pg_search` arm | 1.6 s | 1.7 s | no effect: its cost is not the match count |
+
+! n = 44 labelled queries. "No loss" means no loss that this set can see (one query is 2.3 points);
+confirm through `e2e.py` before changing the engine, because an arm that loses nothing alone can still
+change fusion. The cluster-order result needs no such caveat for *speed*, but the side table is not read by
+the engine yet.
+
+Also candidates, **not measured**: running the three arms concurrently (§6 already estimates ~2× at scale,
+but on two shared cores the gain is I/O overlap only), and probing more clusters for the lexical arms in
+place of scanning globally (trades the "global arms guarantee" of invariant 3 for speed -- needs a
+routing-recall measurement that a replicated corpus cannot give, because duplicate rows make routing look
+perfect).
+
+### 8.4 20M rows · extrapolated, ✗ measured
+
+| stage | estimate | basis |
+|---|---|---|
+| embedding | 0.3 s | measured, fixed |
+| routing, ~10,000 centroids | ~20 ms | 4 ms at 2,478, linear in `k` (engine holds ~40 MB of centroids) |
+| dense, cluster-ordered | ~0.1 s | cost is rows per cluster (~2,000), ✗ corpus size |
+| `pg_search` | ~6.5 s | 1.6 s at 5.0M, assumed linear; its index grows to ~5 GB |
+| tsvector, IDF ≥ 2 | ~5.6 s | 1.4 s at 5.0M, linear; **~25 s unpruned** |
+| **sequential total** | **~12 s** | |
+| database size | ~100 GB | 21 GB heap + TOAST per 5M, plus ~2.7 GB of lexical indexes per 5M |
+
+**Read this as: the routed dense half scales; the two global lexical arms do not.** They are linear in the
+corpus and want their indexes in RAM, which at 20M is ~11 GB of cache for the lexical indexes alone. The
+honest statement for 20M on a two-core box is "interactive only if the lexical arms stop being global". It is
+an extrapolation from one 14× replica, and the assumption that `pg_search` stays linear is exactly the kind
+that §6 got wrong once already (sparse was predicted 14× and measured 41.9×).
+
+### 8.5 Verdict
+
+| claim | status |
+|---|---|
+| runs correctly on ~4 GB, no OOM, embedder included | **holds** (355K) |
+| decent single-query speed on 2 cores | **holds at 355K** (~1.0 s) · **fails at 5.0M** (17-18 s) |
+| concurrency is bounded, not fatal | **holds** -- 503 + retry, no crash at 3× the ceiling |
+| throughput | ~1.65 queries/s on two hardware threads |
+| routing makes dense independent of corpus size | **holds only with cluster-ordered storage** (§8.2, §8.3) |
+| large scale (5M, 20M) | **not demonstrated**; the global lexical arms are the wall |
+

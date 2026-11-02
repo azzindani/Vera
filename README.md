@@ -34,12 +34,12 @@ returns nothing rather than guessing.
 | Recall@5 | **56.8%** through the deployed server, `DENSE_WEIGHT=2.0` |
 | Routing | probing 5 of 177 clusters touches **2.8%** of the corpus for **93%** of flat-scan quality |
 | Memory, full stack | **4,019 MB** at 355K · the embedder is 2,580 MB of it, and the smallest box that runs this correctly is **8 GB**, ✗ 4 |
-| Latency, 2 cores | **p50 2,998 ms** at 355K, whole stack pinned, `DTYPE=float32` (`docs/HARDWARE.md` §3) |
+| Latency, 2 cores | **p50 2,998 ms** at 355K, whole stack pinned, `DTYPE=float32` (`docs/HARDWARE.md` §3) · re-measured on a faster CPU 2026-11-02: **1,051 ms**, and 17-18 s at 5.0M (`docs/HARDWARE.md` §8) |
 | Embedder dtype | `float32`. Narrow dtypes are a **22× latency loss** on CPU and quantization is refused by the canary at cosine 0.6356 — it changes the vector space |
 | Recall at 512 dims | **identical** to 1024 at @5/@10/@50, better at @20 — 347 MB reclaimable, designed ✗ built (`docs/EMBEDDING.md` §5e) |
 | Engine RAM | **14 MB at 355K · 42 MB at 5.1M** — per-request cost is flat, the floor is the hot centroid table and grows with `k ∝ n` (`docs/HARDWARE.md` §2) |
 | Whole stack | **2,253 MB at 355K · 6,316 MB at 5.1M** — Postgres is the ceiling, peaking at 5,907 MB of a 6,336 MB cap |
-| Routing at scale | **proven at 14×** — corpus replicated to 5.0M rows / 23 GB, dense arm moved 46 → **57 ms** (`docs/HARDWARE.md` §6) |
+| Routing at scale | **proven at 14× with a warm cache** — corpus replicated to 5.0M rows / 23 GB, dense arm moved 46 → **57 ms** (`docs/HARDWARE.md` §6). Cold it was 8.3 s until vectors were stored in cluster order (91 ms) — `docs/HARDWARE.md` §8 |
 | Lexical arm | `pg_search` BM25 where available, `sparsevec` scan where not — **1,858 ms vs 6,282 ms at 5M**, same fused recall |
 | vs. a dedicated index | ParadeDB's IVF matches flat-scan recall but costs **2,409 ms against routing's 49 ms**, and its 2.6 GB index has no `halfvec` opclass (`docs/HARDWARE.md` §6b) |
 | Domain gate | 4/6 out-of-domain refused, **0/44 false refusals** |
