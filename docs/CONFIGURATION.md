@@ -111,6 +111,7 @@ safe.
 | `DENSE_WEIGHT` | `2.0` | fitted 2026-09-19 · `EVAL.md` §4b |
 | `SPARSE_WEIGHT` | `1.0` | |
 | `TEXT_WEIGHT` | `1.0` | |
+| `TEXT_MIN_IDF` | `0` (off) | corpus IDF below which a query term is withheld from the `text` arm only · `2.0` took that arm from 6.2 s to 1.4 s at 5.0M rows, hit rate unchanged on 44 labels (`HARDWARE.md` §8.3) · never prunes a query to nothing |
 
 ! These are properties of the **corpus**, not of the engine, and a corpus is
 re-chunked far more often than the engine is rebuilt. Refitting must not require a

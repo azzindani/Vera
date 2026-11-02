@@ -33,6 +33,9 @@ macro_rules! log {
     ($($arg:tt)*) => { eprintln!($($arg)*) };
 }
 
+/// Connections one permitted search may hold: the three arms run concurrently.
+const ARM_FANOUT: usize = 3;
+
 /// A required variable is missing, or one that is set cannot be parsed.
 ///
 /// ! Both are fatal, ✗ defaulted. A typo in `MAX_CONCURRENCY` that silently
@@ -254,6 +257,7 @@ impl Settings {
                 dense_weight: parsed("DENSE_WEIGHT", "number", d.dense_weight)?,
                 sparse_weight: parsed("SPARSE_WEIGHT", "number", d.sparse_weight)?,
                 text_weight: parsed("TEXT_WEIGHT", "number", d.text_weight)?,
+                text_min_idf: parsed("TEXT_MIN_IDF", "number", d.text_min_idf)?,
                 // ! Loosening the canary is a deliberate, visible act. There is
                 // no code path that quietly skips it.
                 canary_min_cosine: parsed("CANARY_MIN_COSINE", "number", d.canary_min_cosine)?,
@@ -344,6 +348,14 @@ impl Settings {
         // declaration is known -- and the corpus's declaration is the one that
         // decides. Checking the fallback here would pass a config the corpus then
         // invalidates, which is a green startup check for the wrong thing.
+        // ! Negative or NaN would read as "off" in `prune` and hide the typo.
+        if self.pipeline.text_min_idf.is_nan() || self.pipeline.text_min_idf < 0.0 {
+            return Err(ConfigError::Invalid {
+                key: "TEXT_MIN_IDF",
+                value: self.pipeline.text_min_idf.to_string(),
+                kind: "non-negative number",
+            });
+        }
         // ! All three weights at zero fuses nothing and returns nothing, which
         // looks exactly like a corpus with no matches.
         let weights =
@@ -391,9 +403,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         contract::DEFAULT_ALGORITHM
     );
 
-    // +2: the pool serves `max_concurrency` searches plus the startup canary
-    // and health probes, which must not have to wait behind a full queue.
-    let pool = store::connect(&s.database_url, s.max_concurrency + 2, s.statement_timeout)?;
+    // ! `ARM_FANOUT` connections per permitted search: the dense, sparse and text
+    // arms run concurrently (`pipeline.rs::arms`), so one search can hold three.
+    // +2: plus the startup canary and health probes, which must not have to wait
+    // behind a full queue.
+    let pool = store::connect(
+        &s.database_url,
+        s.max_concurrency * ARM_FANOUT + 2,
+        s.statement_timeout,
+    )?;
     let ops = store::SearchOps::new(pool);
 
     // The corpus decides the vector space; the provider is built to match it.
