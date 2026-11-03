@@ -909,7 +909,7 @@ are added underneath, or this line says otherwise.*
 | claim | status |
 |---|---|
 | runs correctly on ~4 GB, no OOM, embedder included | **holds** (355K) |
-| decent single-query speed on 2 cores | **holds at 355K** (~1.0 s) · **fails at 5.0M** (17-18 s) |
+| decent single-query speed on 2 cores | **holds at 355K** (~0.75 s with concurrent arms, §8.5a) · **fails at 5.0M** (17-18 s in §8.2; 13.5 s -> **9.5 s** with concurrent arms in the same session, §8.5c -- still not interactive) |
 | concurrency is bounded, not fatal | **holds** -- 503 + retry, no crash at 3× the ceiling |
 | throughput | ~1.65 queries/s on two hardware threads |
 | routing makes dense independent of corpus size | **holds only with cluster-ordered storage** (§8.2, §8.3) |
