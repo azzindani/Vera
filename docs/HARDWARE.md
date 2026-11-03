@@ -528,7 +528,8 @@ marginal cost is disk-bandwidth-bound, so linear should hold from here:
 assumption is that sparse stops super-scaling once it is fully out of cache,
 which is plausible and unverified. Run `scale_probe.py --factor 28` to settle it.
 
-! **The arms run sequentially** (`pipeline.rs`, `search_arms`) — three awaits in
+! **The arms ran sequentially until the change that made them concurrent**
+(`pipeline.rs`, `arms()`; measured at 355K in §8.1, ✗ yet at scale) — three awaits in
 a row over three independent read-only queries. Sparse and text are within 3% of
 each other and together are 99% of the time, so `tokio::try_join!` would take the
 total from `sum` to `max`: roughly half. That is the largest single latency win
@@ -725,6 +726,21 @@ python dev_tools/eval/load_test.py <label> <clients> <requests>
 | 2 cores, `docker-compose.vps.yml` (8 GB limits) | **1,051 ms** | 2,586 / 3,773 | 2.0 GB | 2.66 GB | 12 MB |
 | 2 cores, **4 GB total**, swap off (`docker-compose.squeeze.yml`: db 800 MB, embed 2,800 MB, engine 64 MB) | **1,007 ms** | 1,548 / 1,648 | 0.26 GB | 2.65 GB | 11 MB |
 
+**Concurrent arms, A/B.** `main` against the branch that runs the three arms under `tokio::try_join!`, same
+stack (`docker-compose.vps.yml`, two pinned cores, 355K), alternated before/dev/before/dev, 50 sequential and
+48 four-client requests each (`dev_tools/eval/load_test.py`, seed 3), all served, none refused:
+
+| engine | 1 client p50 | p90 / p95 | 4 clients p50 | 4-client throughput |
+|---|---|---|---|---|
+| `main` (sequential arms), run 1 / 2 | 967 / 931 ms | 1,294 / 1,450 · 1,277 / 1,439 | 2,347 / 2,135 ms | 1.61 / 1.68 /s |
+| concurrent arms, run 1 / 2 | **749 / 748 ms** | 1,087 / 1,252 · 1,166 / 1,272 | 2,505 / 2,250 ms | 1.69 / 1.70 /s |
+
+A single query is **~20% faster** (about 200 ms), reproducible across both pairs. Under four clients nothing
+changes (inside run-to-run noise): two cores are already saturated, the db sits at 165-196% CPU, so concurrent
+arms spend the same CPU sooner and buy no extra throughput. That is the honest limit of the change on this
+hardware: it lowers latency at low load and does not raise the ceiling. n = 2 pairs on one machine.
+Not measured here: the same A/B at 5M rows, and `TEXT_MIN_IDF` through the engine.
+
 The first query after a restart took 4.2 s (8 GB profile). The last row is a real squeeze, ✗ the old
 "4 GB budget" table of §2: `memswap_limit` equals each limit so pressure cannot hide in swap, and
 **nothing was OOM-killed and nothing restarted**. The database fits because every arm reads through the
@@ -795,8 +811,9 @@ confirm through `e2e.py` before changing the engine, because an arm that loses n
 change fusion. The cluster-order result needs no such caveat for *speed*, but the side table is not read by
 the engine yet.
 
-Also candidates, **not measured**: running the three arms concurrently (§6 already estimates ~2× at scale,
-but on two shared cores the gain is I/O overlap only), and probing more clusters for the lexical arms in
+The three arms now run concurrently (`tokio::try_join!`); measured at 355K in §8.1, **not** at 5M, where §6
+estimates ~2× and the cold-cache arms would also contend for the same page cache. Also a candidate, **not
+measured**: probing more clusters for the lexical arms in
 place of scanning globally (trades the "global arms guarantee" of invariant 3 for speed -- needs a
 routing-recall measurement that a replicated corpus cannot give, because duplicate rows make routing look
 perfect).
