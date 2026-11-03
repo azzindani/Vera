@@ -836,7 +836,75 @@ honest statement for 20M on a two-core box is "interactive only if the lexical a
 an extrapolation from one 14× replica, and the assumption that `pg_search` stays linear is exactly the kind
 that §6 got wrong once already (sparse was predicted 14× and measured 41.9×).
 
-### 8.5 Verdict
+### 8.5 Engine-level measurements · 2026-11-03 · the branch, through the deployed HTTP server
+
+Everything here is the shipped engine in its container behind `docker-compose.vps.yml` (two pinned cores,
+8 GB limits), driven by `dev_tools/eval/load_test.py` (latency, seed 3) and `dev_tools/eval/e2e.py` (recall).
+`main` is image `vera-engine:before`, the branch is `vera-engine:dev`; the corpus is `vera2` (355K) or
+`vera5m` (the 5.0M replica of §6). Each variant recreated only the engine container, ✗ the database, so the
+page cache carried over from one run to the next (see the confound below).
+
+**(a) Concurrent arms, 355K -- the table in §8.1, plus what the containers did.**
+
+| run | 1 client p50 / p90 / p95 / max | 4 clients p50 / p90 / p95 / max · throughput | peak db CPU, MiB (1 · 4 clients) | peak embed CPU | engine |
+|---|---|---|---|---|---|
+| `main` #1 | 967 / 1,294 / 1,450 / 1,579 ms | 2,347 / 3,470 / 3,716 / 4,136 ms · 1.61 /s | 103%, 2,086 · 196%, 2,242 | 83% · 123% | 11 MiB |
+| branch #1 | 749 / 1,087 / 1,252 / 1,326 ms | 2,505 / 3,580 / 3,828 / 4,756 ms · 1.69 /s | 124%, 2,207 · 176%, 2,369 | 115% · 107% | 11 MiB |
+| `main` #2 | 931 / 1,277 / 1,439 / 1,523 ms | 2,135 / 3,687 / 3,713 / 4,163 ms · 1.68 /s | 117%, 2,195 · 165%, 2,243 | 83% · 126% | 12 MiB |
+| branch #2 | 748 / 1,166 / 1,272 / 1,353 ms | 2,250 / 3,780 / 4,046 / 4,202 ms · 1.70 /s | 125%, 2,227 · 196%, 2,361 | 87% · 126% | 11 MiB |
+
+All 200 requests were served; none were refused. 50 sequential + 48 four-client requests per run.
+
+**(b) `TEXT_MIN_IDF` through the engine, 355K, branch image, 50 sequential requests, alternated 0/2/0/2.**
+
+| `TEXT_MIN_IDF` | p50 | p90 | p95 | max |
+|---|---|---|---|---|
+| 0 | 749 / 778 ms | 1,097 / 1,215 | 1,199 / 1,249 | 1,356 / 1,355 |
+| 2 | **614 / 583 ms** | 738 / 751 | 783 / 768 | 812 / 827 |
+
+Recall of the same two settings, `e2e.py` over the 44 labelled + 6 out-of-domain queries, one run each:
+
+| `TEXT_MIN_IDF` | Recall@5 | Recall@10 | MRR | real refused | out-of-domain refused |
+|---|---|---|---|---|---|
+| 0 | **63.6%** | 70.5% | 0.557 | 0 / 44 | 2 / 6 |
+| 2 | 59.1% | 70.5% | 0.559 | 0 / 44 | 2 / 6 |
+
+! The IDF floor costs **two of 44** Recall@5 hits (4.5 points) through the engine, although §8.3 measured no
+loss at hit@20 on the arm alone. An arm that loses nothing alone can still reorder fusion, which is exactly
+the caveat §8.3 carried. One query is 2.3 points; this is one run, ✗ a confidence interval. It is why the
+option stays **off** by default.
+
+**(c) 5.0M rows, one client, 24 queries (seed 3), 10 warm-up queries first, `vera5m`.** First pass, run in
+this order, one run per variant:
+
+| engine | p50 | p90 | p95 | max | wall (24 q) | peak db CPU, MiB | peak embed CPU | engine |
+|---|---|---|---|---|---|---|---|---|
+| `main` (sequential arms) | 13,460 ms | 18,174 | 18,636 | 20,745 | 333 s | 152%, 3,533 | 55% | 36 MiB |
+| branch (concurrent arms) | **9,540 ms** | 12,842 | 14,435 | 15,300 | 243 s | 188%, 3,431 | 76% | 38 MiB |
+| branch, `TEXT_MIN_IDF=2` | 15,510 ms | 18,909 | 21,181 | 22,015 | 392 s | 98%, 3,517 | 88% | 33 MiB |
+
+The concurrent arms are **29% faster at p50** and 29% faster at p90. The IDF run is **slower, ✗ faster**, which
+contradicts the 6.2 s -> 1.4 s of §8.3. Two things differ from that measurement: it ran last, after two
+variants had filled and churned the 4 GB-class cache, and its db CPU peaked at 98% against 152-188% for the
+others -- the signature of a run waiting on disk, ✗ computing. So this is **not** evidence that pruning slows
+the arm; it is evidence that the first-pass order is confounded. A repeat alternating the two settings is
+below.
+
+IDF repeat, alternating (`TEXT_MIN_IDF` 2, 0, 2, 0), same procedure: *running when this was written; results
+are added underneath, or this line says otherwise.*
+
+**(d) Build and test, for the record.**
+
+| | result |
+|---|---|
+| `cargo test --workspace --locked` | 225 passed |
+| `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo fmt --check` | clean |
+| `cargo test -p store --locked -- --ignored` (seeded fixture) | 16 passed |
+| `cargo test -p vera-mcp --locked -- --ignored`, live pipeline, db `max_connections=32` | 29 passed x3 at `--test-threads=4`; 28 passed + 1 failed (a pool error, a different test each run) at 8 threads |
+| GitHub CI on PR #2 (7 checks: fmt, 3-OS test matrix, 2 integration jobs, engine image) | 7 / 7 pass, on the code commits and again on the docs commit |
+| engine image build | 6 min once the Rust 1.95.0 toolchain was fetched; the first attempt spent about 21 min in that download and was stopped |
+
+### 8.6 Verdict
 
 | claim | status |
 |---|---|
