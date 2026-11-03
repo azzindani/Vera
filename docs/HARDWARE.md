@@ -883,15 +883,32 @@ this order, one run per variant:
 | branch (concurrent arms) | **9,540 ms** | 12,842 | 14,435 | 15,300 | 243 s | 188%, 3,431 | 76% | 38 MiB |
 | branch, `TEXT_MIN_IDF=2` | 15,510 ms | 18,909 | 21,181 | 22,015 | 392 s | 98%, 3,517 | 88% | 33 MiB |
 
-The concurrent arms are **29% faster at p50** and 29% faster at p90. The IDF run is **slower, ✗ faster**, which
-contradicts the 6.2 s -> 1.4 s of §8.3. Two things differ from that measurement: it ran last, after two
-variants had filled and churned the 4 GB-class cache, and its db CPU peaked at 98% against 152-188% for the
-others -- the signature of a run waiting on disk, ✗ computing. So this is **not** evidence that pruning slows
-the arm; it is evidence that the first-pass order is confounded. A repeat alternating the two settings is
-below.
+! **Do not read the first pass as a result.** The same branch image with the same setting
+(`TEXT_MIN_IDF=0`) measured 9.5 s in the pass above and 14.2 s / 15.3 s in the repeat below -- a 5-6 s swing
+with no code change. The first pass ran in a fixed order against a page cache that carried over from run to
+run, so it measured cache state at least as much as the engine.
 
-IDF repeat, alternating (`TEXT_MIN_IDF` 2, 0, 2, 0), same procedure: *running when this was written; results
-are added underneath, or this line says otherwise.*
+Repeat, alternating `TEXT_MIN_IDF` 2, 0, 2, 0 on the branch image, same procedure (24 queries each):
+
+| order | `TEXT_MIN_IDF` | p50 | p90 | p95 | max | wall | peak db CPU, MiB | peak embed CPU |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 2 | 13,861 ms | 16,517 | 16,848 | 17,053 | 334 s | 125%, 3,409 | 78% |
+| 2 | 0 | 14,239 ms | 17,416 | 18,071 | 18,207 | 354 s | 160%, 3,586 | 83% |
+| 3 | 2 | 14,369 ms | 17,130 | 17,548 | 17,975 | 348 s | 137%, 3,095 | 53% |
+| 4 | 0 | 15,258 ms | 18,198 | 18,458 | 18,922 | 368 s | 160%, 3,512 | 73% |
+
+What this supports, and what it does not:
+
+- **`TEXT_MIN_IDF=2` at 5M:** about 0.4-0.9 s (3-6%) faster at p50 in each of the two alternating pairs, with
+  overlapping ranges. That is **not** the 6.2 s -> 1.4 s the arm showed alone in §8.3; with the three arms
+  sharing a cache the text arm is no longer the term that sets the total. Combined with its 4.5-point
+  Recall@5 cost at 355K (b), it is **not worth turning on**.
+- **Concurrent arms at 5M: not demonstrated.** `main` 13.5 s (one run), branch 14.2-15.3 s (repeat) and
+  9.5 s (first pass) cannot be ordered; the spread across identical runs is larger than any difference
+  between engines. At 355K the effect is clear (§8.5a) because everything is cached; at 5M the arms are bound
+  by disk and by one shared 2-core budget, not by waiting on each other.
+- Every 5M p50 in this section, 9.5-15.5 s, sits within the 13-18 s the 5M stage times of §8.2 already showed.
+  **5M on two cores is not interactive.**
 
 **(d) Build and test, for the record.**
 
@@ -909,7 +926,7 @@ are added underneath, or this line says otherwise.*
 | claim | status |
 |---|---|
 | runs correctly on ~4 GB, no OOM, embedder included | **holds** (355K) |
-| decent single-query speed on 2 cores | **holds at 355K** (~0.75 s with concurrent arms, §8.5a) · **fails at 5.0M** (17-18 s in §8.2; 13.5 s -> **9.5 s** with concurrent arms in the same session, §8.5c -- still not interactive) |
+| decent single-query speed on 2 cores | **holds at 355K** (~0.75 s with concurrent arms, §8.5a) · **fails at 5.0M** (13-18 s across §8.2 and §8.5c; the concurrent-arms gain is not demonstrable there) |
 | concurrency is bounded, not fatal | **holds** -- 503 + retry, no crash at 3× the ceiling |
 | throughput | ~1.65 queries/s on two hardware threads |
 | routing makes dense independent of corpus size | **holds only with cluster-ordered storage** (§8.2, §8.3) |
