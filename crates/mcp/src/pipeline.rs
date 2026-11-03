@@ -53,6 +53,13 @@ pub struct Config {
     pub dense_weight: f32,
     pub sparse_weight: f32,
     pub text_weight: f32,
+    /// Corpus IDF below which a query term is withheld from the `text` arm.
+    ///
+    /// ! `0.0` (off) by default, so every published number stays reproducible. At
+    /// 5.0M rows `2.0` took that arm from 6.2 s to 1.4 s with the hit rate
+    /// unchanged on the 44 labelled queries (`docs/HARDWARE.md` §8.3); it applies
+    /// to the `text` arm ONLY -- `pg_search`'s cost does not depend on the terms.
+    pub text_min_idf: f32,
     /// Minimum cosine for the startup canary round-trip.
     ///
     /// Vectors are stored as `halfvec`, so an exact round-trip through the
@@ -137,6 +144,7 @@ impl Default for Config {
             dense_weight: 0.0,
             sparse_weight: 1.0,
             text_weight: 1.0,
+            text_min_idf: 0.0,
             canary_min_cosine: 0.98,
             // ! Measured on the 50-case set in dev_tools/eval/, not chosen. With
             // identifier queries exempt (invariant 4), this pair rejects 6 of
@@ -765,12 +773,23 @@ impl Pipeline {
         }))
     }
 
-    /// Run the three arms.
+    /// Run the three arms, concurrently.
     ///
     /// ! Only `dense` is routed. `sparse` and `text` scan globally, which is
     /// what makes a routing miss a latency cost rather than a zero-recall one
     /// (`FAILURE_MODES.md` §1) — so this takes the probed clusters and uses
     /// them for exactly one of the three.
+    ///
+    /// ! Concurrent, ✗ three awaits in a row. The arms are independent read-only
+    /// queries and `HARDWARE.md` §6 measured sparse and text at 99% of the time
+    /// at scale, so the total was their SUM where it can be their MAX. Results are
+    /// unchanged: each arm is deterministic (`settle`), and `try_join!` returns
+    /// them in the order written. It needs connections to match: the pool is
+    /// sized `ARM_FANOUT` per permitted search, see `main.rs`.
+    ///
+    /// ! On a box with fewer cores than arms the gain is I/O overlap only, and a
+    /// query that used to hold one connection holds up to three. That is why the
+    /// pool grew with it.
     async fn arms(
         &self,
         query: &str,
@@ -778,22 +797,29 @@ impl Pipeline {
         probed: &[(i32, f32)],
         progress: &mut Vec<String>,
     ) -> Result<(Vec<store::Scored>, Vec<store::Scored>, Vec<store::Scored>), PipelineError> {
-        let dense = self.dense_arm(qvec, probed).await?;
+        let sparse_lit = sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim());
+        // ! Pruned for the text arm only. The sparse arm's query vector is built
+        // from the vocabulary, and `pg_search` does not get slower with fewer terms.
+        let text_query = self.vectorizer.prune(query, self.cfg.text_min_idf);
+        let sparse_k = self.cfg.per_arm_k;
+        let (dense, sparse, text) = tokio::try_join!(
+            self.dense_arm(qvec, probed),
+            async {
+                self.ops
+                    .sparse(query, &sparse_lit, sparse_k)
+                    .await
+                    .map_err(PipelineError::from)
+            },
+            async {
+                self.ops
+                    .text(&text_query, sparse_k)
+                    .await
+                    .map_err(PipelineError::from)
+            },
+        )?;
         progress.push(format!("dense: {} candidates", dense.len()));
-
-        let sparse = self
-            .ops
-            .sparse(
-                query,
-                &sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim()),
-                self.cfg.per_arm_k,
-            )
-            .await?;
         progress.push(format!("sparse: {} candidates", sparse.len()));
-
-        let text = self.ops.text(query, self.cfg.per_arm_k).await?;
         progress.push(format!("text: {} candidates", text.len()));
-
         Ok((dense, sparse, text))
     }
 

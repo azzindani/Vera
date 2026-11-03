@@ -167,7 +167,11 @@ jobs:
       - name: Integration tests · the pipeline
         env:
           VERA_FX_DSN: host=localhost port=5432 dbname=vera user=vera password=vera
-        run: cargo test -p vera-mcp --locked -- --ignored --nocapture
+        # ! --test-threads=4: every test builds its own pool and one search now holds up to
+        # three connections (the arms run concurrently). All 29 tests at once is ~90
+        # connections, nearly all of Postgres's default max_connections = 100; a database
+        # capped at 32 failed intermittently at 8 threads and passed at 4.
+        run: cargo test -p vera-mcp --locked -- --ignored --nocapture --test-threads=4
 
   # ! The job that closes FAILURE_MODES §13. `SearchOps::text` has two SQL
   # paths and picks by probing for the RUM index; the `integration` job above
@@ -256,7 +260,11 @@ jobs:
       - name: Pipeline tests against the RUM path
         env:
           VERA_FX_DSN: host=localhost port=5432 dbname=vera user=vera password=vera
-        run: cargo test -p vera-mcp --locked -- --ignored --nocapture
+        # ! --test-threads=4: every test builds its own pool and one search now holds up to
+        # three connections (the arms run concurrently). All 29 tests at once is ~90
+        # connections, nearly all of Postgres's default max_connections = 100; a database
+        # capped at 32 failed intermittently at 8 threads and passed at 4.
+        run: cargo test -p vera-mcp --locked -- --ignored --nocapture --test-threads=4
 
   # The engine image is built here for the same reason: so a broken Dockerfile
   # fails the pull request, ✗ the deploy. No registry push — CI proves it

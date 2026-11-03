@@ -254,3 +254,37 @@ Not used. RRF is the ranking mechanism. A cross-encoder reranker would put a mod
 on the query path — a round-trip per request, a second set of weights to keep
 consistent, and a dependency the lightweight design exists to avoid. It stays out until
 the eval set shows fusion is the binding constraint.
+
+---
+
+## 7. Reproducing the corpus from its source · 2026-11-02
+
+The deployed corpus is a pure function of `Azzindani/ID_REG_KG_2511` (748,558 articles; 181,807 of them were
+ingested) and the code in this repository. That was checked, ✗ assumed, with
+`dev_tools/pre_embed/verify_from_source.py`:
+
+| check | result |
+|---|---|
+| BM25 refit over every article (`split_article` → `Bm25Vectorizer.fit(20000)`, the `--fit-on-full-corpus` path) | sha256 **`ea8949e3…3d96d`, equal to `corpus_meta.sparse_vocab_sha256`**; n_docs 1,657,712, avgdl 68.9838 |
+| re-chunk the ingested articles with the current `chunking.py` | **367,069 of 367,069** chunk ids regenerated; bodies and `indexable` flags identical |
+| metadata | identical except 433 chunks (193 articles) whose year is `0` in the database and `'0000'` in the source |
+| engine with the exact vocabulary vs a reconstruction from the stored sparse vectors | identical eval (Recall@5 63.6%, Recall@10 70.5%, MRR 0.557, out-of-domain 2/6) |
+
+So a vocabulary lost with a failed disk was recovered *exactly*, ✗ approximately, and the stored vectors can be
+regenerated from text. The two extra dense rows (355,623 dense vs 355,621 sparse) are chunks `280366` and
+`357760` ("Cukup jelas"): non-indexable, so they have no sparse vector and the engine never searches them.
+
+`year = 0` is worth knowing about: a `Range` or `HalfLife` factor over `year` would score those 433 rows as
+the oldest instruments in the corpus. `temporal` carries weight 0.0 today, so nothing is affected.
+
+Source columns the engine does not use yet: `kg_*` (entities, cross-references, legal domains, authority /
+hierarchy / temporal scores, obligation / prohibition / permission flags, sanctions, completeness). They are the
+enrichment `ENRICHMENT_KEYS = &[]` in `pipeline.rs` is waiting for (`SCORING.md` §10).
+
+### Corpus embedding speed
+
+`dev_tools/pre_embed/embed_throughput.py`, RTX 3070 Ti Laptop (8 GB), fp16, `reembed.py`'s recipe, database
+excluded: **57.8 chunks/s at batch 16 (≈1.7 h for 355,621 chunks), 51.9/s at batch 32**; batch 64 was not run. A
+real run is slower by the writer's share. The earlier "~6 h" figure for a full run was not re-measured end to
+end.
+
