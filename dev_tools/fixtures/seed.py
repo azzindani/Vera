@@ -364,6 +364,23 @@ def doc_key(about: str) -> str:
     return hashlib.sha1(about.encode("utf-8")).hexdigest()[:4]
 
 
+def doc_id_of(doc: dict) -> str:
+    """One id per document, as Ravel assigns. (type, number, year) is NOT identity: the two
+    Peraturan Bupati 27/2013 are different regulations, which `about` tells apart."""
+    return f"fx-{doc['type'][:2]}-{doc['number']}-{doc['year']}-{doc_key(doc['about'])}"
+
+
+#: (revoked, revoker), each as (type, number, year). ! Synthetic: this exercises the engine's
+#: ordering and labelling, it does not assert anything about Indonesian law.
+REVOKED = [
+    (("UNDANG-UNDANG", "22", 2009), ("PERATURAN PEMERINTAH", "79", 2013)),
+]
+
+
+def _find(key: tuple[str, str, int]) -> dict:
+    return next(d for d in DOCS if (d["type"], d["number"], d["year"]) == key)
+
+
 def build_rows() -> list[dict]:
     """Flatten DOCS into chunk rows with themes attached."""
     rows: list[dict] = []
@@ -375,6 +392,7 @@ def build_rows() -> list[dict]:
                 # later re-seed. A fixture that is not reproducible is a trap.
                 "id": f"fx-{doc['type'][:2]}-{doc['number']}-{doc['year']}-{i:02d}"
                       f"-{doc_key(doc['about'])}",
+                "doc_id": doc_id_of(doc),
                 "type": doc["type"], "number": doc["number"], "year": doc["year"],
                 "about": doc["about"], "theme": doc["theme"],
                 "chapter": chapter, "article": article, "chunk_no": i,
@@ -385,6 +403,7 @@ def build_rows() -> list[dict]:
     u = UNINDEXABLE
     rows.append({
         "id": "fx-PE-26-2009-99-lampiran",
+        "doc_id": doc_id_of(u),
         "type": u["type"], "number": u["number"], "year": u["year"],
         "about": u["about"], "theme": u["theme"],
         "chapter": u["chapter"], "article": u["article"], "chunk_no": 99,
@@ -424,7 +443,7 @@ def main() -> int:
                   f"{len(rows)}). Pass --force if you really mean it.", file=sys.stderr)
             return 1
 
-    cur.execute("DROP TABLE IF EXISTS clusters, ingest_progress, chunks, corpus_meta")
+    cur.execute("DROP TABLE IF EXISTS clusters, ingest_progress, doc_status, chunks, corpus_meta")
     schema = (SCHEMA_SQL.read_text(encoding="utf-8")
               .replace("{{DENSE_DIM}}", str(DENSE_DIM))
               .replace("{{SPARSE_DIM}}", str(SPARSE_DIM)))
@@ -474,7 +493,7 @@ def main() -> int:
     for r in rows:
         dv = dense_for(r["theme"], r["body"], DENSE_DIM)
         payload.append((
-            r["id"], CORPUS_ID, r["type"], r["number"], r["year"], r["about"],
+            r["id"], CORPUS_ID, r["doc_id"], r["type"], r["number"], r["year"], r["about"],
             r["chapter"], r["article"], r["chunk_no"], r["body"],
             None,  # source_url: this corpus genuinely has none (invariant 8)
             f"{r['type']} Nomor {r['number']} Tahun {r['year']} tentang {r['about']}",
@@ -484,13 +503,22 @@ def main() -> int:
 
     cur.executemany(
         """INSERT INTO chunks (
-               id, corpus_id, regulation_type, regulation_number, year, about,
+               id, corpus_id, doc_id, regulation_type, regulation_number, year, about,
                chapter, article, chunk_no, body, source_url, source_title,
                truncated_at_source, indexable, cluster_id, dense, sparse)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
                    %s::halfvec,%s::sparsevec)""",
         payload,
     )
+
+    # -- the sidecar the engine labels and orders by --------------------------------
+    for revoked, revoker in REVOKED:
+        old, new = _find(revoked), _find(revoker)
+        cur.execute(
+            "INSERT INTO doc_status (corpus_id, doc_id, status, revoked_by)"
+            " VALUES (%s,%s,'revoked',%s)",
+            (CORPUS_ID, doc_id_of(old), [doc_id_of(new)]),
+        )
 
     # Centroid = normalized mean of the cluster's members, exactly as spherical
     # k-means leaves it, so probing with a centroid really does surface members.
