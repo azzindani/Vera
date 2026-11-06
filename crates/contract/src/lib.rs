@@ -18,8 +18,8 @@ pub use algorithms::{
     TransformSpec, classic_composition,
 };
 pub use contract::{
-    Citation, ComponentScores, Confidence, ExactMatch, Locator, SearchResponse, SearchResult,
-    Source, SummaryPayload, citation_block,
+    Citation, ComponentScores, Confidence, Currency, ExactMatch, Locator, SearchResponse,
+    SearchResult, Source, SummaryPayload, citation_block,
 };
 pub use options::{
     AppliedOptions, Ceilings, Expansion, FactorWeights, Mode, ResolveError, SearchOptions,

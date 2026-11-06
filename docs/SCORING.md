@@ -673,3 +673,58 @@ meaningless. `e2e.py` owns recall, against the real corpus.
 re-embed, on a corpus where the dense arm contributed 0.0%, and must be refitted
 (§9). This validates that the layer is *faithful and fast*, ✗ that its numbers
 are good.
+
+---
+
+## 11. Currency · a revoked regulation and the one that revoked it
+
+Ravel reads, from the verb beside each citation, which regulation revokes, replaces or
+amends which (`Ravel/docs/RELATIONS.md`), and loads it as `doc_status`. A search for a
+subject finds both the old regulation and the one that ended it, and relevance alone can
+put the dead one first, because it was written in the words the query uses.
+
+Two things happen, both read from the sidecar and both absent for a corpus without it
+(`SearchOps::currency` probes `doc_status` and `chunks.doc_id` once and returns an empty
+map otherwise, so every corpus loaded before Ravel wrote relations serves as it did):
+
+1. **Labelled.** A result whose document is `revoked`, `partially_revoked` or `amended`
+   carries `currency` (`OUTPUT_CONTRACT.md` §2) with the titles of the regulations that did
+   so. `none_known` is never sent: it is the absence of a finding, and "no `currency`" must
+   not read as "in force".
+2. **Ordered, between two members of the pool.** A fully `revoked` candidate never sits
+   above a candidate from a document that revokes it (`engine::rank_below_revokers`, a
+   stable topological order: everything else keeps the order relevance and the factors
+   gave it, and the revoked chunk lands as soon as its last revoker has).
+
+**Why it is an ordering rule and not a weight.** A multiplier on revoked documents would be
+a number nobody has measured, in a ranking whose weights are already waiting to be refitted
+(§9). This moves nothing unless both documents are candidates and one has revoked the
+other, never removes a result, and does nothing for a revoked regulation whose revoker is
+not in the pool: that one keeps its place and is labelled instead. A revoked regulation is
+still the right answer to "what did the 2008 rule say".
+
+**What it does not do.**
+
+- *A named regulation is not reordered.* "UU 22 tahun 2009" asked for that instrument, so
+  when the query is an identifier match nothing moves. The label still shows.
+- *Factors off means off.* With the factor weights zeroed the order is exactly fusion's
+  (`zeroed_factor_weights_are_the_identity_on_the_fused_order`); the ordering rule is part of
+  ranking and honours the switch. Labels stay.
+- *A partially revoked regulation is not demoted.* It is partly in force, and its amender
+  has no claim to outrank it.
+- *A mutual pair is left alone.* The Ravel corpus holds one (a bad link between a regulation
+  and its own amendments); ranking one below the other would be arbitrary.
+
+**Measured here, and not.** The fixture marks UU 22/2009 as revoked by PP 79/2013
+(synthetic: it tests the ordering and the label, not the law). With the rule off, relevance
+puts a UU 22/2009 chunk above PP 79/2013; with it on, none is
+(`a_revoked_regulation_is_labelled_and_never_outranks_its_revoker`, which asserts the rule
+fired so it cannot pass on a fixture that happened to rank them correctly). **Not measured:**
+any effect on Recall@k or on the 50-case set, because no corpus with `doc_status` has been
+built end to end yet; Ravel's own coverage of the revokes graph is a floor (71% of
+revocation targets are not among the files).
+
+`indexable` is a separate thing and needs nothing here: Ravel's load plan sets
+`chunks.indexable = FALSE` for documents its quality gate rejected, and every arm already
+searches `WHERE indexable`.
+

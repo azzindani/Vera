@@ -9,10 +9,12 @@
 //! The numbers in these modules' docs are measured, ✗ assumed — they come from
 //! the 182K-row spike corpus, and `docs/EVAL.md` is what keeps them honest.
 
+pub mod currency;
 pub mod factors;
 pub mod fusion;
 pub mod routing;
 
+pub use currency::rank_below_revokers;
 pub use factors::{
     Composition, Context, Facets, FactorSpec, Field, StructuralRule, Transform, Variable,
     Vocabulary, Weights, contributions, rescore, rescore_composed,

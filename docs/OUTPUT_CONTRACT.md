@@ -52,6 +52,13 @@ one.
         // ! page is reachable only for a corpus ingested with page numbers.
         // The current one has no page column, so every locator is section-only.
         "locator": { "section": "Pasal 9 ayat (3)" }
+      },
+      // ! Present only when another regulation is KNOWN to have ended or changed this
+      // one (`docs/SCORING.md` §11). Its absence means no revocation was found, ✗ that
+      // the regulation is in force: the revoker may not be in the corpus.
+      "currency": {
+        "status": "revoked",                          // revoked | partially_revoked | amended
+        "revoked_by": ["Peraturan Daerah Nomor 5 Tahun 2015 tentang ..."]   // as ingested
       }
     }
   ],
