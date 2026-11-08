@@ -44,6 +44,13 @@ pub enum StoreError {
         engine_dim: usize,
     },
 
+    #[error(
+        "corpus declares instruction style '{0}' · this engine embeds queries through a \
+         plain-text endpoint and cannot send that form · a query in a different form lands \
+         in a different vector space · refusing to serve"
+    )]
+    UnsupportedInstructionStyle(String),
+
     // ! One literal, no line continuations. A `\` + newline inside a Rust
     // string only folds cleanly with LF endings; on a CRLF working copy the
     // indentation survives into the message an operator reads.
@@ -120,6 +127,39 @@ impl CorpusMeta {
             });
         }
         Ok(())
+    }
+}
+
+/// The text prepended to a query, from whichever `corpus_meta` schema the corpus has.
+///
+/// Two schemas exist. The older one carries a single `dense_instruction` that IS the
+/// prefix. Ravel's carries `dense_instruction_style` plus separate document and query
+/// instructions, because one column cannot say whether an instruction is a prefix or a
+/// system turn, and cannot hold different strings for the two sides.
+///
+/// ! With no style recorded, the legacy value passes through untouched, so an older corpus
+/// behaves exactly as it did. With a style, the string is Ravel's `render_query`: Qwen3's own
+/// template `Instruct: {instruction}\nQuery: {text}`, of which the prefix returned here is
+/// everything up to and including the space after `Query:`. A different string is a
+/// different vector.
+///
+/// # Errors
+/// [`StoreError::UnsupportedInstructionStyle`] for any style other than `none` and
+/// `prefix`: a system-turn instruction cannot be sent through a plain-text embedding
+/// endpoint, and silently dropping it would embed queries into another space.
+pub fn query_prefix(
+    legacy: Option<String>,
+    style: Option<&str>,
+    query_instruction: Option<&str>,
+) -> Result<Option<String>, StoreError> {
+    match style {
+        None => Ok(legacy),
+        Some("none") => Ok(None),
+        Some("prefix") => Ok(query_instruction
+            .map(str::trim)
+            .filter(|q| !q.is_empty())
+            .map(|q| format!("Instruct: {q}\nQuery: "))),
+        Some(other) => Err(StoreError::UnsupportedInstructionStyle(other.to_owned())),
     }
 }
 
@@ -234,6 +274,61 @@ mod tests {
             sparse_vocab_sha256: "abc".into(),
             scoring_vocabulary: None,
         }
+    }
+
+    // -- query_prefix: both `corpus_meta` schemas ---------------------------------
+
+    const RAVEL_QUERY: &str =
+        "Given a legal or regulatory question, retrieve passages that answer it";
+
+    #[test]
+    fn an_older_corpus_keeps_its_stored_prefix_untouched() {
+        let kept = query_prefix(Some("Instruct: x\nQuery: ".into()), None, None).unwrap();
+        assert_eq!(kept.as_deref(), Some("Instruct: x\nQuery: "));
+        assert_eq!(query_prefix(None, None, None).unwrap(), None);
+    }
+
+    #[test]
+    fn a_style_wins_over_a_stale_legacy_value() {
+        let got = query_prefix(Some("old".into()), Some("none"), Some(RAVEL_QUERY)).unwrap();
+        assert_eq!(got, None);
+    }
+
+    #[test]
+    fn a_prefix_corpus_gets_ravels_exact_query_template() {
+        // ! Must equal Ravel's `render_query`: f"Instruct: {instruction}\nQuery: {text}",
+        // with the space after `Query:` inside the prefix. Any other string is a
+        // different vector.
+        let prefix = query_prefix(None, Some("prefix"), Some(RAVEL_QUERY))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            prefix,
+            "Instruct: Given a legal or regulatory question, retrieve passages that answer it\nQuery: "
+        );
+        assert_eq!(
+            format!("{prefix}tarif retribusi"),
+            "Instruct: Given a legal or regulatory question, retrieve passages that answer it\nQuery: tarif retribusi"
+        );
+    }
+
+    #[test]
+    fn a_prefix_corpus_with_no_query_instruction_sends_the_bare_query() {
+        // ! Ravel's rule: no instruction, no template. An empty template is not the same
+        // thing as no instruction.
+        assert_eq!(query_prefix(None, Some("prefix"), Some("")).unwrap(), None);
+        assert_eq!(
+            query_prefix(None, Some("prefix"), Some("  ")).unwrap(),
+            None
+        );
+        assert_eq!(query_prefix(None, Some("prefix"), None).unwrap(), None);
+    }
+
+    #[test]
+    fn a_system_turn_instruction_is_refused_rather_than_dropped() {
+        let e = query_prefix(None, Some("chat_system"), Some(RAVEL_QUERY)).unwrap_err();
+        assert!(matches!(e, StoreError::UnsupportedInstructionStyle(_)));
+        assert!(e.to_string().contains("different vector space"));
     }
 
     #[test]

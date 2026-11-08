@@ -224,10 +224,18 @@ impl SearchOps {
                 // NULL. Through `to_jsonb` the key is simply absent and the result is
                 // NULL -- so one query serves both schemas with no probe and no
                 // version flag.
+                //
+                // ! The same trick serves the instruction, whose columns differ by
+                // schema: the older one has `dense_instruction`, Ravel's has a style and
+                // separate document and query strings. `query_prefix` reads whichever is
+                // there. The sparse columns are nullable in Ravel's schema (a corpus with
+                // no sparse arm records none), so they are read as optional.
                 "SELECT id, dense_model, dense_dim, dense_pooling, dense_normalize,
                         sparse_scheme, sparse_dim, sparse_vocab_sha256,
-                        dense_instruction,
-                        to_jsonb(corpus_meta) ->> 'scoring_vocabulary'
+                        to_jsonb(corpus_meta) ->> 'dense_instruction',
+                        to_jsonb(corpus_meta) ->> 'scoring_vocabulary',
+                        to_jsonb(corpus_meta) ->> 'dense_instruction_style',
+                        to_jsonb(corpus_meta) ->> 'dense_query_instruction'
                  FROM corpus_meta ORDER BY created_at DESC LIMIT 1",
                 &[],
             )
@@ -239,10 +247,14 @@ impl SearchOps {
             dense_dim: row.get(2),
             dense_pooling: row.get(3),
             dense_normalize: row.get(4),
-            sparse_scheme: row.get(5),
-            sparse_dim: row.get(6),
-            sparse_vocab_sha256: row.get(7),
-            dense_instruction: row.get(8),
+            sparse_scheme: row.get::<_, Option<String>>(5).unwrap_or_default(),
+            sparse_dim: row.get::<_, Option<i32>>(6).unwrap_or_default(),
+            sparse_vocab_sha256: row.get::<_, Option<String>>(7).unwrap_or_default(),
+            dense_instruction: crate::query_prefix(
+                row.get(8),
+                row.get::<_, Option<String>>(10).as_deref(),
+                row.get::<_, Option<String>>(11).as_deref(),
+            )?,
             scoring_vocabulary: row.get(9),
         })
     }
