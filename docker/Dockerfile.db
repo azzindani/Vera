@@ -66,7 +66,7 @@ ARG PG_SEARCH_DEB=postgresql-16-pg-search_0.25.9-1PARADEDB-bookworm_amd64.deb
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends curl ca-certificates; \
-    curl -fsSL -o /tmp/pg_search.deb \
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 3 -o /tmp/pg_search.deb \
       "https://github.com/paradedb/paradedb/releases/download/v${PG_SEARCH_REF}/${PG_SEARCH_DEB}"; \
     apt-get install -y --no-install-recommends /tmp/pg_search.deb; \
     rm -f /tmp/pg_search.deb; \
