@@ -64,6 +64,24 @@ pub struct ComponentScores {
     pub bm25: f32,
 }
 
+/// Whether another regulation ended or changed the one a result comes from.
+///
+/// Read from Ravel's `doc_status`, which derives it from the verb beside each citation
+/// (`revokes`, `replaces`, `amends`) and from nothing else. Present only when something is
+/// known, so its absence means "no revocation was found", ✗ "in force": the regulation that
+/// revoked this one may not be in the corpus at all.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Currency {
+    /// `revoked`, `partially_revoked` or `amended`.
+    pub status: String,
+    /// Titles of the regulations that revoked or replaced this one, as ingested.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub revoked_by: Vec<String>,
+    /// Titles of the regulations that amended this one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amended_by: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchResult {
     pub id: String,
@@ -90,6 +108,13 @@ pub struct SearchResult {
     /// supports, so the distinction is on the wire.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expanded_from: Option<String>,
+    /// Whether a later regulation revoked or amended this one · `docs/SCORING.md` §11.
+    ///
+    /// ! A label, ✗ a filter. A revoked regulation is still a correct answer to "what did
+    /// the 2008 rule say", so it stays in the list, marked, and ranks below the regulation
+    /// that revoked it when both are present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<Currency>,
 }
 
 /// A hit from the global exact-identifier path that bypasses routing.
@@ -282,6 +307,7 @@ mod tests {
                 },
             },
             expanded_from: None,
+            currency: None,
         }
     }
 

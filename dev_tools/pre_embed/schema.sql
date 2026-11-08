@@ -61,6 +61,10 @@ CREATE TABLE IF NOT EXISTS chunks (
     article         TEXT,
     chunk_no        INTEGER,
 
+    -- The document this chunk belongs to, as Ravel writes it. Empty for a corpus loaded
+    -- before Ravel assigned one; `doc_status` joins on it.
+    doc_id          TEXT NOT NULL DEFAULT '',
+
     body            TEXT NOT NULL,
 
     -- ! Nullable for the spike. This corpus has no source_url, and inventing
@@ -94,6 +98,25 @@ CREATE INDEX IF NOT EXISTS chunks_indexable_idx ON chunks (indexable) WHERE inde
 -- gets its own btree and searches globally.
 CREATE INDEX IF NOT EXISTS chunks_identifier_idx
     ON chunks (regulation_type, regulation_number, year);
+
+-- ---------------------------------------------------------------------------
+-- doc_status · written by Ravel (docs/RELATIONS.md), read by the engine.
+--
+-- ! Ravel's schema takes precedence where the two differ. This copy exists so the
+-- fixture and a fresh clone have the table the engine probes for; a corpus without it
+-- serves exactly as before (`SearchOps::currency`).
+--
+-- `status` is revoked | partially_revoked | amended | none_known. `none_known` is the
+-- ABSENCE of a known revocation, never a claim that a regulation is in force.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS doc_status (
+    corpus_id   TEXT NOT NULL REFERENCES corpus_meta(id),
+    doc_id      TEXT NOT NULL,
+    status      TEXT NOT NULL,
+    revoked_by  TEXT[] NOT NULL DEFAULT '{}',
+    amended_by  TEXT[] NOT NULL DEFAULT '{}',
+    PRIMARY KEY (corpus_id, doc_id)
+);
 
 -- ---------------------------------------------------------------------------
 -- ingest_progress · resumability is a table, not a flag.

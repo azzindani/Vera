@@ -420,3 +420,40 @@ async fn zero_disables_the_timeout() {
     let v: String = row.get(0);
     assert_eq!(v, "0", "no timeout should be set when disabled");
 }
+
+#[tokio::test]
+#[ignore = "needs a live corpus"]
+async fn a_corpus_without_ravels_sidecar_serves_with_no_currency() {
+    // ! Holds for BOTH corpora: the 181K spike has no `doc_status` and must keep serving,
+    // and the fixture has one. In the first case the answer is an empty map, ✗ an error.
+    let ops = ops();
+    let ids: Vec<String> = ops
+        .text("lalu lintas", 20)
+        .await
+        .expect("text")
+        .into_iter()
+        .map(|s| s.id)
+        .collect();
+    let currency = ops
+        .currency(&ids)
+        .await
+        .expect("currency never errors on absence");
+    println!(
+        "{} of {} candidates carry a document",
+        currency.len(),
+        ids.len()
+    );
+    for (id, c) in &currency {
+        assert!(ids.contains(id));
+        assert!(
+            !c.doc_id.is_empty(),
+            "a status needs a document to attach to"
+        );
+        assert!(
+            ["revoked", "partially_revoked", "amended", "none_known"].contains(&c.status.as_str()),
+            "{}",
+            c.status
+        );
+    }
+    assert!(ops.currency(&[]).await.expect("empty").is_empty());
+}

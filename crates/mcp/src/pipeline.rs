@@ -749,6 +749,26 @@ impl Pipeline {
                 .await?;
         }
 
+        // ! Currency is read for everything that ranked, expanded siblings included, and
+        // only ORDERS when the query does not name a regulation: someone who typed
+        // "PP 26 tahun 2009" asked for that instrument, revoked or not.
+        let currency = self
+            .ops
+            .currency(&ranked.iter().map(|c| c.row.id.clone()).collect::<Vec<_>>())
+            .await?;
+        // ! And only when ranking is on. "Factors off" has to mean exactly the order fusion
+        // produced (`zeroed_factor_weights_are_the_identity_on_the_fused_order`): an
+        // ordering rule that ignored the switch would be a second ranking layer nobody
+        // could turn off. The labels stay either way.
+        let ranking_on = !composition_from_contract(
+            applied.factor_weights.relevance_floor,
+            &applied.composition,
+        )
+        .is_inert();
+        if apply_floor && ranking_on && !currency.is_empty() {
+            Self::rank_revoked_below_revokers(&mut ranked, &currency, &mut progress);
+        }
+
         // ! Counted BEFORE the cut. `truncated` is the only signal a caller
         // has that raising `top_k` would return something it has not seen, and
         // after `truncate` the number that would have said so is gone.
@@ -759,7 +779,7 @@ impl Pipeline {
             ranked.len(),
             pool.len()
         ));
-        let results = self.to_results(&ranked, &dense, &sparse);
+        let results = self.to_results(&ranked, &dense, &sparse, &currency);
 
         Ok(self.assemble(Assembly {
             query,
@@ -1065,6 +1085,33 @@ impl Pipeline {
         }
     }
 
+    /// A regulation that was revoked never outranks the one that revoked it.
+    ///
+    /// Only a FULL revocation orders (`status == "revoked"`): a partially revoked
+    /// regulation is partly in force, and its amender has no claim to outrank it. Nothing
+    /// is removed, no score changes, and a revoked regulation whose revoker is not among the
+    /// candidates keeps its place (`docs/SCORING.md` §11).
+    fn rank_revoked_below_revokers(
+        ranked: &mut Vec<Candidate<'_>>,
+        currency: &std::collections::HashMap<String, store::Currency>,
+        progress: &mut Vec<String>,
+    ) {
+        let held = engine::rank_below_revokers(
+            ranked,
+            |c| currency.get(&c.row.id).map_or("", |x| x.doc_id.as_str()),
+            |c, other| {
+                currency.get(&c.row.id).is_some_and(|x| {
+                    x.status == "revoked" && x.revoked_by.iter().any(|r| r.doc_id == other)
+                })
+            },
+        );
+        if held > 0 {
+            progress.push(format!(
+                "currency: {held} candidate(s) held below the regulation that revoked them"
+            ));
+        }
+    }
+
     /// Map a stored row onto the scoring facets.
     ///
     /// ! Borrowed, so scoring a pool of 60 clones nothing. Lives here rather
@@ -1225,6 +1272,7 @@ impl Pipeline {
         ranked: &[Candidate<'_>],
         dense: &[store::Scored],
         sparse: &[store::Scored],
+        currency: &std::collections::HashMap<String, store::Currency>,
     ) -> Vec<SearchResult> {
         let score_in = |arm: &[store::Scored], id: &str| {
             arm.iter().find(|s| s.id == id).map_or(0.0, |s| s.score)
@@ -1251,6 +1299,14 @@ impl Pipeline {
                         },
                     },
                     expanded_from: c.expanded_from.clone(),
+                    currency: currency
+                        .get(&row.id)
+                        .filter(|x| x.is_noteworthy())
+                        .map(|x| contract::Currency {
+                            status: x.status.clone(),
+                            revoked_by: x.revoked_by.iter().map(|d| d.title.clone()).collect(),
+                            amended_by: x.amended_by.iter().map(|d| d.title.clone()).collect(),
+                        }),
                 }
             })
             .collect()
@@ -2405,6 +2461,102 @@ mod live {
                 "unindexable chunk surfaced for {q:?}"
             );
         }
+    }
+
+    /// Positions of results whose source title starts with `prefix`. By title, ✗ by id:
+    /// `fx-PE-79-2013` is a prefix of a Peraturan Bupati as well as the Peraturan Pemerintah.
+    fn positions(r: &SearchResponse, prefix: &str) -> Vec<usize> {
+        r.results
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| x.source.title.starts_with(prefix))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn a_revoked_regulation_is_labelled_and_never_outranks_its_revoker() {
+        // The fixture marks UU 22/2009 as revoked by PP 79/2013 (synthetic: this tests the
+        // ordering and the label, ✗ the law). Both are about road traffic, so a query for
+        // it retrieves chunks of each.
+        let p = pipeline(open_cfg()).await;
+        let r = p
+            .search_with(
+                "lalu lintas dan angkutan jalan",
+                &contract::SearchOptions::default(),
+            )
+            .await
+            .expect("search");
+        let old_law: Vec<usize> = positions(&r, "UNDANG-UNDANG Nomor 22 Tahun 2009");
+        let new_law: Vec<usize> = positions(&r, "PERATURAN PEMERINTAH Nomor 79 Tahun 2013");
+        assert!(
+            !old_law.is_empty() && !new_law.is_empty(),
+            "the query must retrieve both, or this proves nothing · {:?}",
+            r.results.iter().map(|x| &x.id).collect::<Vec<_>>()
+        );
+        // ! Non-vacuous: relevance alone put the revoked chunk first, and the rule moved it.
+        // Without this a fixture that happened to rank them correctly would pass for nothing.
+        assert!(
+            r.progress.iter().any(|l| l.starts_with("currency:")),
+            "the rule never fired · {:?}",
+            r.progress
+        );
+        let last_new_law = *new_law.iter().max().unwrap();
+        assert!(
+            old_law.iter().all(|&i| i > last_new_law),
+            "a revoked chunk ranks above its revoker: old {old_law:?} new {new_law:?}"
+        );
+
+        // Labelled, with a title a reader can cite, never an invented one.
+        for &i in &old_law {
+            let c = r.results[i]
+                .currency
+                .as_ref()
+                .expect("a revoked result says so");
+            assert_eq!(c.status, "revoked");
+            assert!(
+                c.revoked_by
+                    .iter()
+                    .any(|t| t.contains("JARINGAN LALU LINTAS")),
+                "{:?}",
+                c.revoked_by
+            );
+        }
+        // ! The revoker is not labelled: `none_known` is the absence of a finding.
+        for &i in &new_law {
+            assert!(r.results[i].currency.is_none());
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn naming_a_revoked_regulation_does_not_reorder_it() {
+        // Someone who typed the identifier asked for THAT instrument, revoked or not.
+        let p = pipeline(Config::default()).await;
+        let r = p
+            .search_with(
+                "UNDANG-UNDANG 22 tahun 2009",
+                &contract::SearchOptions::default(),
+            )
+            .await
+            .expect("search");
+        assert!(!r.exact_matches.is_empty(), "{:?}", r.progress);
+        assert!(
+            !r.progress.iter().any(|l| l.starts_with("currency:")),
+            "{:?}",
+            r.progress
+        );
+        // Still labelled, so the answer is honest about what it returned.
+        assert!(
+            r.results
+                .iter()
+                .filter(|x| x
+                    .source
+                    .title
+                    .starts_with("UNDANG-UNDANG Nomor 22 Tahun 2009"))
+                .all(|x| x.currency.is_some())
+        );
     }
 
     #[tokio::test]

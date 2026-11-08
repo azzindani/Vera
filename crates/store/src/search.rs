@@ -20,6 +20,8 @@
 //! `work_mem` and the database container's limit. No setting in this crate
 //! governs it.
 
+use std::collections::HashMap;
+
 use deadpool_postgres::Pool;
 use tokio_postgres::Row;
 
@@ -71,6 +73,34 @@ pub struct ExactHit {
     pub matched_on: String,
 }
 
+/// A document named by the sidecar: its id, and a title a reader can cite.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Cited {
+    pub doc_id: String,
+    pub title: String,
+}
+
+/// What Ravel's sidecars say about the document a chunk belongs to (`RELATIONS.md`).
+///
+/// ! `status` is `revoked`, `partially_revoked`, `amended` or `none_known`. `none_known`
+/// is the ABSENCE of a known revocation, never a claim that the regulation is in force:
+/// the regulation that revoked it may not be in the corpus.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Currency {
+    pub doc_id: String,
+    pub status: String,
+    pub revoked_by: Vec<Cited>,
+    pub amended_by: Vec<Cited>,
+}
+
+impl Currency {
+    /// Whether a reader should be told anything: some document ended or changed this one.
+    #[must_use]
+    pub fn is_noteworthy(&self) -> bool {
+        self.status != "none_known"
+    }
+}
+
 /// Read-only operations over an ingested corpus.
 pub struct SearchOps {
     pool: Pool,
@@ -81,6 +111,9 @@ pub struct SearchOps {
     /// Same contract as `rum`: probed once, cached, and its absence costs
     /// latency rather than answers.
     bm25: std::sync::OnceLock<bool>,
+    /// Whether this corpus carries Ravel's `doc_status` sidecar and `chunks.doc_id`.
+    /// Probed once, cached; a corpus loaded before they existed serves as it always did.
+    currency: std::sync::OnceLock<bool>,
 }
 
 impl SearchOps {
@@ -90,7 +123,30 @@ impl SearchOps {
             pool,
             rum: std::sync::OnceLock::new(),
             bm25: std::sync::OnceLock::new(),
+            currency: std::sync::OnceLock::new(),
         }
+    }
+
+    /// Whether `doc_status` and `chunks.doc_id` are here.
+    ///
+    /// ! Probed, ✗ assumed, and its absence costs a label, ✗ an answer: every corpus built
+    /// before Ravel wrote relations has neither, and must keep serving.
+    async fn has_currency(&self) -> Result<bool, StoreError> {
+        if let Some(v) = self.currency.get() {
+            return Ok(*v);
+        }
+        let c = self.client().await?;
+        let row = c
+            .query_one(
+                "SELECT to_regclass('doc_status') IS NOT NULL
+                    AND EXISTS (SELECT 1 FROM information_schema.columns
+                                WHERE table_name = 'chunks' AND column_name = 'doc_id')",
+                &[],
+            )
+            .await?;
+        let found: bool = row.get(0);
+        let _ = self.currency.set(found);
+        Ok(found)
     }
 
     /// Whether `ORDER BY tsv <=> tq` can be served from an index here.
@@ -506,6 +562,85 @@ impl SearchOps {
             .filter_map(|x| x.trim().parse::<f32>().ok())
             .collect();
         Ok((row.get(0), row.get(1), v))
+    }
+
+    /// The document each chunk belongs to, and whether another document revoked or amended it.
+    ///
+    /// Keyed by chunk id. Empty when the corpus has no `doc_status`; a chunk with no
+    /// `doc_id` is left out, because a status needs a document to attach to.
+    ///
+    /// ! Two reads, both by primary key or document id, over at most the candidate pool.
+    /// The second turns the revoking documents' ids into titles a reader can cite, so the
+    /// engine never invents a label.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn currency(&self, ids: &[String]) -> Result<HashMap<String, Currency>, StoreError> {
+        if ids.is_empty() || !self.has_currency().await? {
+            return Ok(HashMap::new());
+        }
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "SELECT ch.id, ch.doc_id, COALESCE(s.status, 'none_known'),
+                        COALESCE(s.revoked_by, '{}'), COALESCE(s.amended_by, '{}')
+                 FROM chunks ch
+                 LEFT JOIN doc_status s
+                        ON s.corpus_id = ch.corpus_id AND s.doc_id = ch.doc_id
+                 WHERE ch.id = ANY($1) AND ch.doc_id <> ''",
+                &[&ids],
+            )
+            .await?;
+
+        let mut named: Vec<String> = Vec::new();
+        for r in &rows {
+            let by: Vec<String> = r.get(3);
+            let amended: Vec<String> = r.get(4);
+            named.extend(by);
+            named.extend(amended);
+        }
+        named.sort();
+        named.dedup();
+        let titles: HashMap<String, String> = if named.is_empty() {
+            HashMap::new()
+        } else {
+            c.query(
+                "SELECT DISTINCT ON (doc_id) doc_id, source_title
+                 FROM chunks WHERE doc_id = ANY($1) ORDER BY doc_id, id",
+                &[&named],
+            )
+            .await?
+            .iter()
+            .map(|r| (r.get::<_, String>(0), r.get::<_, String>(1)))
+            .collect()
+        };
+        let cite = |docs: Vec<String>| -> Vec<Cited> {
+            docs.into_iter()
+                .map(|doc_id| Cited {
+                    // ! A document with no chunk of its own cannot be titled; its id
+                    // stands in, ✗ a made-up name.
+                    title: titles
+                        .get(&doc_id)
+                        .cloned()
+                        .unwrap_or_else(|| doc_id.clone()),
+                    doc_id,
+                })
+                .collect()
+        };
+        Ok(rows
+            .iter()
+            .map(|r| {
+                (
+                    r.get::<_, String>(0),
+                    Currency {
+                        doc_id: r.get(1),
+                        status: r.get(2),
+                        revoked_by: cite(r.get(3)),
+                        amended_by: cite(r.get(4)),
+                    },
+                )
+            })
+            .collect())
     }
 
     /// Fetch chunks by id, for snippets, `read_chunk` and `get_provenance`.
