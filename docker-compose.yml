@@ -160,6 +160,37 @@ services:
       DENSE_WEIGHT: ${DENSE_WEIGHT:-2.0}
       SPARSE_WEIGHT: ${SPARSE_WEIGHT:-1.0}
       TEXT_WEIGHT: ${TEXT_WEIGHT:-1.0}
+      TEXT_MIN_IDF: ${TEXT_MIN_IDF:-0}
+      # ! Every other tunable the engine reads (CONFIGURATION.md) is forwarded
+      # here, with the .env.example value as the default. Compose only hands a
+      # container the variables its `environment:` block names, so a knob left
+      # out of this list is silently ignored however it is set in `.env` -- and
+      # the engine falls back to its compiled-in default. That is how
+      # DOMAIN_FLOOR=0.39 in `.env` ran as 0.45 and wrongly refused 2 of 44 real
+      # questions. Add a new engine knob here in the same change that adds it
+      # to `.env.example`.
+      #
+      # ! Deliberately NOT forwarded: FACTOR_* and RELEVANCE_FLOOR. Factors are
+      # declared, not enumerated -- any number of them, as variable x transform x
+      # weight in config/algorithms.json (SCORING.md §10) -- so naming five of
+      # them here would hardcode at the container layer exactly the closed set
+      # that file exists to open. Set ALGORITHMS_PATH (below) instead; the
+      # FACTOR_* variables only feed the single fallback algorithm used when it
+      # is unset.
+      PER_CLUSTER_K: ${PER_CLUSTER_K:-20}
+      PER_ARM_K: ${PER_ARM_K:-20}
+      TOP_K: ${TOP_K:-10}
+      CANDIDATE_POOL: ${CANDIDATE_POOL:-60}
+      SNIPPET_CHARS: ${SNIPPET_CHARS:-280}
+      EXPAND_SEEDS: ${EXPAND_SEEDS:-5}
+      EXPAND_PER_SEED: ${EXPAND_PER_SEED:-40}
+      CANARY_MIN_COSINE: ${CANARY_MIN_COSINE:-0.98}
+      DOMAIN_FLOOR: ${DOMAIN_FLOOR:-0.39}
+      DOMAIN_LEXICAL_FLOOR: ${DOMAIN_LEXICAL_FLOOR:-0.40}
+      GATE_SAMPLE: ${GATE_SAMPLE:-5}
+      READ_CHUNK_CHARS: ${READ_CHUNK_CHARS:-4000}
+      MAX_PROVENANCE_IDS: ${MAX_PROVENANCE_IDS:-50}
+      STATEMENT_TIMEOUT_MS: ${STATEMENT_TIMEOUT_MS:-15000}
       # ! Both optional, both validated at startup, both FATAL when they cannot
       # work. Unset is a supported deployment: the engine loads one algorithm
       # (`balanced`, from the FACTOR_* values above) and the scoring vocabulary

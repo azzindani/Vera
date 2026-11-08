@@ -493,9 +493,14 @@ box after the OS, embedder and engine. 12 queries, median of 3 after a warm run.
 | text | 446 ms | 6,428 ms | 14.4× | linear |
 | **total (sequential)** | **649 ms** | **12,853 ms** | 19.8× | |
 
-**The central claim is confirmed.** 14× the corpus moved the dense arm by 11 ms.
+**The central claim is confirmed — for a WARM cache.** 14× the corpus moved the dense arm by 11 ms.
 Layers 1-3 do what `ARCHITECTURE.md` §2 says they do, and it is no longer an
 argument from how the SQL is written.
+
+! **This table is a warm-cache measurement.** It repeats the same 12 queries ("median of 3 after a
+warm run"), so the probed clusters' pages are resident. Re-measured 2026-11-02 with a different cluster
+set per query on the same 5.0M replica, the dense arm was **8.3 s, ✗ 57 ms**, until the vectors were stored
+in cluster order (**91 ms cold**). The routing is sound; the heap layout was not. See §8.2.
 
 ! **Sparse is worse than this document used to predict.** It was described as
 "linear · global scan", which implied 14× — it is **41.9×**. At 355K the `sparse`
@@ -523,7 +528,8 @@ marginal cost is disk-bandwidth-bound, so linear should hold from here:
 assumption is that sparse stops super-scaling once it is fully out of cache,
 which is plausible and unverified. Run `scale_probe.py --factor 28` to settle it.
 
-! **The arms run sequentially** (`pipeline.rs`, `search_arms`) — three awaits in
+! **The arms ran sequentially until the change that made them concurrent**
+(`pipeline.rs`, `arms()`; measured at 355K in §8.1, ✗ yet at scale) — three awaits in
 a row over three independent read-only queries. Sparse and text are within 3% of
 each other and together are 99% of the time, so `tokio::try_join!` would take the
 total from `sum` to `max`: roughly half. That is the largest single latency win
@@ -692,4 +698,237 @@ docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 
 # memory, as the kernel sees it
 docker exec vera-db sh -c 'grep -E "^(anon|file|shmem|slab) " /sys/fs/cgroup/memory.stat'
+
+# concurrency + latency percentiles + peak CPU/memory per container (§8)
+python dev_tools/eval/load_test.py <label> <clients> <requests>
 ```
+
+! **Use `127.0.0.1`, ✗ `localhost`, in every harness on Windows.** Python resolving `localhost` costs about
+2 s per request there. The first 2026-11-02 run of this section read 3.0 s p50 for a stack that answers in
+0.9 s, and every `e2e.py` number taken against `http://localhost:8081` on such a machine carries the same
+2 s. `load_test.py` defaults to the IP literal.
+
+---
+
+## 8. Validation · limited hardware, concurrency, scale · 2026-11-02
+
+> Question asked: does this work on very limited hardware, on a large corpus, at a decent speed, under
+> concurrent load? Everything below was measured on one machine (i7-12700H, 20 threads, Docker Desktop VM with
+> 25 GB, NVMe), through the deployed HTTP server, with `dev_tools/eval/load_test.py`. The containers were
+> pinned to host cores `0,1` (`docker-compose.vps.yml`), which on this CPU is **one physical P-core's two
+> hardware threads** -- a 2-vCPU VPS is typically the same shape, but not identical.
+
+### 8.1 355K rows, two pinned cores
+
+| profile | single-client p50 | p95 / max | peak db | peak embed | engine |
+|---|---|---|---|---|---|
+| dev box, nothing pinned | **895 ms** | 1,268 / 1,381 | 1.8 GB | 2.7 GB | 17 MB |
+| 2 cores, `docker-compose.vps.yml` (8 GB limits) | **1,051 ms** | 2,586 / 3,773 | 2.0 GB | 2.66 GB | 12 MB |
+| 2 cores, **4 GB total**, swap off (`docker-compose.squeeze.yml`: db 800 MB, embed 2,800 MB, engine 64 MB) | **1,007 ms** | 1,548 / 1,648 | 0.26 GB | 2.65 GB | 11 MB |
+
+**Concurrent arms, A/B.** `main` against the branch that runs the three arms under `tokio::try_join!`, same
+stack (`docker-compose.vps.yml`, two pinned cores, 355K), alternated before/dev/before/dev, 50 sequential and
+48 four-client requests each (`dev_tools/eval/load_test.py`, seed 3), all served, none refused:
+
+| engine | 1 client p50 | p90 / p95 | 4 clients p50 | 4-client throughput |
+|---|---|---|---|---|
+| `main` (sequential arms), run 1 / 2 | 967 / 931 ms | 1,294 / 1,450 · 1,277 / 1,439 | 2,347 / 2,135 ms | 1.61 / 1.68 /s |
+| concurrent arms, run 1 / 2 | **749 / 748 ms** | 1,087 / 1,252 · 1,166 / 1,272 | 2,505 / 2,250 ms | 1.69 / 1.70 /s |
+
+A single query is **~20% faster** (about 200 ms), reproducible across both pairs. Under four clients nothing
+changes (inside run-to-run noise): two cores are already saturated, the db sits at 165-196% CPU, so concurrent
+arms spend the same CPU sooner and buy no extra throughput. That is the honest limit of the change on this
+hardware: it lowers latency at low load and does not raise the ceiling. n = 2 pairs on one machine.
+Not measured here: the same A/B at 5M rows, and `TEXT_MIN_IDF` through the engine.
+
+The first query after a restart took 4.2 s (8 GB profile). The last row is a real squeeze, ✗ the old
+"4 GB budget" table of §2: `memswap_limit` equals each limit so pressure cannot hide in swap, and
+**nothing was OOM-killed and nothing restarted**. The database fits because every arm reads through the
+page cache and a 355K corpus is 2.4 GB; the embedder is the one component with a hard floor (2.55 GB anon).
+
+Concurrency, 2 pinned cores, 8 GB profile (`MAX_CONCURRENCY=4`, `QUEUE_WAIT_MS=2000`):
+
+| clients | requests | served | refused (503) | served p50 | throughput |
+|---|---|---|---|---|---|
+| 1 | 40 | 40 | 0 | 1,051 ms | 0.89 /s |
+| 2 | 40 | 40 | 0 | 1,278 ms | 1.57 /s |
+| 4 | 48 | 48 | 0 | 2,432 ms | 1.65 /s |
+| 8 | 64 | 45 | 19 (30%) | 3,579 ms | 1.67 /s |
+| 12 | 72 | 29 | 43 (60%) | 3,722 ms | 1.61 /s |
+
+**Throughput plateaus at ~1.65 queries/s from two clients on** -- the two hardware threads are the limit
+(db 190% + embed 150% against 200% available), ~140,000 queries/day. Past four clients extra load becomes
+refusals, not latency, which is what invariant 6 promises. The 4 GB profile gave the same table (4 clients
+1.62 /s, 12 clients 43 of 72 refused). Unpinned, the same stack served 3.9 /s at 4 clients.
+
+! The embedder is ~250 ms of the ~1,000 ms (249 ms p50 for one query, measured on `127.0.0.1`). It uses
+`TORCH_THREADS=2` by default and scales with cores (352 / 219 / 155 / 126 ms at 1 / 2 / 4 / 8 threads), so
+the plateau moves with the box.
+
+### 8.2 5.0M rows (the replica of §6), same two cores
+
+| profile | single-client p50 | p90 | 4 clients | 12 clients |
+|---|---|---|---|---|
+| 4 GB total, swap off | **18.5 s** | 26.6 s | 23.5 s p50, 0.20 /s | 32 of 36 refused |
+| 8 GB (`docker-compose.vps.yml`) | **17.2 s** | 21.1 s | 28.7 s p50, 0.13 /s | 32 of 36 refused |
+
+It serves correctly and nothing was killed, but this is **not interactive**, and doubling memory bought ~7%.
+Per stage, one query at a time, different clusters each time, 4 GB-class cache:
+
+| stage | p50 | |
+|---|---|---|
+| query embedding | 279 ms | CPU, fixed |
+| layer-2 routing (2,478 centroids) | 4 ms | linear in `k` |
+| **dense, 5 probed clusters** | **8,347 ms** | cold: ~1.4 s per cluster, ~5,000 page reads for 2,085 rows |
+| `pg_search` | 9,622 ms | cache thrash under a 4 GB cap; **1.6 s** with the cache to itself |
+| tsvector (`text`) | 6,537 ms | matches ~62% of rows |
+
+Three things this corrects:
+
+1. **Dense is flat only when cached.** Warm, the same cluster costs 17 ms at 355K and at 5.0M. Cold, it
+   costs ~1.4 s. A cluster's ~2,000 rows are scattered over the heap and each drags TOAST chunks (35,808
+   buffers touched for 2,085 rows), because `kmeans.py` assigns `cluster_id` after ingest. The §6 table
+   repeated 12 queries, so it measured the warm case.
+2. **The arms evict each other.** BM25 (1.2 GB), RUM (1.4 GB) and the dense pages of a probe (~1.4 GB) are
+   larger than a 4 GB database cache together. `pg_search` read 9.6 s when interleaved with dense scans and
+   1.6 s alone.
+3. **The text arm is the biggest single term and is avoidable** -- see §8.3.
+
+### 8.3 What fixes it · measured on the replica, ✗ built into the engine
+
+`dev_tools/eval/cluster_layout.py` and `dev_tools/eval/lexical_prune.py`.
+
+| change | before | after | cost / risk |
+|---|---|---|---|
+| **Store vectors in cluster order** (side table, `dense` PLAIN, `ORDER BY cluster_id, id`) | dense arm, cold, 5 clusters: **5,477 ms** (warm 58) | **91 ms** (warm 20) | +13 GB at 5M (a second copy); a migration + `store/` change; re-sort on re-cluster |
+| **Prune query terms by IDF** before the tsvector arm (keep IDF ≥ 2) | **6,208 ms** warm at 5.0M | **1,443 ms** | hit@20 unchanged (63.6% → 63.6%), hit@5 40.9% → 43.2% on 44 labels |
+| prune to IDF ≥ 3 | | 1,199 ms | hit@20 59.1% |
+| prune to the 3-4 rarest terms | | 120-404 ms | **hit@20 25-41% -- do not** |
+| prune the `pg_search` arm | 1.6 s | 1.7 s | no effect: its cost is not the match count |
+
+! n = 44 labelled queries. "No loss" means no loss that this set can see (one query is 2.3 points);
+confirm through `e2e.py` before changing the engine, because an arm that loses nothing alone can still
+change fusion. The cluster-order result needs no such caveat for *speed*, but the side table is not read by
+the engine yet.
+
+The three arms now run concurrently (`tokio::try_join!`); measured at 355K in §8.1, **not** at 5M, where §6
+estimates ~2× and the cold-cache arms would also contend for the same page cache. Also a candidate, **not
+measured**: probing more clusters for the lexical arms in
+place of scanning globally (trades the "global arms guarantee" of invariant 3 for speed -- needs a
+routing-recall measurement that a replicated corpus cannot give, because duplicate rows make routing look
+perfect).
+
+### 8.4 20M rows · extrapolated, ✗ measured
+
+| stage | estimate | basis |
+|---|---|---|
+| embedding | 0.3 s | measured, fixed |
+| routing, ~10,000 centroids | ~20 ms | 4 ms at 2,478, linear in `k` (engine holds ~40 MB of centroids) |
+| dense, cluster-ordered | ~0.1 s | cost is rows per cluster (~2,000), ✗ corpus size |
+| `pg_search` | ~6.5 s | 1.6 s at 5.0M, assumed linear; its index grows to ~5 GB |
+| tsvector, IDF ≥ 2 | ~5.6 s | 1.4 s at 5.0M, linear; **~25 s unpruned** |
+| **sequential total** | **~12 s** | |
+| database size | ~100 GB | 21 GB heap + TOAST per 5M, plus ~2.7 GB of lexical indexes per 5M |
+
+**Read this as: the routed dense half scales; the two global lexical arms do not.** They are linear in the
+corpus and want their indexes in RAM, which at 20M is ~11 GB of cache for the lexical indexes alone. The
+honest statement for 20M on a two-core box is "interactive only if the lexical arms stop being global". It is
+an extrapolation from one 14× replica, and the assumption that `pg_search` stays linear is exactly the kind
+that §6 got wrong once already (sparse was predicted 14× and measured 41.9×).
+
+### 8.5 Engine-level measurements · 2026-11-03 · the branch, through the deployed HTTP server
+
+Everything here is the shipped engine in its container behind `docker-compose.vps.yml` (two pinned cores,
+8 GB limits), driven by `dev_tools/eval/load_test.py` (latency, seed 3) and `dev_tools/eval/e2e.py` (recall).
+`main` is image `vera-engine:before`, the branch is `vera-engine:dev`; the corpus is `vera2` (355K) or
+`vera5m` (the 5.0M replica of §6). Each variant recreated only the engine container, ✗ the database, so the
+page cache carried over from one run to the next (see the confound below).
+
+**(a) Concurrent arms, 355K -- the table in §8.1, plus what the containers did.**
+
+| run | 1 client p50 / p90 / p95 / max | 4 clients p50 / p90 / p95 / max · throughput | peak db CPU, MiB (1 · 4 clients) | peak embed CPU | engine |
+|---|---|---|---|---|---|
+| `main` #1 | 967 / 1,294 / 1,450 / 1,579 ms | 2,347 / 3,470 / 3,716 / 4,136 ms · 1.61 /s | 103%, 2,086 · 196%, 2,242 | 83% · 123% | 11 MiB |
+| branch #1 | 749 / 1,087 / 1,252 / 1,326 ms | 2,505 / 3,580 / 3,828 / 4,756 ms · 1.69 /s | 124%, 2,207 · 176%, 2,369 | 115% · 107% | 11 MiB |
+| `main` #2 | 931 / 1,277 / 1,439 / 1,523 ms | 2,135 / 3,687 / 3,713 / 4,163 ms · 1.68 /s | 117%, 2,195 · 165%, 2,243 | 83% · 126% | 12 MiB |
+| branch #2 | 748 / 1,166 / 1,272 / 1,353 ms | 2,250 / 3,780 / 4,046 / 4,202 ms · 1.70 /s | 125%, 2,227 · 196%, 2,361 | 87% · 126% | 11 MiB |
+
+All 200 requests were served; none were refused. 50 sequential + 48 four-client requests per run.
+
+**(b) `TEXT_MIN_IDF` through the engine, 355K, branch image, 50 sequential requests, alternated 0/2/0/2.**
+
+| `TEXT_MIN_IDF` | p50 | p90 | p95 | max |
+|---|---|---|---|---|
+| 0 | 749 / 778 ms | 1,097 / 1,215 | 1,199 / 1,249 | 1,356 / 1,355 |
+| 2 | **614 / 583 ms** | 738 / 751 | 783 / 768 | 812 / 827 |
+
+Recall of the same two settings, `e2e.py` over the 44 labelled + 6 out-of-domain queries, one run each:
+
+| `TEXT_MIN_IDF` | Recall@5 | Recall@10 | MRR | real refused | out-of-domain refused |
+|---|---|---|---|---|---|
+| 0 | **63.6%** | 70.5% | 0.557 | 0 / 44 | 2 / 6 |
+| 2 | 59.1% | 70.5% | 0.559 | 0 / 44 | 2 / 6 |
+
+! The IDF floor costs **two of 44** Recall@5 hits (4.5 points) through the engine, although §8.3 measured no
+loss at hit@20 on the arm alone. An arm that loses nothing alone can still reorder fusion, which is exactly
+the caveat §8.3 carried. One query is 2.3 points; this is one run, ✗ a confidence interval. It is why the
+option stays **off** by default.
+
+**(c) 5.0M rows, one client, 24 queries (seed 3), 10 warm-up queries first, `vera5m`.** First pass, run in
+this order, one run per variant:
+
+| engine | p50 | p90 | p95 | max | wall (24 q) | peak db CPU, MiB | peak embed CPU | engine |
+|---|---|---|---|---|---|---|---|---|
+| `main` (sequential arms) | 13,460 ms | 18,174 | 18,636 | 20,745 | 333 s | 152%, 3,533 | 55% | 36 MiB |
+| branch (concurrent arms) | **9,540 ms** | 12,842 | 14,435 | 15,300 | 243 s | 188%, 3,431 | 76% | 38 MiB |
+| branch, `TEXT_MIN_IDF=2` | 15,510 ms | 18,909 | 21,181 | 22,015 | 392 s | 98%, 3,517 | 88% | 33 MiB |
+
+! **Do not read the first pass as a result.** The same branch image with the same setting
+(`TEXT_MIN_IDF=0`) measured 9.5 s in the pass above and 14.2 s / 15.3 s in the repeat below -- a 5-6 s swing
+with no code change. The first pass ran in a fixed order against a page cache that carried over from run to
+run, so it measured cache state at least as much as the engine.
+
+Repeat, alternating `TEXT_MIN_IDF` 2, 0, 2, 0 on the branch image, same procedure (24 queries each):
+
+| order | `TEXT_MIN_IDF` | p50 | p90 | p95 | max | wall | peak db CPU, MiB | peak embed CPU |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 2 | 13,861 ms | 16,517 | 16,848 | 17,053 | 334 s | 125%, 3,409 | 78% |
+| 2 | 0 | 14,239 ms | 17,416 | 18,071 | 18,207 | 354 s | 160%, 3,586 | 83% |
+| 3 | 2 | 14,369 ms | 17,130 | 17,548 | 17,975 | 348 s | 137%, 3,095 | 53% |
+| 4 | 0 | 15,258 ms | 18,198 | 18,458 | 18,922 | 368 s | 160%, 3,512 | 73% |
+
+What this supports, and what it does not:
+
+- **`TEXT_MIN_IDF=2` at 5M:** about 0.4-0.9 s (3-6%) faster at p50 in each of the two alternating pairs, with
+  overlapping ranges. That is **not** the 6.2 s -> 1.4 s the arm showed alone in §8.3; with the three arms
+  sharing a cache the text arm is no longer the term that sets the total. Combined with its 4.5-point
+  Recall@5 cost at 355K (b), it is **not worth turning on**.
+- **Concurrent arms at 5M: not demonstrated.** `main` 13.5 s (one run), branch 14.2-15.3 s (repeat) and
+  9.5 s (first pass) cannot be ordered; the spread across identical runs is larger than any difference
+  between engines. At 355K the effect is clear (§8.5a) because everything is cached; at 5M the arms are bound
+  by disk and by one shared 2-core budget, not by waiting on each other.
+- Every 5M p50 in this section, 9.5-15.5 s, sits within the 13-18 s the 5M stage times of §8.2 already showed.
+  **5M on two cores is not interactive.**
+
+**(d) Build and test, for the record.**
+
+| | result |
+|---|---|
+| `cargo test --workspace --locked` | 225 passed |
+| `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo fmt --check` | clean |
+| `cargo test -p store --locked -- --ignored` (seeded fixture) | 16 passed |
+| `cargo test -p vera-mcp --locked -- --ignored`, live pipeline, db `max_connections=32` | 29 passed x3 at `--test-threads=4`; 28 passed + 1 failed (a pool error, a different test each run) at 8 threads |
+| GitHub CI on PR #2 (7 checks: fmt, 3-OS test matrix, 2 integration jobs, engine image) | 7 / 7 pass, on the code commits and again on the docs commit |
+| engine image build | 6 min once the Rust 1.95.0 toolchain was fetched; the first attempt spent about 21 min in that download and was stopped |
+
+### 8.6 Verdict
+
+| claim | status |
+|---|---|
+| runs correctly on ~4 GB, no OOM, embedder included | **holds** (355K) |
+| decent single-query speed on 2 cores | **holds at 355K** (~0.75 s with concurrent arms, §8.5a) · **fails at 5.0M** (13-18 s across §8.2 and §8.5c; the concurrent-arms gain is not demonstrable there) |
+| concurrency is bounded, not fatal | **holds** -- 503 + retry, no crash at 3× the ceiling |
+| throughput | ~1.65 queries/s on two hardware threads |
+| routing makes dense independent of corpus size | **holds only with cluster-ordered storage** (§8.2, §8.3) |
+| large scale (5M, 20M) | **not demonstrated**; the global lexical arms are the wall |
+

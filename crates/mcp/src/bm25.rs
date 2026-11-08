@@ -149,6 +149,36 @@ impl QueryVectorizer {
         matched / total
     }
 
+    /// The query with its low-information terms removed · what the `text` arm is sent.
+    ///
+    /// Keeps a term when its corpus IDF is at least `min_idf`, or when the corpus has
+    /// never seen it (an unknown word is charged the maximum IDF, as in `evidence`).
+    /// `min_idf <= 0.0`, or a query that would be left empty, returns the query
+    /// unchanged -- pruning must never turn a question into no question.
+    ///
+    /// ! Why it exists: the `text` arm ORs every term, so a function word matches
+    /// most of the corpus and the arm's cost is the MATCH COUNT, ✗ the ranking. At
+    /// 5.0M rows it took 6.2 s; keeping IDF >= 2 took 1.4 s with no hit-rate loss on
+    /// the 44 labelled queries (`docs/HARDWARE.md` §8.3). Keeping only the 3-4
+    /// rarest terms lost half the hits, so this is a floor on IDF, ✗ a term count.
+    #[must_use]
+    pub fn prune(&self, text: &str, min_idf: f32) -> String {
+        if min_idf <= 0.0 {
+            return text.to_owned();
+        }
+        let mut seen: Vec<String> = Vec::new();
+        for t in tokenize(text) {
+            if self.idf.get(&t).is_none_or(|v| *v >= min_idf) && !seen.contains(&t) {
+                seen.push(t);
+            }
+        }
+        if seen.is_empty() {
+            text.to_owned()
+        } else {
+            seen.join(" ")
+        }
+    }
+
     /// Project a query into `(index, weight)` pairs.
     ///
     /// Presence-weighted, so the dot product against a BM25-weighted document
@@ -262,6 +292,26 @@ mod tests {
     #[test]
     fn an_empty_query_yields_no_evidence_rather_than_full_confidence() {
         assert!(vz().evidence("", &["apa pun".to_owned()]).abs() < 1e-6);
+    }
+
+    #[test]
+    fn pruning_keeps_rare_and_unknown_terms_and_drops_common_ones() {
+        let v = vz(); // idf: sanksi 6.0, denda 6.0, yang 0.5
+        assert_eq!(
+            v.prune("Sanksi denda yang berlaku", 2.0),
+            "sanksi denda berlaku"
+        );
+        assert_eq!(
+            v.prune("yang yang", 2.0),
+            "yang yang",
+            "never prune a query to nothing"
+        );
+        assert_eq!(
+            v.prune("sanksi yang", 0.0),
+            "sanksi yang",
+            "0.0 disables pruning"
+        );
+        assert_eq!(v.prune("denda denda", 2.0), "denda", "repeats collapse");
     }
 
     #[test]

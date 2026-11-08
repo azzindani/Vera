@@ -79,6 +79,11 @@ IVFFlat because the centroids belong in the engine, where routing can be explain
 rows, which is small enough that a flat scan is fast; routing is what keeps the scanned
 set small.
 
+! **That holds only if a cluster's rows are physically close.** `cluster_id` is assigned after ingest, so
+the ~2,000 rows of a cluster are scattered across the heap and its TOAST. Measured on the 5.0M replica, a
+cold probe of 5 clusters took 5,477 ms in the heap and 91 ms from a table stored in cluster order
+(`docs/HARDWARE.md` §8.2-8.3). Today the engine reads the heap; the ordered layout is measured, ✗ built.
+
 `CLUSTERS_PROBED` is the central dial. It trades recall against latency — and
 notably **not** against RAM, because of §4.
 

@@ -176,6 +176,48 @@ out-of-domain case, for exactly that reason.
 Fixing this properly needs a better gate signal than max-centroid similarity, not a
 re-tuned number.
 
+### 4c-bis. The gate is coupled to the sparse arm · measured 2026-11-02
+
+The domain gate's lexical half pools the **top `GATE_SAMPLE` (5) hits of the sparse arm**
+(`pipeline.rs::domain_gate`). Migration 0004 switched that arm from the `sparsevec` scan to `pg_search`,
+and `DOMAIN_LEXICAL_FLOOR = 0.40` was never refitted. Same 6 out-of-domain queries, same corpus, same code,
+both arms (`dev_tools/eval/pipeline_mirror.py`, a read-only Python mirror of the pipeline that reproduced the
+live engine's top-10 on 50 of 50 queries):
+
+| query | lexical, `pg_search` (live) | lexical, `sparsevec` | centroid |
+|---|---|---|---|
+| q045 | 0.250 | 0.000 | 0.477 |
+| q046 | 0.424 | 0.232 | 0.421 |
+| q047 | 0.397 | 0.240 | 0.426 |
+| q048 | **1.000** | 0.346 | 0.493 |
+| q049 | 0.863 | 0.400 | 0.433 |
+| q050 | 0.782 | 0.565 | 0.398 |
+| **out-of-domain refused** | **2 / 6** | **4 / 6** | |
+| in-domain minimum | 0.475 | 0.464 | |
+
+The 4/6 of §4c is the `sparsevec` arm's. With `pg_search`, BM25 retrieves chunks that contain *every* query
+term ("keran" appears in the corpus), so lexical evidence reads 1.0 for a plumbing question. **Recall is
+unaffected by the arm** (Recall@5 63.6%, Recall@10 70.5% both ways; MRR 0.557 vs 0.541) -- it is the gate that
+depends on it.
+
+Sweeping the floors on the 39 gated in-domain and 6 out-of-domain cases (`pg_search`, sample 5):
+
+| centroid floor (lexical 0.40) | OOD refused | real refused |
+|---|---|---|
+| 0.39 (shipped) | 2/6 | 0/39 |
+| 0.44 | 5/6 | 2/39 |
+| 0.50 | 6/6 | 9/39 |
+
+| lexical floor (centroid 0.39) | OOD refused | real refused |
+|---|---|---|
+| 0.40 (shipped) | 2/6 | 0/39 |
+| 0.45 | 3/6 | 0/39 |
+| 0.60 | 3/6 | 8/39 |
+
+No setting separates them; 39 + 6 cases cannot choose between the trade-offs, and §4c's conclusion stands:
+the gate needs a better signal, not a new number. The rebuilt-versus-exact BM25 vocabulary made no difference
+(identical eval both ways, `EMBEDDING.md` §7).
+
 ### 4d. Routing, measured for the first time
 
 Layers 2 and 3 exist to prune the dense arm's search. While dense carried weight
