@@ -36,6 +36,26 @@ puts the two in different spaces. Only the corpus knows which convention it was 
 under, so only the corpus gets to say. The current corpus recorded `NULL`, so no
 instruction is applied.
 
+### 2.1 Two `corpus_meta` schemas
+
+The instruction is stored two ways, and `SearchOps::corpus_meta` reads both with one query
+(`to_jsonb(corpus_meta) ->> 'col'`, so a missing column is NULL rather than an error):
+
+| Schema | Columns | Resulting query prefix |
+|---|---|---|
+| Older | `dense_instruction` | that string, unchanged |
+| Ravel | `dense_instruction_style`, `dense_query_instruction` (and `dense_doc_instruction`) | `none` → no prefix · `prefix` → `Instruct: {query_instruction}\nQuery: ` when the instruction is non-empty, else none · `chat_system` → **refused** |
+
+! The Ravel form must produce Ravel's `render_query` byte for byte
+(`f"Instruct: {instruction}\nQuery: {text}"`, with the space after `Query:`): a different
+string is a different vector. `chat_system` is refused because this engine embeds through a
+plain-text endpoint and cannot send a system turn; dropping it silently would put queries in
+another space. `store::query_prefix` is the one place this is decided.
+
+The `sparse_*` columns are nullable in Ravel's schema (a corpus without a sparse arm records
+none) and are read as optional, so a missing sparse side does not stop startup. The BM25
+vocabulary file the engine loads (`BM25_VOCAB`) is a separate requirement.
+
 This is why `embed::validate_against` takes the expected model and width as arguments
 rather than reading a constant. A constant could only ever encode the model the author
 expected; the rule that matters is that query and corpus agree.
