@@ -33,6 +33,11 @@ PORT = int(os.environ.get("PORT", "80"))
 # vector that does not represent its text.
 MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "32768"))
 THREADS = int(os.environ.get("TORCH_THREADS", "2"))
+# ! A corpus embedded with an extra closing token after the tokenizer's own (Ravel's
+# `append_eos` recipe: `<|im_end|>`, id 151645, after `<|endoftext|>`) lives in a different
+# space from a plain tokenizer call (cosine ~0.64). Queries must be closed the same way.
+# Empty = standard. The corpus canary (reference.npy) is what proves the choice.
+APPEND_TOKEN_ID = int(os.environ["APPEND_TOKEN_ID"]) if os.environ.get("APPEND_TOKEN_ID") else None
 
 torch.set_num_threads(THREADS)
 
@@ -42,7 +47,8 @@ DTYPES = {
     "float16": torch.float16,
 }
 
-print(f"loading {MODEL_DIR} dtype={DTYPE} quantize={QUANTIZE} threads={THREADS}",
+print(f"loading {MODEL_DIR} dtype={DTYPE} quantize={QUANTIZE} threads={THREADS} "
+      f"append_token_id={APPEND_TOKEN_ID}",
       file=sys.stderr, flush=True)
 tok = AutoTokenizer.from_pretrained(MODEL_DIR)
 model = AutoModel.from_pretrained(MODEL_DIR, torch_dtype=DTYPES[DTYPE]).eval()
@@ -58,8 +64,14 @@ if QUANTIZE:
 
 
 def embed(texts: list[str]) -> list[list[float]]:
-    batch = tok(texts, padding=True, truncation=True, max_length=MAX_TOKENS,
-                return_tensors="pt")
+    if APPEND_TOKEN_ID is None:
+        batch = tok(texts, padding=True, truncation=True, max_length=MAX_TOKENS,
+                    return_tensors="pt")
+    else:
+        ids = tok(texts, padding=False, truncation=True, max_length=MAX_TOKENS - 1,
+                  return_attention_mask=False)
+        ids["input_ids"] = [[*seq, APPEND_TOKEN_ID] for seq in ids["input_ids"]]
+        batch = tok.pad(ids, padding=True, return_tensors="pt")
     with torch.no_grad():
         out = model(**batch).last_hidden_state
     # ! LAST-TOKEN pooling, the value `corpus_meta` declares. Mean-pooling the
