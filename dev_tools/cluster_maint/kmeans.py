@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import struct
 import time
 
 import numpy as np
@@ -33,25 +34,59 @@ FETCH = 20_000
 
 
 def load_vectors(pg):
-    """Stream dense vectors out of Postgres into one float32 matrix."""
+    """Stream dense vectors out of Postgres into one float32 matrix.
+
+    ! Binary `COPY ... TO STDOUT`, ✗ `dense::text`. A `halfvec` on the wire is `int16 dim,
+    int16 0` then `dim` big-endian half floats: reading them is a buffer copy, where the text
+    route made Postgres print 1,024 numbers per row for Python to split and parse back, about
+    3,000 rows/s, ten minutes for 1.7M.
+    """
     ids: list[str] = []
     blocks: list[np.ndarray] = []
-    with pg.cursor(name="vecs") as cur:
-        cur.itersize = FETCH
-        cur.execute(
-            "SELECT id, dense::text FROM chunks"
-            " WHERE indexable AND dense IS NOT NULL ORDER BY id"
-        )
-        buf: list[np.ndarray] = []
-        for cid, txt in cur:
-            ids.append(cid)
-            buf.append(np.fromstring(txt[1:-1], sep=",", dtype=np.float32))
-            if len(buf) >= FETCH:
-                blocks.append(np.vstack(buf))
-                buf = []
+    pending: list[np.ndarray] = []
+    buf = bytearray()
+    started = False
+    query = (
+        "COPY (SELECT id, dense FROM chunks WHERE indexable AND dense IS NOT NULL ORDER BY id)"
+        " TO STDOUT (FORMAT BINARY)"
+    )
+
+    def flush():
+        if pending:
+            blocks.append(np.vstack(pending).astype(np.float32))
+            pending.clear()
+
+    with pg.cursor() as cur, cur.copy(query) as cp:
+        for data in cp:
+            buf += data
+            if not started:
+                if len(buf) < 19:
+                    continue
+                del buf[:19]  # signature (11) + flags (4) + extension length (4)
+                started = True
+            pos = 0
+            end = len(buf)
+            while end - pos >= 6:
+                (nfields,) = struct.unpack_from(">h", buf, pos)
+                if nfields == -1:  # trailer
+                    pos = end
+                    break
+                (klen,) = struct.unpack_from(">i", buf, pos + 2)
+                head = pos + 6 + klen
+                if end - head < 8:
+                    break
+                vlen, dim, _unused = struct.unpack_from(">ihh", buf, head)
+                row_end = head + 4 + 4 + 2 * dim
+                if row_end > end:
+                    break
+                ids.append(bytes(buf[pos + 6 : head]).decode("utf-8"))
+                pending.append(np.frombuffer(buf, dtype=">f2", count=dim, offset=head + 8).copy())
+                pos = row_end
+            del buf[:pos]
+            if len(pending) >= FETCH:
+                flush()
                 print(f"\r  loaded {len(ids):,}", end="", flush=True)
-        if buf:
-            blocks.append(np.vstack(buf))
+    flush()
     X = np.vstack(blocks)
     print(f"\r  loaded {len(ids):,} vectors {X.shape}")
     # Guard: halfvec round-trips should already be unit norm.

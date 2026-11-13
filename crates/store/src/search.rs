@@ -541,6 +541,44 @@ impl SearchOps {
             .collect())
     }
 
+    /// The corpus's own canary: a sentence and the vector its embedder gave it, if the
+    /// corpus shipped one.
+    ///
+    /// ! Probed, ✗ assumed: a corpus deployed before bundles carried a reference has no
+    /// `corpus_canary` table, and must keep starting on the body check below. The text is
+    /// returned as the corpus wrote it, ✗ with the query prefix: applying the prefix is the
+    /// caller's job, because the prefix is read from `corpus_meta` and this is the
+    /// store's job to return only what was recorded.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn canary_reference(&self) -> Result<Option<(String, Vec<f32>)>, StoreError> {
+        let c = self.client().await?;
+        let present: bool = c
+            .query_one("SELECT to_regclass('corpus_canary') IS NOT NULL", &[])
+            .await?
+            .get(0);
+        if !present {
+            return Ok(None);
+        }
+        let Some(row) = c
+            .query_opt(
+                "SELECT text, dense::text FROM corpus_canary ORDER BY corpus_id LIMIT 1",
+                &[],
+            )
+            .await?
+        else {
+            return Ok(None);
+        };
+        let raw: String = row.get(1);
+        let v = raw
+            .trim_matches(['[', ']'])
+            .split(',')
+            .filter_map(|x| x.trim().parse::<f32>().ok())
+            .collect();
+        Ok(Some((row.get(0), v)))
+    }
+
     /// One deterministic chunk with its stored vector, for the startup canary.
     ///
     /// ! This is what makes invariant 2 enforceable rather than declarative.

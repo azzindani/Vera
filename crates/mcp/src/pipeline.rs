@@ -456,7 +456,26 @@ impl Pipeline {
         // the configured provider and check it lands where ingestion put it.
         // An endpoint quietly serving different weights under the same model
         // name gets caught here and nowhere else.
-        let (chunk_id, body, stored) = ops.canary_sample().await?;
+        //
+        // ! A corpus that ships a reference (`corpus_canary`, written by
+        // `dev_tools/deploy_bundle.py` from the bundle's `reference.txt` and
+        // `reference.npy`) is checked against it, through the SAME path a real query
+        // takes: the corpus's own query prefix, then the provider. A chunk body cannot
+        // serve here for a corpus whose documents were embedded behind a header: the
+        // body alone is a different text from the one that was embedded, so a correct
+        // provider scores 0.84 against the stored vector and a wrong one 0.73. A bar
+        // that cannot tell them apart is not a bar. A corpus with no reference keeps the
+        // body check it always had.
+        let (chunk_id, body, stored) = match ops.canary_reference().await? {
+            Some((text, stored)) => {
+                let probe = match meta.dense_instruction.as_deref() {
+                    Some(prefix) => format!("{prefix}{text}"),
+                    None => text,
+                };
+                ("bundle reference".to_owned(), probe, stored)
+            }
+            None => ops.canary_sample().await?,
+        };
         match provider.embed_query(&body).await {
             Ok(fresh) => {
                 let got = cosine(&fresh, &stored);

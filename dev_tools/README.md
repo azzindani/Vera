@@ -54,6 +54,31 @@ returns plausible nonsense rather than failing.
 
 ---
 
+## Deploying a Ravel bundle
+
+There is no Vera pipeline for this. A corpus built by [Ravel](https://github.com/azzindani/Ravel)
+arrives as a sealed bundle, and the one process that makes a database ready to serve is
+Ravel's, run here unchanged:
+
+```bash
+ravel db prepare <bundle dir> --dsn "host=... dbname=vera user=vera password=..."   --vocabulary-to <dir the engine reads BM25_VOCAB from>/corpus.bm25.json
+# --replace   the corpus is already loaded and is to be replaced
+```
+
+It places (fits the routing structure from the bundle's vectors), loads with each row's
+cluster in the same pass, applies the provenance guard and the optional RUM and BM25 indexes,
+records the corpus canary, and reports ready only when the database itself says so. Measured
+on the 1.7M-chunk corpus: about 16.5 minutes, and the engine starts on the result with no
+canary override. Full description: Ravel's `docs/DATABASE.md`.
+
+! **The canary comes from the bundle.** Chunk bodies cannot serve as one for a corpus whose
+documents were embedded behind a header: a correct provider scores 0.84 against the stored
+vector and a wrong one 0.73. The bundle's reference sentence, embedded through the same
+query path on both sides, is held to the usual 0.98 (`docs/EMBEDDING.md`). A corpus with no
+`corpus_canary` row keeps the old chunk-body check.
+
+---
+
 ## Clustering
 
 ```bash

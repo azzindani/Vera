@@ -74,6 +74,12 @@ truncated or wrong-width vector is rejected there, not deep inside routing.
 through the configured endpoint, and compares against the vector ingestion stored for
 it. Below `CANARY_MIN_COSINE` (default 0.98) it refuses to serve.
 
+A corpus that ships a reference (`corpus_canary`, stamped from the Ravel bundle's
+`reference.txt` and `reference.npy` by Ravel's `ravel db prepare`) is checked against
+that instead: the reference sentence goes through the corpus's own query prefix and the
+provider, and must land on the recorded vector. The chunk-body check cannot hold a bar for
+a corpus whose documents were embedded behind a header (0.84 correct, 0.73 wrong).
+
 ! Only the canary tests the actual space. The first two compare strings and integers;
 an endpoint serving different weights under the same name passes both and fails here.
 That is the whole reason it exists.
