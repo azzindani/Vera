@@ -73,6 +73,19 @@ pub struct ExactHit {
     pub matched_on: String,
 }
 
+/// A reference the query named, as `SearchOps::named` looks it up.
+#[derive(Debug, Clone, Copy)]
+pub struct NamedRef<'a> {
+    /// Every stored spelling of the tier the user typed; empty when none was typed.
+    pub types: &'a [String],
+    pub number: &'a str,
+    pub year: Option<i32>,
+    /// Uppercased region words; each must appear in the title or the enacting body.
+    pub region: &'a [String],
+    /// "Pasal 14" as `chunks.article` stores it.
+    pub article: Option<&'a str>,
+}
+
 /// A document named by the sidecar: its id, and a title a reader can cite.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cited {
@@ -670,6 +683,102 @@ impl SearchOps {
                 }
             })
             .collect())
+    }
+
+    /// The chunks a query names: its regulation, and its article when it names one,
+    /// best match to the query first (`ROADMAP.md` Stage 1).
+    ///
+    /// ! Unlike `exact_identifier` this returns the clause the user ASKED for, ✗ the
+    /// first chunks of the document. "Menurut Pasal 14 PP 26/2009, berapa dendanya" is
+    /// answered by Pasal 14, and the first five chunks of PP 26/2009 are its preamble.
+    ///
+    /// Narrowed in order, and each narrowing is dropped only when it finds nothing:
+    /// the tier the user typed (every stored spelling of it, `types`), number with
+    /// leading zeros ignored ("03" is "3"), year, region words (each must appear in the
+    /// title or the enacting body), then the article. A named article that does not
+    /// exist falls back to the whole regulation, ranked by the query; a region no title
+    /// carries falls back to every region, ranked by the query. Neither fallback can
+    /// cross into another number, year or tier.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn named(
+        &self,
+        r: &NamedRef<'_>,
+        query: &[f32],
+        k: i64,
+    ) -> Result<Vec<ExactHit>, StoreError> {
+        let regions: Vec<&[String]> = if r.region.is_empty() {
+            vec![&[]]
+        } else {
+            vec![r.region, &[]]
+        };
+        let articles: Vec<Option<&str>> = match r.article {
+            Some(a) => vec![Some(a), None],
+            None => vec![None],
+        };
+        let c = self.client().await?;
+        let vec = dense_literal(query);
+        // ! The number as every zero-padded spelling, ✗ `ltrim(regulation_number)`: a
+        // function on the column keeps the identifier index from narrowing by number, and
+        // a cold lookup then reads every regulation of that tier and year (2.2 s for
+        // PERATURAN BUPATI x/2017, measured).
+        let bare = r.number.trim_start_matches('0');
+        let numbers: Vec<String> = (0..3).map(|z| format!("{}{bare}", "0".repeat(z))).collect();
+        for region in &regions {
+            for article in &articles {
+                let rows = c
+                    .query(
+                        "SELECT id, regulation_type, regulation_number, year, article
+                         FROM chunks
+                         WHERE indexable AND dense IS NOT NULL
+                           AND (cardinality($1::text[]) = 0 OR regulation_type = ANY($1))
+                           AND regulation_number = ANY($2)
+                           AND ($3::int IS NULL OR year = $3)
+                           AND ($4::text IS NULL OR article = $4)
+                           AND NOT EXISTS (
+                               SELECT 1 FROM unnest($5::text[]) w
+                               WHERE upper(coalesce(about, '') || ' ' || coalesce(enacting_body, ''))
+                                     NOT LIKE '%' || w || '%')
+                         ORDER BY dense <=> $6::text::halfvec, id
+                         LIMIT $7",
+                        &[&r.types, &numbers, &r.year, article, region, &vec, &k],
+                    )
+                    .await?;
+                if rows.is_empty() {
+                    continue;
+                }
+                return Ok(rows
+                    .iter()
+                    .map(|row| {
+                        let rtype: Option<String> = row.get(1);
+                        let num: Option<String> = row.get(2);
+                        let yr: Option<i32> = row.get(3);
+                        let art: Option<String> = row.get(4);
+                        let mut on = format!(
+                            "{} {}/{}",
+                            rtype.unwrap_or_default(),
+                            num.unwrap_or_default(),
+                            yr.map_or_else(|| "?".to_owned(), |y| y.to_string())
+                        );
+                        if article.is_some() {
+                            on.push(' ');
+                            on.push_str(&art.unwrap_or_default());
+                        } else if r.article.is_some() {
+                            on.push_str(" (named article not found, ranked within the regulation)");
+                        }
+                        if region.is_empty() && !r.region.is_empty() {
+                            on.push_str(" (named region not found in any title)");
+                        }
+                        ExactHit {
+                            id: row.get(0),
+                            matched_on: on.trim().to_owned(),
+                        }
+                    })
+                    .collect());
+            }
+        }
+        Ok(Vec::new())
     }
 
     /// The corpus's own canary: a sentence and the vector its embedder gave it, if the

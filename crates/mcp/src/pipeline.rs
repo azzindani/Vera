@@ -33,6 +33,9 @@ pub struct Config {
     /// are ~3 MB, while two levels probing 8 of 29 parents cost 2.6 points of routing
     /// recall on the 1.7M corpus, `SCALING.md` §2).
     pub two_level_from: usize,
+    /// Chunks a named reference contributes, ranked first (`exact_arm`). The named
+    /// article's chunks, or the named regulation's best matches to the query.
+    pub named_chunks: usize,
     /// How many probed clusters go into one statement.
     ///
     /// ! A **latency** dial, ✗ a memory one. Measured engine peak RSS is flat
@@ -87,6 +90,10 @@ pub struct Config {
     pub domain_lexical_floor: f32,
     /// How many sparse hits the lexical evidence is pooled over.
     pub gate_sample: usize,
+    /// Jurisdictions this corpus does not cover, as the corpus declares them
+    /// (`corpus_meta.gate.foreign`), lowercased. A query naming one is refused unless
+    /// the retrieved text names it too (`ROADMAP.md` Stage 1).
+    pub gate_foreign: Vec<String>,
     /// How many top-ranked candidates sibling expansion walks from.
     ///
     /// ! Seeds, ✗ the whole pool. Expanding 60 candidates at up to 1,313
@@ -122,6 +129,7 @@ impl Default for Config {
             clusters_probed: 5,
             parents_probed: 8,
             two_level_from: 8192,
+            named_chunks: 5,
             cluster_batch: 1,
             per_cluster_k: 20,
             per_arm_k: 20,
@@ -172,6 +180,7 @@ impl Default for Config {
             domain_floor: 0.52,
             domain_lexical_floor: 0.0,
             gate_sample: 5,
+            gate_foreign: Vec::new(),
             // ! p50 is 22 chunks per regulation and p95 is 210, so 5 seeds x 40
             // is the common case whole and the tail bounded. Measured cost of
             // the widest possible walk — siblings of 10 seeds drawn from the 10
@@ -214,6 +223,10 @@ struct Gate {
     clusters: usize,
     in_domain: usize,
     out_of_domain: usize,
+    /// Jurisdictions the corpus does not cover ("malaysia", "gdpr"). Optional: a gate
+    /// calibrated before Stage 1 has none, and then this rule is off.
+    #[serde(default)]
+    foreign: Vec<String>,
 }
 
 impl Gate {
@@ -242,7 +255,13 @@ fn apply_corpus_gate(
     declared: Option<&str>,
     clusters: usize,
 ) -> Result<(), StartupError> {
-    let source = match declared.map(Gate::parse) {
+    let parsed = declared.map(Gate::parse);
+    // ! The jurisdiction list is a fact about the corpus, ✗ a floor measured on its
+    // clusters, so a stale calibration still supplies it.
+    if let Some(Ok(g)) = &parsed {
+        cfg.gate_foreign = g.foreign.iter().map(|f| f.to_lowercase()).collect();
+    }
+    let source = match parsed {
         Some(Ok(g)) if g.clusters == clusters => {
             cfg.domain_floor = g.centroid_floor;
             cfg.domain_lexical_floor = g.lexical_floor;
@@ -264,10 +283,47 @@ fn apply_corpus_gate(
         None => "configuration".to_owned(),
     };
     eprintln!(
-        "[vera] domain gate · {source} · centroid ≥ {:.2}, lexical ≥ {:.2}",
-        cfg.domain_floor, cfg.domain_lexical_floor
+        "[vera] domain gate · {source} · centroid ≥ {:.2}, lexical ≥ {:.2}, {} foreign jurisdictions",
+        cfg.domain_floor,
+        cfg.domain_lexical_floor,
+        cfg.gate_foreign.len()
     );
     Ok(())
+}
+
+/// Words of `text`, lowercased and space-delimited at both ends, for whole-word search.
+fn padded_words(text: &str) -> String {
+    let words: Vec<String> = text
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect();
+    format!(" {} ", words.join(" "))
+}
+
+/// The first declared foreign jurisdiction the query names that no retrieved body names.
+///
+/// ! The bodies are the check that keeps this from refusing real questions: the corpus
+/// holds Indonesia's treaties, so "perjanjian ekstradisi Indonesia dengan Australia" names
+/// Australia and so does the treaty text retrieved for it. A question about Malaysian
+/// marriage law names Malaysia and retrieves Indonesian marriage law, which does not.
+fn foreign_unanswered(query: &str, bodies: &[String], foreign: &[String]) -> Option<String> {
+    if foreign.is_empty() {
+        return None;
+    }
+    let q = padded_words(query);
+    let named: Vec<&String> = foreign
+        .iter()
+        .filter(|f| q.contains(&format!(" {f} ")))
+        .collect();
+    if named.is_empty() {
+        return None;
+    }
+    let text = padded_words(&bodies.join(" "));
+    named
+        .into_iter()
+        .find(|f| !text.contains(&format!(" {f} ")))
+        .cloned()
 }
 
 fn log_canary(chunk_id: &str, got: f32) {
@@ -831,7 +887,7 @@ impl Pipeline {
             .arms(query, &qvec, &probed, weights, &mut progress)
             .await?;
 
-        let exact_matches = self.exact_arm(query, &mut progress).await?;
+        let exact_matches = self.exact_arm(query, &qvec, &mut progress).await?;
 
         let top_cluster = probed.first().map_or(0.0, |(_, s)| *s);
         if let Some(refused) = self
@@ -899,6 +955,10 @@ impl Pipeline {
             self.expand_pool(query, &mut ranked, &applied, apply_floor, &mut progress)
                 .await?;
         }
+
+        // ! Before currency, so a named chunk fetched from outside the pool is labelled.
+        self.promote_named(&mut ranked, &exact_matches, &mut progress)
+            .await?;
 
         // ! Currency is read for everything that ranked, expanded siblings included, and
         // only ORDERS when the query does not name a regulation: someone who typed
@@ -1346,6 +1406,17 @@ impl Pipeline {
             .into_iter()
             .map(|r| r.body)
             .collect();
+        if let Some(name) = foreign_unanswered(query, &bodies, &self.cfg.gate_foreign) {
+            progress.push(format!(
+                "domain gate: the query names {name}, and no retrieved text does"
+            ));
+            let mut empty = SearchResponse::no_matching_domain(query, std::mem::take(progress));
+            empty.hint = Some(format!(
+                "the question names {name}, a jurisdiction this corpus does not cover · check list_domains for what this engine covers"
+            ));
+            empty.token_estimate = empty.estimate_tokens();
+            return Ok(Some(empty));
+        }
         let lexical = self.vectorizer.evidence(query, &bodies);
         progress.push(format!(
             "domain gate: lexical {lexical:.3} (floor {:.2}), centroid {top_cluster:.3} (floor {:.2})",
@@ -1410,31 +1481,97 @@ impl Pipeline {
     }
 
     /// Global identifier lookup · never gated by cluster selection.
+    ///
+    /// ! Returns the chunks the query NAMED (`ROADMAP.md` Stage 1): the article when
+    /// one is named, else the named regulation's chunks best matching the query, each
+    /// narrowed by the tier and region the user typed (`SearchOps::named`). Until
+    /// v0.1.0 this returned the regulation's first five chunks, its preamble, and kept
+    /// them out of the ranking: a query naming Pasal 14 was ranked on meaning alone,
+    /// and its article came first 31% of the time.
     async fn exact_arm(
         &self,
         query: &str,
+        qvec: &[f32],
         progress: &mut Vec<String>,
     ) -> Result<Vec<ExactMatch>, PipelineError> {
-        let mut out = Vec::new();
+        let mut out: Vec<ExactMatch> = Vec::new();
         for id in identifier::extract(query) {
-            let hits = self
-                .ops
-                .exact_identifier(&id.number, id.year, id.reg_type, 5)
-                .await?;
-            if !hits.is_empty() {
+            let types = id
+                .reg_type
+                .map(identifier::type_variants)
+                .unwrap_or_default();
+            let named = store::NamedRef {
+                types: &types,
+                number: &id.number,
+                year: id.year,
+                region: &id.region,
+                article: id.article.as_deref(),
+            };
+            let k = i64::try_from(self.cfg.named_chunks).unwrap_or(5);
+            let hits = self.ops.named(&named, qvec, k).await?;
+            if let Some(first) = hits.first() {
                 progress.push(format!(
-                    "exact identifier {}/{}: {} hits (routing bypassed)",
-                    id.number,
-                    id.year.unwrap_or(0),
+                    "named {}: {} chunks (routing bypassed)",
+                    first.matched_on,
                     hits.len()
                 ));
             }
-            out.extend(hits.into_iter().map(|h| ExactMatch {
-                id: h.id,
-                matched_on: h.matched_on,
-            }));
+            for h in hits {
+                if !out.iter().any(|e| e.id == h.id) {
+                    out.push(ExactMatch {
+                        id: h.id,
+                        matched_on: h.matched_on,
+                    });
+                }
+            }
         }
         Ok(out)
+    }
+
+    /// Put the chunks the query named first, in the order `exact_arm` ranked them.
+    ///
+    /// ! A user who typed "Pasal 14 PP 26/2009" asked for that clause. Ranking it on
+    /// meaning, as one candidate among sixty, is how it came back fourth. A named chunk
+    /// the arms never retrieved is fetched and placed with the pool's top relevance.
+    async fn promote_named<'a>(
+        &self,
+        ranked: &mut Vec<Candidate<'a>>,
+        named: &[ExactMatch],
+        progress: &mut Vec<String>,
+    ) -> Result<(), PipelineError> {
+        if named.is_empty() {
+            return Ok(());
+        }
+        let missing: Vec<String> = named
+            .iter()
+            .filter(|n| !ranked.iter().any(|c| c.row.id == n.id))
+            .map(|n| n.id.clone())
+            .collect();
+        let fetched = if missing.is_empty() {
+            Vec::new()
+        } else {
+            self.ops.chunks_by_id(&missing).await?
+        };
+        let top = ranked.first().map_or(1.0, |c| c.relevance);
+        let mut front: Vec<Candidate<'a>> = Vec::new();
+        for n in named {
+            if let Some(pos) = ranked.iter().position(|c| c.row.id == n.id) {
+                front.push(ranked.remove(pos));
+            } else if let Some(row) = fetched.iter().find(|r| r.id == n.id) {
+                front.push(Candidate {
+                    row: std::borrow::Cow::Owned(row.clone()),
+                    relevance: top,
+                    expanded_from: None,
+                });
+            }
+        }
+        progress.push(format!(
+            "named reference: {} chunks ranked first",
+            front.len()
+        ));
+        front.append(ranked);
+        *ranked = front;
+        Ok(())
     }
 
     /// Render the surviving candidates as the wire contract.
@@ -1784,6 +1921,38 @@ mod tests {
         assert!(apply_corpus_gate(&mut cfg, Some(r#"{"centroid_floor": "high"}"#), 846).is_err());
         let bad = GATE.replace("0.52", "3.5");
         assert!(apply_corpus_gate(&mut cfg, Some(&bad), 846).is_err());
+    }
+
+    #[test]
+    fn a_declared_jurisdiction_list_is_read_even_from_a_stale_gate() {
+        let with = GATE.replacen('{', r#"{"foreign": ["Malaysia", "GDPR"], "#, 1);
+        let mut cfg = configured();
+        apply_corpus_gate(&mut cfg, Some(&with), 2538).expect("stale is not an error");
+        assert_eq!(cfg.gate_foreign, vec!["malaysia", "gdpr"]);
+    }
+
+    #[test]
+    fn a_foreign_jurisdiction_is_refused_only_when_no_retrieved_text_names_it() {
+        let foreign = vec!["malaysia".to_owned(), "australia".to_owned()];
+        let marriage =
+            vec!["Perkawinan hanya diizinkan bila pria dan wanita berumur 19 tahun.".to_owned()];
+        assert_eq!(
+            foreign_unanswered("batas usia menikah di Malaysia", &marriage, &foreign).as_deref(),
+            Some("malaysia")
+        );
+        // A treaty question: the corpus holds the treaty, and the treaty names the country.
+        let treaty =
+            vec!["Persetujuan Ekstradisi antara Republik Indonesia dan Australia".to_owned()];
+        assert_eq!(
+            foreign_unanswered("ekstradisi Indonesia dengan Australia", &treaty, &foreign),
+            None
+        );
+        // Whole words only: "malaysian" is not "malaysia", and no list means no rule.
+        assert_eq!(
+            foreign_unanswered("hukum malaysian", &marriage, &foreign),
+            None
+        );
+        assert_eq!(foreign_unanswered("hukum Malaysia", &marriage, &[]), None);
     }
 
     #[test]
@@ -2586,6 +2755,31 @@ mod live {
             "identifier path returned nothing · progress: {:?}",
             r.progress
         );
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn a_named_article_is_ranked_first() {
+        // ! `ROADMAP.md` Stage 1. Until v0.1.0 the identifier path returned the
+        // regulation's first chunks and kept them out of `results`, so a query naming
+        // an article was ranked on meaning alone: its article came first 31% of the time.
+        let p = pipeline(Config::default()).await;
+        let r = p
+            .search_with(
+                "menurut Pasal 20 UU 22/2009, siapa yang menetapkan kelas jalan",
+                &contract::SearchOptions::default(),
+            )
+            .await
+            .expect("search");
+        let first = r.results.first().expect("a result");
+        assert!(
+            r.exact_matches
+                .first()
+                .is_some_and(|m| m.matched_on.ends_with("Pasal 20")),
+            "{:?}",
+            r.exact_matches
+        );
+        assert_eq!(first.id, r.exact_matches[0].id, "{:?}", r.progress);
     }
 
     #[tokio::test]

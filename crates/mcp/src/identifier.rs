@@ -12,6 +12,8 @@
 //! UU 28/2007              number/year
 //! PP No. 26 Tahun 2009    number + year, spelled out
 //! Nomor 26 Tahun 2009     the same, without a type prefix
+//! Perda Kabupaten Sleman Nomor 5 Tahun 2014     a regional tier and its region
+//! Pasal 14 PP 26/2009     the article as well (`ROADMAP.md` Stage 1)
 //! ```
 
 /// A regulation reference found in a query.
@@ -27,6 +29,151 @@ pub struct Identifier {
     /// different question confidently. `None` means the query named no tier
     /// and every tier is a legitimate hit.
     pub reg_type: Option<&'static str>,
+    /// The article the query names ("Pasal 14", "Pasal 178G", "Pasal I"), if any.
+    pub article: Option<String>,
+    /// For a regional tier, the region words between the tier and the number
+    /// ("Perbup **Sleman** 12/2019"), uppercased, level words dropped, common
+    /// abbreviations expanded. Empty when none was named.
+    ///
+    /// ! Without it a regional reference is not unique: PERDA KABUPATEN 1/2016 is
+    /// dozens of regencies' regulations, and the engine would answer for whichever
+    /// one ranked first.
+    pub region: Vec<String>,
+}
+
+/// The tiers enacted per region, so a region may sit between tier and number.
+const REGIONAL: &[&str] = &[
+    "PERATURAN DAERAH",
+    "PERATURAN GUBERNUR",
+    "PERATURAN BUPATI",
+    "PERATURAN WALIKOTA",
+    "QANUN",
+];
+
+/// Every spelling of a tier as `chunks.regulation_type` stores it.
+///
+/// ! The column carries OCR variants ("PERATURANBUPATI", "PERATURAN WALI KOTA") and
+/// the identifier index leads with the type, so the lookup names each spelling
+/// rather than normalising the column, which no index could serve. A generic tier
+/// ("Perda", "Qanun") stands for every level of it.
+#[must_use]
+pub fn type_variants(canonical: &str) -> Vec<String> {
+    let base: Vec<&str> = match canonical {
+        "PERATURAN DAERAH" => vec![
+            "PERATURAN DAERAH",
+            "PERATURAN DAERAH PROVINSI",
+            "PERATURAN DAERAH KABUPATEN",
+            "PERATURAN DAERAH KOTA",
+        ],
+        "QANUN" => vec!["QANUN", "QANUN ACEH", "QANUN KABUPATEN", "QANUN KOTA"],
+        "PERATURAN WALIKOTA" => vec!["PERATURAN WALIKOTA", "PERATURAN WALI KOTA"],
+        other => vec![other],
+    };
+    let mut out: Vec<String> = Vec::new();
+    for b in base {
+        for v in [b.to_owned(), b.replace(' ', "")] {
+            if !out.contains(&v) {
+                out.push(v);
+            }
+        }
+    }
+    out
+}
+
+/// Words between a regional tier and its number that are not the region's name.
+const NOT_REGION: &[&str] = &[
+    "nomor",
+    "no",
+    "nr",
+    "kabupaten",
+    "kab",
+    "kota",
+    "provinsi",
+    "prov",
+    "pemerintah",
+];
+
+/// Province abbreviations as people write them, expanded to the words a title carries.
+const REGION_ALIASES: &[(&str, &[&str])] = &[
+    ("dki", &[]),
+    ("diy", &["YOGYAKARTA"]),
+    ("jabar", &["JAWA", "BARAT"]),
+    ("jateng", &["JAWA", "TENGAH"]),
+    ("jatim", &["JAWA", "TIMUR"]),
+    ("kalbar", &["KALIMANTAN", "BARAT"]),
+    ("kalteng", &["KALIMANTAN", "TENGAH"]),
+    ("kalsel", &["KALIMANTAN", "SELATAN"]),
+    ("kaltim", &["KALIMANTAN", "TIMUR"]),
+    ("sulsel", &["SULAWESI", "SELATAN"]),
+    ("sulut", &["SULAWESI", "UTARA"]),
+    ("sulteng", &["SULAWESI", "TENGAH"]),
+    ("sumut", &["SUMATERA", "UTARA"]),
+    ("sumbar", &["SUMATERA", "BARAT"]),
+    ("sumsel", &["SUMATERA", "SELATAN"]),
+    ("ntb", &["NUSA", "TENGGARA", "BARAT"]),
+    ("ntt", &["NUSA", "TENGGARA", "TIMUR"]),
+];
+
+/// Words that end a citation when walking back from the number: a sentence, ✗ a name.
+const SENTENCE_WORDS: &[&str] = &[
+    "yang",
+    "tentang",
+    "dan",
+    "atau",
+    "di",
+    "dalam",
+    "dari",
+    "ke",
+    "untuk",
+    "pada",
+    "sesuai",
+    "menurut",
+    "berdasarkan",
+    "aturan",
+    "mengatur",
+    "apa",
+    "bagaimana",
+];
+
+fn region_words(tokens: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for t in tokens {
+        if NOT_REGION.contains(&t.as_str()) {
+            continue;
+        }
+        if let Some((_, words)) = REGION_ALIASES.iter().find(|(a, _)| a == t) {
+            out.extend(words.iter().map(|w| (*w).to_owned()));
+        } else {
+            out.push(t.to_uppercase());
+        }
+    }
+    out
+}
+
+fn is_roman(s: &str) -> bool {
+    matches!(
+        s,
+        "i" | "ii" | "iii" | "iv" | "v" | "vi" | "vii" | "viii" | "ix" | "x"
+    )
+}
+
+/// The article named in the query: `pasal 14`, `pasal 178g`, `pasal ii`.
+fn article_in(tokens: &[String]) -> Option<String> {
+    tokens.windows(2).find_map(|w| {
+        if w[0] != "pasal" {
+            return None;
+        }
+        let t = &w[1];
+        let digits: String = t.chars().take_while(char::is_ascii_digit).collect();
+        let rest = &t[digits.len()..];
+        if !digits.is_empty() && rest.len() <= 1 && rest.chars().all(|c| c.is_ascii_alphabetic()) {
+            Some(format!("Pasal {digits}{}", rest.to_uppercase()))
+        } else if is_roman(t) {
+            Some(format!("Pasal {}", t.to_uppercase()))
+        } else {
+            None
+        }
+    })
 }
 
 /// How Indonesian regulations are abbreviated in practice, longest first so
@@ -50,23 +197,73 @@ const TYPE_WORDS: &[(&[&str], &str)] = &[
     (&["peraturan", "walikota"], "PERATURAN WALIKOTA"),
     (&["peraturan", "wali", "kota"], "PERATURAN WALIKOTA"),
     (&["perwali"], "PERATURAN WALIKOTA"),
+    (&["perwalkot"], "PERATURAN WALIKOTA"),
+    (&["perwal"], "PERATURAN WALIKOTA"),
+    (&["keputusan", "presiden"], "KEPUTUSAN PRESIDEN"),
+    (&["keppres"], "KEPUTUSAN PRESIDEN"),
+    (&["kepres"], "KEPUTUSAN PRESIDEN"),
+    // ! After "undang undang": at an equal end the later entry wins, and "peraturan
+    // pemerintah pengganti undang-undang" is a Perpu, ✗ a law.
+    (
+        &["pengganti", "undang", "undang"],
+        "PERATURAN PEMERINTAH PENGGANTI UNDANG-UNDANG",
+    ),
+    (&["perpu"], "PERATURAN PEMERINTAH PENGGANTI UNDANG-UNDANG"),
+    (&["perppu"], "PERATURAN PEMERINTAH PENGGANTI UNDANG-UNDANG"),
+    (&["peraturan", "daerah"], "PERATURAN DAERAH"),
+    (&["perda"], "PERATURAN DAERAH"),
     (
         &["peraturan", "daerah", "provinsi"],
         "PERATURAN DAERAH PROVINSI",
     ),
+    (&["perda", "provinsi"], "PERATURAN DAERAH PROVINSI"),
     (
         &["peraturan", "daerah", "kabupaten"],
         "PERATURAN DAERAH KABUPATEN",
     ),
+    (&["perda", "kabupaten"], "PERATURAN DAERAH KABUPATEN"),
+    (&["perda", "kab"], "PERATURAN DAERAH KABUPATEN"),
     (&["peraturan", "daerah", "kota"], "PERATURAN DAERAH KOTA"),
+    (&["perda", "kota"], "PERATURAN DAERAH KOTA"),
+    (&["qanun"], "QANUN"),
+    (&["qanun", "kabupaten"], "QANUN KABUPATEN"),
+    (&["qanun", "kota"], "QANUN KOTA"),
+    (&["qanun", "aceh"], "QANUN ACEH"),
 ];
 
 /// The regulation tier named in the tokens before a number, if any.
 ///
 /// Looks back a short distance only: "UU 28/2007 tentang pajak" names a tier,
 /// but the word "pemerintah" three sentences earlier does not.
-fn type_before(tokens: &[String], upto: usize) -> Option<&'static str> {
-    let lo = upto.saturating_sub(4);
+/// The tier before a number, and for a regional tier the region words between them.
+fn tier_and_region(tokens: &[String], upto: usize) -> (Option<&'static str>, Vec<String>) {
+    match tier_before(tokens, upto) {
+        Some((canonical, end)) if REGIONAL.iter().any(|r| canonical.starts_with(r)) => {
+            (Some(canonical), region_words(&tokens[end..upto]))
+        }
+        Some((canonical, _)) => (Some(canonical), Vec::new()),
+        None => (None, Vec::new()),
+    }
+}
+
+/// A national tier must sit within 4 tokens of the number, as it always had to. A
+/// regional tier may sit up to 8 back, because its region comes between ("Peraturan
+/// Daerah Kabupaten Kotawaringin Timur Nomor 5"), but only across words that can be
+/// part of a name: a sentence word ("yang", "tentang") ends the citation.
+fn tier_before(tokens: &[String], upto: usize) -> Option<(&'static str, usize)> {
+    let near = scan_tier(tokens, upto.saturating_sub(4), upto);
+    if near.is_some() {
+        return near;
+    }
+    let mut lo = upto;
+    while lo > 0 && upto - lo < 8 && !SENTENCE_WORDS.contains(&tokens[lo - 1].as_str()) {
+        lo -= 1;
+    }
+    scan_tier(tokens, lo, upto).filter(|(c, _)| REGIONAL.iter().any(|r| c.starts_with(r)))
+}
+
+/// The tier phrase in `tokens[lo..upto]` that ends nearest the number, with its end.
+fn scan_tier(tokens: &[String], lo: usize, upto: usize) -> Option<(&'static str, usize)> {
     let window = &tokens[lo..upto];
     let mut best: Option<(usize, &'static str)> = None;
     for (words, canonical) in TYPE_WORDS {
@@ -87,7 +284,7 @@ fn type_before(tokens: &[String], upto: usize) -> Option<&'static str> {
             }
         }
     }
-    best.map(|(_, c)| c)
+    best.map(|(end, c)| (c, lo + end))
 }
 
 fn is_year(s: &str) -> bool {
@@ -126,12 +323,17 @@ pub fn extract(query: &str) -> Vec<Identifier> {
                 .take(3)
                 .find(|c| c.chars().all(|ch| ch.is_ascii_digit()) && !is_year(c))
             {
+                // The tier and region sit before the NUMBER, ✗ before "tahun".
+                let at = tokens[..i].iter().rposition(|c| c == num).unwrap_or(i);
+                let (reg_type, region) = tier_and_region(&tokens, at);
                 push_unique(
                     &mut out,
                     Identifier {
                         number: num.clone(),
                         year: tokens[i + 1].parse().ok(),
-                        reg_type: type_before(&tokens, i),
+                        reg_type,
+                        article: None,
+                        region,
                     },
                 );
                 i += 2;
@@ -145,12 +347,15 @@ pub fn extract(query: &str) -> Vec<Identifier> {
             && i + 1 < tokens.len()
             && is_year(&tokens[i + 1])
         {
+            let (reg_type, region) = tier_and_region(&tokens, i);
             push_unique(
                 &mut out,
                 Identifier {
                     number: t.clone(),
                     year: tokens[i + 1].parse().ok(),
-                    reg_type: type_before(&tokens, i),
+                    reg_type,
+                    article: None,
+                    region,
                 },
             );
             i += 2;
@@ -160,6 +365,14 @@ pub fn extract(query: &str) -> Vec<Identifier> {
         i += 1;
     }
 
+    // ! One article named in the query belongs to the regulation cited with it. With
+    // several regulations and one article it is attached to each: the lookup finds it
+    // only in the regulation that has it.
+    if let Some(article) = article_in(&tokens) {
+        for id in &mut out {
+            id.article = Some(article.clone());
+        }
+    }
     out
 }
 
@@ -174,6 +387,9 @@ fn push_unique(out: &mut Vec<Identifier>, id: Identifier) {
     {
         if existing.reg_type.is_none() {
             existing.reg_type = id.reg_type;
+        }
+        if existing.region.is_empty() {
+            existing.region = id.region;
         }
         return;
     }
@@ -202,6 +418,8 @@ mod tests {
                 number: "28".into(),
                 year: Some(2007),
                 reg_type: Some("UNDANG-UNDANG"),
+                article: None,
+                region: vec![],
             }
         );
     }
@@ -214,6 +432,8 @@ mod tests {
                 number: "26".into(),
                 year: Some(2009),
                 reg_type: Some("PERATURAN PEMERINTAH"),
+                article: None,
+                region: vec![],
             }
         );
     }
@@ -227,6 +447,8 @@ mod tests {
                 year: Some(2009),
                 // No tier named · every tier is a legitimate hit.
                 reg_type: None,
+                article: None,
+                region: vec![],
             }
         );
     }
@@ -310,5 +532,85 @@ mod tests {
     #[test]
     fn mixed_case_and_punctuation_do_not_matter() {
         assert_eq!(one("UU No.28/2007 tentang pajak").number, "28");
+    }
+
+    #[test]
+    fn the_named_article_is_kept() {
+        assert_eq!(
+            one("Pasal 14 PP 26/2009").article.as_deref(),
+            Some("Pasal 14")
+        );
+        assert_eq!(
+            one("menurut UU 10/2016 pasal 178g, apa sanksinya")
+                .article
+                .as_deref(),
+            Some("Pasal 178G")
+        );
+        assert_eq!(
+            one("bunyi pasal II UU 11/2020").article.as_deref(),
+            Some("Pasal II")
+        );
+        assert_eq!(one("UU 28/2007").article, None);
+    }
+
+    #[test]
+    fn a_regional_citation_keeps_its_tier_and_region() {
+        let id = one("Bunyi Pasal 52 Perda Kabupaten Kotawaringin Timur Nomor 5 Tahun 2014");
+        assert_eq!(id.reg_type, Some("PERATURAN DAERAH KABUPATEN"));
+        assert_eq!(id.region, vec!["KOTAWARINGIN", "TIMUR"]);
+        assert_eq!(id.article.as_deref(), Some("Pasal 52"));
+
+        let id = one("Pergub DKI Jakarta No. 18 Tahun 2015");
+        assert_eq!(id.reg_type, Some("PERATURAN GUBERNUR"));
+        assert_eq!(id.region, vec!["JAKARTA"]);
+
+        let id = one("Perbup Sleman 12/2019");
+        assert_eq!(id.reg_type, Some("PERATURAN BUPATI"));
+        assert_eq!(id.region, vec!["SLEMAN"]);
+
+        let id = one("Peraturan Daerah Kota Ternate Nomor 10 Tahun 2010");
+        assert_eq!(id.reg_type, Some("PERATURAN DAERAH KOTA"));
+        assert_eq!(id.region, vec!["TERNATE"]);
+    }
+
+    #[test]
+    fn a_national_tier_carries_no_region() {
+        assert!(one("UU 28/2007").region.is_empty());
+        assert!(
+            one("Peraturan Pemerintah No. 26 Tahun 2009")
+                .region
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn the_newer_tier_words_are_recognised() {
+        assert_eq!(one("Keppres 12/1999").reg_type, Some("KEPUTUSAN PRESIDEN"));
+        assert_eq!(
+            one("Perpu 1/2020").reg_type,
+            Some("PERATURAN PEMERINTAH PENGGANTI UNDANG-UNDANG")
+        );
+        assert_eq!(
+            one("Peraturan Pemerintah Pengganti Undang-Undang Nomor 1 Tahun 2020").reg_type,
+            Some("PERATURAN PEMERINTAH PENGGANTI UNDANG-UNDANG")
+        );
+        assert_eq!(one("perda 3/2011").reg_type, Some("PERATURAN DAERAH"));
+        assert_eq!(one("perwali 7/2018").reg_type, Some("PERATURAN WALIKOTA"));
+    }
+
+    #[test]
+    fn a_sentence_word_ends_a_regional_citation() {
+        // "perda" four words back, across "yang mengatur", is not this number's tier.
+        let id = one("perda yang mengatur pajak nomor 12 tahun 2011");
+        assert_eq!(id.reg_type, None, "{id:?}");
+    }
+
+    #[test]
+    fn every_stored_spelling_of_a_tier_is_looked_up() {
+        let v = type_variants("PERATURAN BUPATI");
+        assert!(v.contains(&"PERATURAN BUPATI".to_owned()));
+        assert!(v.contains(&"PERATURANBUPATI".to_owned()));
+        assert!(type_variants("PERATURAN WALIKOTA").contains(&"PERATURAN WALI KOTA".to_owned()));
+        assert_eq!(type_variants("PERATURAN DAERAH").len(), 8);
     }
 }

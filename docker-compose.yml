@@ -153,6 +153,8 @@ services:
       # 0 = one level. docs/SCALING.md §2.
       PARENTS_PROBED: ${PARENTS_PROBED:-8}
       TWO_LEVEL_FROM: ${TWO_LEVEL_FROM:-8192}
+      # Chunks a named regulation or article contributes, ranked first. docs/ROADMAP.md Stage 1.
+      NAMED_CHUNKS: ${NAMED_CHUNKS:-5}
       # ! Latency only. Engine RSS measured flat at 14/12/14 MB across 1/2/5,
       # because the engine never holds a cluster -- Postgres does the scan and
       # returns ranked ids (docs/HARDWARE.md §6a). 5 is worth -182 ms.

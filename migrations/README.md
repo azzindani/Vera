@@ -12,6 +12,7 @@ What lives here is what a corpus needs *after* ingestion, applied by hand:
 | `0003_rum_text_index.sql` | the RUM index the text arm's ordering is served from |
 | `0004_bm25_index.sql` | the optional pg_search BM25 index for the sparse arm |
 | `0005_corpus_canary.sql` | the corpus's own canary: a sentence and its vector, from the Ravel bundle |
+| `0006_gate_foreign.sql` | the foreign jurisdictions the domain gate refuses unless retrieved text names them (`ROADMAP.md` Stage 1) |
 
 `ravel db prepare` (Ravel) applies the same guard and indexes as part of making a database ready; these files remain the manual path for a corpus loaded some other way.
 

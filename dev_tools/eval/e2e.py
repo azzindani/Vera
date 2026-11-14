@@ -203,6 +203,9 @@ def main():
         held = bool(q.get("holdout"))
         if (split == "train" and held) or (split == "holdout" and not held):
             continue
+        # EVAL_TYPES=exact_ref,out_of_domain scores only those types (for iterating).
+        if os.environ.get("EVAL_TYPES") and q["type"] not in os.environ["EVAL_TYPES"].split(","):
+            continue
         # ! EVAL_REVIEWED=1 scores only labels a domain reviewer marked BENAR
         # (`draft/review.py`); out-of-domain cases are kept, they have no label to review.
         if (os.environ.get("EVAL_REVIEWED") == "1" and q["type"] != "out_of_domain"

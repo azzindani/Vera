@@ -238,6 +238,7 @@ impl Settings {
                 // routing every number before 2026-11-14 was measured with.
                 parents_probed: parsed("PARENTS_PROBED", "integer", d.parents_probed)?,
                 two_level_from: parsed("TWO_LEVEL_FROM", "integer", d.two_level_from)?,
+                named_chunks: parsed("NAMED_CHUNKS", "positive integer", d.named_chunks)?,
                 // ! Config, ✗ a constant, because §7.12 forbids a hardcoded
                 // limit — not because it trades memory for speed. Measured
                 // engine RSS is flat across it; what it buys is −182 ms
@@ -272,6 +273,8 @@ impl Settings {
                     d.domain_lexical_floor,
                 )?,
                 gate_sample: parsed("GATE_SAMPLE", "positive integer", d.gate_sample)?,
+                // ! Declared by the corpus (`corpus_meta.gate.foreign`), ✗ configured.
+                gate_foreign: d.gate_foreign,
                 // ! Fitted against the eval set, never chosen by hand
                 // (`docs/SCORING.md` §4) -- and env-driven for the same reason
                 // the arm weights are: they are properties of the CORPUS, and

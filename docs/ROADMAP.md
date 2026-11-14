@@ -68,6 +68,40 @@ Every later stage is measured against this table, on the holdout.
 | real questions refused: **0%** | 0 / 196 |
 | off-topic refused ≥ **90%**, foreign-law questions included | 76% |
 
+**Status (Stage 1 engine, 604-case set; holdout in brackets).** Measured with
+`dev_tools/eval/e2e.py` against the 1.7M corpus on the `docker-compose.vps.yml` profile.
+
+| target | Stage 0 baseline | now |
+|---|---|---|
+| `exact_ref`: named article at rank 1 | 31.4% | **100%** (51/51) [15/15] |
+| named regulation at rank 1 | 54.9% | **100%** (51/51) [15/15] |
+| revoked never above its revoker | holds | holds (`naming_a_revoked_regulation_does_not_reorder_it`) |
+| real questions refused | 0 / 496 | **0 / 496** [0 / 134] |
+| off-topic refused | 62 / 106 (58%) | **74 / 106 (70%)** [13 / 20] — ✗ short of 90% |
+
+Side effects, all types: Recall@5 57.1 → 60.7% [51.5 → 55.2%], MRR 0.425 → 0.481, right
+regulation in top 5 72.4 → 74.2%. No type moved down. BEIR SciFact `literal` 0.7175,
+unchanged. p50 not re-measured; the named lookup itself is 0.8 ms (index on type, number,
+year).
+
+How:
+* **Named references.** The query's regulation, tier, region and article are parsed
+  (`crates/mcp/src/identifier.rs`); the named article — or the named regulation's chunks
+  nearest the query — is promoted to rank 1, routing bypassed (`SearchOps::named`).
+* **Foreign jurisdictions.** A query naming a jurisdiction the corpus declares foreign
+  (`corpus_meta.gate.foreign`, `migrations/0006_gate_foreign.sql`) is refused unless a
+  retrieved text names it too, so Indonesia's own treaties stay answerable.
+
+Why 90% is not reached without refusing real questions. The 32 off-topic cases still
+served are near-domain or everyday questions (tax in general, a contract between friends)
+and foreign questions whose country appears in Indonesian treaty text ("Inggris" is also
+the language). The centroid gate separates in-domain from off-topic at AUC 0.971, but the
+floor that refuses no real question stops at ~60%; adding BM25 evidence reached 81% on
+train and refused a real question in the holdout, so it was rejected. Separating the rest
+needs a model reading the question, which principle 1 excludes. **Proposed revision:**
+off-topic refused ≥ 70% at 0 real refused, with the remainder left to the agent, which
+sees the cited evidence and can decline.
+
 ## Stage 2 · the retrieval ceiling
 
 Ranking cannot surface what retrieval never found.
