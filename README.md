@@ -143,6 +143,7 @@ dev_tools/       offline, operator-side: embedding, clustering, eval, fixtures
 | [docs/HARDWARE.md](docs/HARDWARE.md) | measured memory, latency, concurrency, disk, scaling |
 | [docs/EVAL.md](docs/EVAL.md) | the harness that gates retrieval quality |
 | [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md) | what breaks silently, and what stops it |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | v0.2.0: staged accuracy targets on the regulation corpus |
 | [docs/BEIR.md](docs/BEIR.md) | public benchmark: Vera against pgvector and Qdrant on three BEIR sets |
 | [docs/SCALING.md](docs/SCALING.md) | from 20M rows to 100M across databases: two-level routing built, the rest designed |
 | [docs/STANDARDS_COMPLIANCE.md](docs/STANDARDS_COMPLIANCE.md) | mapping to the upstream standard |

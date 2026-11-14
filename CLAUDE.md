@@ -120,6 +120,7 @@ vera/
 │   ├── EMBEDDING.md  EVAL.md  FAILURE_MODES.md  STANDARDS_COMPLIANCE.md
 │   ├── SCALING.md              ← 20M → 100M across databases: designed, ✗ built
 │   ├── BEIR.md                 ← public benchmark vs pgvector and Qdrant: measured
+│   ├── ROADMAP.md              ← v0.2.0 accuracy targets, staged; the bar every change is held to
 │
 └── dev_tools/                  ← offline, operator-side. Never on the query path.
     ├── pre_embed/              ← ingest → chunk → embed → load
