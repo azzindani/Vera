@@ -1,0 +1,66 @@
+{
+  "vera:balanced": {
+    "ndcg@10": 0.3588,
+    "recall@10": 0.1755,
+    "recall@100": null,
+    "p50_ms": 293.1,
+    "p95_ms": 361.4,
+    "queries": 323
+  },
+  "vera:literal": {
+    "ndcg@10": 0.3684,
+    "recall@10": 0.18,
+    "recall@100": null,
+    "p50_ms": 289.8,
+    "p95_ms": 352.1,
+    "queries": 323
+  },
+  "pg-exact": {
+    "ndcg@10": 0.3681,
+    "recall@10": 0.1795,
+    "recall@100": 0.3451,
+    "p50_ms": 12.6,
+    "p95_ms": 15.0,
+    "queries": 323
+  },
+  "pg-hnsw": {
+    "ndcg@10": 0.3649,
+    "recall@10": 0.1772,
+    "recall@100": null,
+    "p50_ms": 2.8,
+    "p95_ms": 5.6,
+    "queries": 323
+  },
+  "pg-hnsw@100": {
+    "ndcg@10": 0.368,
+    "recall@10": 0.1793,
+    "recall@100": 0.3452,
+    "p50_ms": 3.6,
+    "p95_ms": 5.5,
+    "queries": 323
+  },
+  "pg-bm25": {
+    "ndcg@10": 0.3065,
+    "recall@10": 0.149,
+    "recall@100": null,
+    "p50_ms": 1.8,
+    "p95_ms": 3.2,
+    "queries": 323
+  },
+  "qdrant": {
+    "ndcg@10": 0.3681,
+    "recall@10": 0.1795,
+    "recall@100": 0.3451,
+    "p50_ms": 9.3,
+    "p95_ms": 37.8,
+    "queries": 323
+  },
+  "qdrant-hybrid": {
+    "ndcg@10": 0.3588,
+    "recall@10": 0.1765,
+    "recall@100": 0.347,
+    "p50_ms": 8.2,
+    "p95_ms": 33.2,
+    "queries": 323
+  }
+}

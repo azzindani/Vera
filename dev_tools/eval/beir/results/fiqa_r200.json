@@ -1,0 +1,26 @@
+{
+  "vera:literal:semantic": {
+    "ndcg@10": 0.4373,
+    "recall@10": 0.5059,
+    "recall@100": null,
+    "p50_ms": 364.4,
+    "p95_ms": 444.8,
+    "queries": 648
+  },
+  "vera:literal": {
+    "ndcg@10": 0.4101,
+    "recall@10": 0.505,
+    "recall@100": null,
+    "p50_ms": 363.3,
+    "p95_ms": 447.9,
+    "queries": 648
+  },
+  "vera:balanced": {
+    "ndcg@10": 0.3718,
+    "recall@10": 0.4482,
+    "recall@100": null,
+    "p50_ms": 370.0,
+    "p95_ms": 442.9,
+    "queries": 648
+  }
+}

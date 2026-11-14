@@ -47,6 +47,14 @@ Quality on the real 1.7M corpus, 196 labelled questions (`docs/EVAL.md`):
 | real questions refused | **0 / 196** |
 | off-topic questions refused | **35 / 46** (the 11 admitted are mostly foreign-law questions) |
 
+Public benchmark, BEIR nDCG@10, same embedder and chunks for every engine (`docs/BEIR.md`):
+
+| | SciFact | NFCorpus | FiQA |
+|---|---|---|---|
+| Vera, hybrid | **0.718** | **0.368** | 0.428 |
+| pgvector HNSW / Qdrant, dense | 0.692 / 0.694 | 0.365 / 0.368 | 0.463 / **0.470** |
+| Qdrant hybrid (RRF) | 0.709 | 0.359 | 0.411 |
+
 Nothing was OOM-killed at any size; past four clients extra load is refused with `503` +
 `Retry-After`, never queued. What this release does **not** prove is listed in
 [CHANGELOG.md](CHANGELOG.md).
@@ -108,6 +116,7 @@ dev_tools/       offline, operator-side: embedding, clustering, eval, fixtures
 | [docs/HARDWARE.md](docs/HARDWARE.md) | measured memory, latency, concurrency, disk, scaling |
 | [docs/EVAL.md](docs/EVAL.md) | the harness that gates retrieval quality |
 | [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md) | what breaks silently, and what stops it |
+| [docs/BEIR.md](docs/BEIR.md) | public benchmark: Vera against pgvector and Qdrant on three BEIR sets |
 | [docs/SCALING.md](docs/SCALING.md) | from 20M rows to 100M across databases: two-level routing built, the rest designed |
 | [docs/STANDARDS_COMPLIANCE.md](docs/STANDARDS_COMPLIANCE.md) | mapping to the upstream standard |
 

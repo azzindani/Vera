@@ -1,0 +1,15 @@
+{
+  "_comment": "BEIR runs only (dev_tools/eval/beir/bench.py). A BEIR corpus has no authority table, so the shipped `balanced` (authority 0.5) is refused at startup, correctly. Here `balanced` is the shipped weights with authority removed: the structural and topical priors the generic profile does declare, behind the same relevance floor. `literal` is unchanged: no prior at all. Neither is fitted on BEIR.",
+  "algorithms": {
+    "balanced": {
+      "description": "Shipped `balanced` without the authority term (no authority table in a BEIR corpus).",
+      "factors": {"relevance_floor": 0.3, "authority": 0.0, "structural": 0.25, "temporal": 0.0, "completeness": 0.0, "topical": 0.25},
+      "expand": []
+    },
+    "literal": {
+      "description": "No metadata prior: the arms' own fused order.",
+      "factors": {"relevance_floor": 0.0, "authority": 0.0, "structural": 0.0, "temporal": 0.0, "completeness": 0.0, "topical": 0.0},
+      "expand": []
+    }
+  }
+}

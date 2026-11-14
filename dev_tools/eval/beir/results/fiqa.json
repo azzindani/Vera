@@ -1,0 +1,82 @@
+{
+  "vera:balanced": {
+    "ndcg@10": 0.3855,
+    "recall@10": 0.4596,
+    "recall@100": null,
+    "p50_ms": 374.8,
+    "p95_ms": 455.7,
+    "queries": 648
+  },
+  "vera:literal": {
+    "ndcg@10": 0.428,
+    "recall@10": 0.5279,
+    "recall@100": null,
+    "p50_ms": 369.9,
+    "p95_ms": 446.0,
+    "queries": 648
+  },
+  "pg-exact": {
+    "ndcg@10": 0.4703,
+    "recall@10": 0.5535,
+    "recall@100": 0.8145,
+    "p50_ms": 109.6,
+    "p95_ms": 125.8,
+    "queries": 648
+  },
+  "pg-hnsw": {
+    "ndcg@10": 0.4625,
+    "recall@10": 0.5458,
+    "recall@100": null,
+    "p50_ms": 4.2,
+    "p95_ms": 9.7,
+    "queries": 648
+  },
+  "pg-hnsw@100": {
+    "ndcg@10": 0.4669,
+    "recall@10": 0.5501,
+    "recall@100": 0.8096,
+    "p50_ms": 5.6,
+    "p95_ms": 9.1,
+    "queries": 648
+  },
+  "pg-bm25": {
+    "ndcg@10": 0.2388,
+    "recall@10": 0.3004,
+    "recall@100": 0.5061,
+    "p50_ms": 8.8,
+    "p95_ms": 15.5,
+    "queries": 648
+  },
+  "qdrant": {
+    "ndcg@10": 0.4697,
+    "recall@10": 0.552,
+    "recall@100": 0.8064,
+    "p50_ms": 10.1,
+    "p95_ms": 33.1,
+    "queries": 648
+  },
+  "qdrant-hybrid": {
+    "ndcg@10": 0.4108,
+    "recall@10": 0.5086,
+    "recall@100": 0.7695,
+    "p50_ms": 9.7,
+    "p95_ms": 33.4,
+    "queries": 648
+  },
+  "vera:literal:semantic": {
+    "ndcg@10": 0.4551,
+    "recall@10": 0.5315,
+    "recall@100": null,
+    "p50_ms": 368.1,
+    "p95_ms": 449.5,
+    "queries": 648
+  },
+  "vera:literal:keyword": {
+    "ndcg@10": 0.2388,
+    "recall@10": 0.3004,
+    "recall@100": null,
+    "p50_ms": 366.2,
+    "p95_ms": 451.3,
+    "queries": 648
+  }
+}
