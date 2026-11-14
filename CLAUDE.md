@@ -56,7 +56,9 @@ Full detail in `docs/ARCHITECTURE.md`.
 LAYER 1  domain gate     → centroid similarity + lexical evidence; serve or refuse
 LAYER 2  k-means clusters → pick the 5 nearest centroids (held hot in the engine)
 LAYER 3  per-cluster scan → load CLUSTER_BATCH (default 1), flat halfvec scan, drop
-                          ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM)
+                            over chunk_vectors, stored in cluster order  [built]
+                          ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM, off
+                            by default: an arm at weight 0 is not run)
                           ⊕ global exact-identifier path (routing bypassed)
                           → RRF over RANKS → candidate pool
 SCORING  multi-factor     → relevance floor, then authority / structural / topical,

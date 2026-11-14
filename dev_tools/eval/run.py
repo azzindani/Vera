@@ -173,11 +173,18 @@ def resolve_targets(cur, q):
     """
     ids = set(q.get("answer_chunks", []))
     for ref in q.get("answer_articles", []):
+        # ! `about` disambiguates regional regulations that share type, number and
+        # year (PERDA KABUPATEN 1/2010 is 17 documents). It is matched as a PREFIX
+        # either way, ✗ exactly: the label's `about` was copied from one corpus's
+        # title extraction, and another build of the same law cuts the title at a
+        # different place ("E N E R G I" against "E N E R G I DENGAN RAHMAT ...").
+        about = ref["about"].strip()
         cur.execute(
             "SELECT id FROM chunks WHERE regulation_type=%s AND regulation_number=%s"
-            " AND year=%s AND about=%s AND article=%s",
+            " AND year=%s AND article=%s AND about <> ''"
+            " AND (starts_with(upper(about), upper(%s)) OR starts_with(upper(%s), upper(about)))",
             (ref["regulation_type"], ref["regulation_number"], ref["year"],
-             ref["about"], ref["article"]),
+             ref["article"], about, about),
         )
         ids |= {r[0] for r in cur.fetchall()}
     reg = q.get("answer_regulation")

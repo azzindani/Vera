@@ -82,7 +82,9 @@ set small.
 ! **That holds only if a cluster's rows are physically close.** `cluster_id` is assigned after ingest, so
 the ~2,000 rows of a cluster are scattered across the heap and its TOAST. Measured on the 5.0M replica, a
 cold probe of 5 clusters took 5,477 ms in the heap and 91 ms from a table stored in cluster order
-(`docs/HARDWARE.md` §8.2-8.3). Today the engine reads the heap; the ordered layout is measured, ✗ built.
+(`docs/HARDWARE.md` §8.2-8.3). **Built since 2026-11-14:** Ravel's `db prepare` writes
+`chunk_vectors (cluster_id, id, dense)` sorted by cluster with `dense` stored PLAIN, and the dense arm
+reads it when present -- 7,622 ms -> 54 ms cold on the 1.7M corpus (`docs/HARDWARE.md` §9).
 
 `CLUSTERS_PROBED` is the central dial. It trades recall against latency — and
 notably **not** against RAM, because of §4.
@@ -201,7 +203,7 @@ side has not been measured.
 |---|---|---|---|
 | dense | `halfvec` cosine, flat scan | 5 routed clusters | paraphrase, concept |
 | sparse | `sparsevec` BM25 | global | term overlap, weighted by IDF |
-| text | `tsvector`, ordered by a RUM index | global | exact wording, phrases |
+| text | `tsvector`, ordered by a RUM index | global | exact wording, phrases · **off by default** (`TEXT_WEIGHT=0`, not run): 2.1 s of a 3.2 s query at 1.7M for one case of Recall@5 (`HARDWARE.md` §9) |
 
 ! The **sparse arm has two implementations**, chosen by what the database has.
 With `pg_search` and migration 0004 it is Tantivy's BM25 served from an index;

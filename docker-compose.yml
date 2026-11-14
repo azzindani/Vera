@@ -159,7 +159,7 @@ services:
       # it again for anyone who brings the stack up without a .env.
       DENSE_WEIGHT: ${DENSE_WEIGHT:-2.0}
       SPARSE_WEIGHT: ${SPARSE_WEIGHT:-1.0}
-      TEXT_WEIGHT: ${TEXT_WEIGHT:-1.0}
+      TEXT_WEIGHT: ${TEXT_WEIGHT:-0.0}
       TEXT_MIN_IDF: ${TEXT_MIN_IDF:-0}
       # ! Every other tunable the engine reads (CONFIGURATION.md) is forwarded
       # here, with the .env.example value as the default. Compose only hands a

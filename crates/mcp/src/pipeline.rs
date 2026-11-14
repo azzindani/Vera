@@ -143,7 +143,7 @@ impl Default for Config {
             // dense stays 0.0: it adds nothing at any weight (row 3 above).
             dense_weight: 0.0,
             sparse_weight: 1.0,
-            text_weight: 1.0,
+            text_weight: 0.0,
             text_min_idf: 0.0,
             canary_min_cosine: 0.98,
             // ! Measured on the 50-case set in dev_tools/eval/, not chosen. With
@@ -697,7 +697,10 @@ impl Pipeline {
             self.centroids.len()
         ));
 
-        let (dense, sparse, text) = self.arms(query, &qvec, &probed, &mut progress).await?;
+        let weights = self.arm_weights(applied.mode);
+        let (dense, sparse, text) = self
+            .arms(query, &qvec, &probed, weights, &mut progress)
+            .await?;
 
         let exact_matches = self.exact_arm(query, &mut progress).await?;
 
@@ -829,11 +832,20 @@ impl Pipeline {
     /// ! On a box with fewer cores than arms the gain is I/O overlap only, and a
     /// query that used to hold one connection holds up to three. That is why the
     /// pool grew with it.
+    ///
+    /// ! An arm whose fusion weight is zero is **not run**. RRF already ignores
+    /// it (`fusion.rs`), so its rows could only cost time, and on two cores the
+    /// time is CPU the other arms are waiting for: measured on the 1.7M corpus,
+    /// the text arm is 2.1 s of a 3.2 s query and moves Recall@5 by one case of
+    /// 42 (`HARDWARE.md` §9). The **sparse** arm always runs, whatever its
+    /// weight, because the domain gate reads its top hits (`domain_gate`), and a
+    /// gate that silently lost its lexical half would admit what it refuses now.
     async fn arms(
         &self,
         query: &str,
         qvec: &[f32],
         probed: &[(i32, f32)],
+        (w_dense, _w_sparse, w_text): (f32, f32, f32),
         progress: &mut Vec<String>,
     ) -> Result<(Vec<store::Scored>, Vec<store::Scored>, Vec<store::Scored>), PipelineError> {
         let sparse_lit = sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim());
@@ -842,7 +854,13 @@ impl Pipeline {
         let text_query = self.vectorizer.prune(query, self.cfg.text_min_idf);
         let sparse_k = self.cfg.per_arm_k;
         let (dense, sparse, text) = tokio::try_join!(
-            self.dense_arm(qvec, probed),
+            async {
+                if w_dense > 0.0 {
+                    self.dense_arm(qvec, probed).await
+                } else {
+                    Ok(Vec::new())
+                }
+            },
             async {
                 self.ops
                     .sparse(query, &sparse_lit, sparse_k)
@@ -850,15 +868,26 @@ impl Pipeline {
                     .map_err(PipelineError::from)
             },
             async {
-                self.ops
-                    .text(&text_query, sparse_k)
-                    .await
-                    .map_err(PipelineError::from)
+                if w_text > 0.0 {
+                    self.ops
+                        .text(&text_query, sparse_k)
+                        .await
+                        .map_err(PipelineError::from)
+                } else {
+                    Ok(Vec::new())
+                }
             },
         )?;
-        progress.push(format!("dense: {} candidates", dense.len()));
+        let shown = |w: f32, n: usize| {
+            if w > 0.0 {
+                format!("{n} candidates")
+            } else {
+                "skipped (weight 0)".to_owned()
+            }
+        };
+        progress.push(format!("dense: {}", shown(w_dense, dense.len())));
         progress.push(format!("sparse: {} candidates", sparse.len()));
-        progress.push(format!("text: {} candidates", text.len()));
+        progress.push(format!("text: {}", shown(w_text, text.len())));
         Ok((dense, sparse, text))
     }
 

@@ -7,6 +7,9 @@
 **Corpus under test:** `spike-02` · 355,621 indexable chunks · 1024 dims
 (Qwen3-Embedding-0.6B, last-token pooling) · 177 clusters · 2,417 MB database.
 
+! **§1-§8 describe that corpus and the engine before 2026-11-14.** §9 is the current
+state: Ravel's 1.7M-chunk corpus and 5M / 10M / 20M replicas of it on 2 vCPU / 8 GB.
+
 ---
 
 ## 1. The target
@@ -932,3 +935,101 @@ What this supports, and what it does not:
 | routing makes dense independent of corpus size | **holds only with cluster-ordered storage** (§8.2, §8.3) |
 | large scale (5M, 20M) | **not demonstrated**; the global lexical arms are the wall |
 
+
+---
+
+## 9. 1.7M real, 5M / 10M / 20M replicas, 2 vCPU / 8 GB · 2026-11-14
+
+> Question asked: can Vera serve a 5M, 10M and 20M-row corpus on 2 vCPU / 8 GB? Measured
+> on the same machine as §8 (i7-12700H, Docker Desktop, NVMe), the whole stack pinned to
+> host cores `0,1` by `docker-compose.vps.yml`, through the deployed HTTP server with
+> `dev_tools/eval/load_test.py`. Cold rows drop the VM page cache and restart Postgres first.
+
+**Corpus.** `id_reg_markdown`, built by Ravel and prepared by `ravel db prepare`:
+1,716,628 chunks (1,691,419 servable), 846 clusters, Qwen3-Embedding-0.6B at 1024 dims,
+canary at cosine 1.00000. The replicas are `dev_tools/eval/scale_clone.py --in-place` on a
+copy of that volume: 3x, 6x and 12x the rows, `k` scaled with them (~2,000 rows a cluster).
+
+### 9.1 What 1.7M exposed · three fixes, each measured
+
+The engine as of `a38fdc5` on 1.7M: **p50 3,456 ms, 0.42 q/s at 4 clients**, the database at
+190-200% CPU. Per arm (`arm_latency.py`): routing 41 ms, dense 53 ms, sparse 944 ms, text
+2,117 ms. Routing held; everything else did not.
+
+| fix | where | before | after |
+|---|---|---|---|
+| **an arm at weight 0 is not run**, `TEXT_WEIGHT` 1.0 -> 0.0 | `pipeline.rs::arms` | text arm 2.1-3.8 s per query, RUM-ordered OR over ~60% of rows | not run |
+| **`indexable` outside pg_search's top-k** | `store::search::sparse` | heap filter on every match: 343,626 page reads, 940 ms | index top-k then a PK join: 303 reads, 35-52 ms |
+| **dense arm reads `chunk_vectors`** (cluster-ordered, `dense` PLAIN), built by Ravel | `store::search::dense_in_clusters` | cold 5-cluster probe 114K buffers, **7,622 ms** (warm 97 ms) | 2K buffers, **54 ms** (warm 7.7 ms) |
+| **one row per revoking document** for currency titles | `store::search::currency` | `DISTINCT ON` over every chunk: 18.5 s for 40 docs at 20M | `LATERAL ... LIMIT 1`: 0.6 ms |
+
+Recall through the engine, `e2e.py`, 42 labelled cases on the real corpus:
+
+| configuration | Recall@5 | Recall@10 | MRR |
+|---|---|---|---|
+| shipped before (all three arms) | 66.7% | 73.8% | 0.441 |
+| **`TEXT_WEIGHT=0` (shipped now)** | **64.3%** | **71.4%** | **0.478** |
+| `SPARSE_WEIGHT=0` | 61.9% | 69.0% | 0.409 |
+| dense alone | 59.5% | 64.3% | 0.507 |
+| `DENSE_WEIGHT=0` | 35.7% | 42.9% | 0.272 |
+
+! One case is 2.4 points. The text arm is worth **one case** of Recall@5 and costs MRR;
+dense is the backbone and BM25 adds two cases. The BM25 and `chunk_vectors` changes return
+identical results (same three figures before and after each).
+
+! 5 of the 50 labels did not resolve on this corpus at first: `run.py` matched `about`
+exactly and Ravel cuts titles at a different place. It now matches a prefix either way, which
+recovers three; q015 and q022 name regulations this corpus does not hold and are skipped.
+
+### 9.2 The scale table
+
+`TEXT_WEIGHT=0`, `CLUSTERS_PROBED=5`, `MAX_CONCURRENCY=4`, same engine image for every row.
+
+| rows | clusters | cold p50 / p95 | warm p50 / p95 | 4 clients p50 · q/s | 8 clients · refused | peak db / embed / engine | database |
+|---|---|---|---|---|---|---|---|
+| **1.7M** real | 846 | 556 / 833 ms | 430 / 569 ms | 1,432 ms · 2.73 | 2.84 q/s · 3/64 | 1.8 GB / 2.0 GB / 30 MB | 16 GB |
+| **5.1M** | 2,538 | 530 / 751 ms | 430 / 507 ms | 1,410 ms · 2.73 | 2.77 q/s · 3/64 | 2.1 GB / 2.0 GB / 56 MB | 28 GB |
+| **10.3M** | 5,076 | 604 / 918 ms | 480 / 825 ms | 1,468 ms · 2.67 | 2.69 q/s · 6/64 | 2.6 GB / 2.0 GB / 105 MB | 49 GB |
+| **20.6M** | 10,152 | 676 / 1,035 ms | 613 / 833 ms | 1,614 ms · 2.41 | 2.49 q/s · 1/64 | 3.5 GB / 1.9 GB / 184 MB | 92 GB |
+
+Against §8: 5.0M on two cores was **13-18 s** p50 and 0.13-0.20 q/s. It is now 0.53 s and 2.7 q/s.
+
+Nothing was OOM-killed and nothing restarted at any size. The 8-client column is
+backpressure doing its job: refusals, ✗ queueing.
+
+**Where the time goes now.** The query embedding (~300 ms, CPU) and the embedder's share of
+the two cores: it sits at 150-199% while Postgres is at 30-70%. Throughput is set by the
+embedder, which is why it is flat from 1.7M to 10M. What grows with `n`:
+
+| | 1.7M | 20.6M | |
+|---|---|---|---|
+| BM25 arm, per query (warm) | 35-52 ms | p50 123, max 339 ms | pg_search top-k, `(id, body)` index 6.3 GB |
+| engine RSS | 30 MB | 184 MB | centroids held hot, linear in `k` |
+| database page working set | 1.8 GB | 3.5 GB | of a 4 GB container limit |
+
+### 9.3 What this does and does not prove
+
+- **Holds:** a 20M-row corpus is served on 2 vCPU / 8 GB at ~0.6-0.7 s p50, ~1 s p95 cold,
+  ~2.4 q/s, with the dense arm's cost independent of corpus size and every other cost known.
+- **Not measured: recall above 1.7M.** Every answer exists 3-12 times in a replica and every
+  centroid is duplicated, so the router's 5 clusters are copies of each other. The rows a query
+  touches are right; what they contain is not. Recall at scale needs a real corpus that size.
+- **Not measured: a real 20M vocabulary.** Copies repeat term frequencies; a real corpus has
+  more distinct terms and longer tails, so BM25 posting lists differ.
+- **The next wall is the engine's centroid set.** 184 MB at 10K clusters is ~0.9 GB at 50K
+  (100M rows) against a 512 MB engine limit, and the linear scan over centroids grows with it.
+  Hierarchical routing is the fix for 100M, still neither designed nor built.
+- **`chunk_vectors` costs disk:** 2.7 KB a row (2 KB vector + header, three rows a page),
+  4.6 GB at 1.7M and 54 GB at 20M, on top of `chunks`. Narrower vectors (512 dims,
+  `EMBEDDING.md` §5e) would halve it.
+
+```bash
+# the stack on a prepared volume, 2 vCPU / 8 GB
+DB_VOLUME=<volume> TEXT_WEIGHT=0 docker compose -f docker-compose.yml -f docker-compose.vps.yml -f <overlay mounting DB_VOLUME> up -d
+# a replica: copy the volume, start a server on it, grow it in place
+DATABASE_URL=... python dev_tools/eval/scale_clone.py --factor 12 --in-place
+# cold stream, then warm and concurrency
+python dev_tools/eval/load_test.py <label> 1 50 5     # after dropping caches
+python dev_tools/eval/load_test.py <label> 4 48 3
+VERA_HTTP=http://127.0.0.1:8081 DATABASE_URL=... BM25_VOCAB=... python dev_tools/eval/e2e.py
+```

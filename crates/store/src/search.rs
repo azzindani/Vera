@@ -114,6 +114,9 @@ pub struct SearchOps {
     /// Whether this corpus carries Ravel's `doc_status` sidecar and `chunks.doc_id`.
     /// Probed once, cached; a corpus loaded before they existed serves as it always did.
     currency: std::sync::OnceLock<bool>,
+    /// Whether this corpus carries `chunk_vectors`, the dense column stored again
+    /// in cluster order. Same contract: probed once, cached, absence costs latency.
+    vectors: std::sync::OnceLock<bool>,
 }
 
 impl SearchOps {
@@ -124,7 +127,33 @@ impl SearchOps {
             rum: std::sync::OnceLock::new(),
             bm25: std::sync::OnceLock::new(),
             currency: std::sync::OnceLock::new(),
+            vectors: std::sync::OnceLock::new(),
         }
+    }
+
+    /// Whether the dense arm can read `chunk_vectors` here.
+    ///
+    /// ! The side table is the layout that makes routing hold on a COLD cache.
+    /// `cluster_id` is assigned after the rows exist, so in `chunks` a cluster's
+    /// ~2,000 rows are scattered over the heap and every vector is a TOAST fetch:
+    /// measured on the 1.7M corpus, a cold 5-cluster probe read 114K buffers and
+    /// took 7.3 s. `chunk_vectors` holds `(cluster_id, id, dense)` for servable
+    /// rows only, sorted by cluster, with `dense` stored PLAIN (inline, ✗ TOAST),
+    /// so a probe is a few contiguous megabytes (`docs/HARDWARE.md` §9).
+    ///
+    /// ! It holds ONLY servable rows: whoever builds it applies `indexable`, so the
+    /// arm does not join back to `chunks` to check it.
+    async fn has_vectors(&self) -> Result<bool, StoreError> {
+        if let Some(v) = self.vectors.get() {
+            return Ok(*v);
+        }
+        let c = self.client().await?;
+        let row = c
+            .query_one("SELECT to_regclass('chunk_vectors') IS NOT NULL", &[])
+            .await?;
+        let found: bool = row.get(0);
+        let _ = self.vectors.set(found);
+        Ok(found)
     }
 
     /// Whether `doc_status` and `chunks.doc_id` are here.
@@ -300,14 +329,23 @@ impl SearchOps {
         if cluster_ids.is_empty() {
             return Ok(Vec::new());
         }
+        let sql = if self.has_vectors().await? {
+            "SELECT id, 1.0 - (dense <=> $1::text::halfvec) AS sim
+             FROM chunk_vectors
+             WHERE cluster_id = ANY($2)
+             ORDER BY dense <=> $1::text::halfvec
+             LIMIT $3"
+        } else {
+            "SELECT id, 1.0 - (dense <=> $1::text::halfvec) AS sim
+             FROM chunks
+             WHERE indexable AND dense IS NOT NULL AND cluster_id = ANY($2)
+             ORDER BY dense <=> $1::text::halfvec
+             LIMIT $3"
+        };
         let c = self.client().await?;
         let rows = c
             .query(
-                "SELECT id, 1.0 - (dense <=> $1::text::halfvec) AS sim
-                 FROM chunks
-                 WHERE indexable AND dense IS NOT NULL AND cluster_id = ANY($2)
-                 ORDER BY dense <=> $1::text::halfvec
-                 LIMIT $3",
+                sql,
                 &[&dense_literal(query), &cluster_ids, &(k * OVERFETCH)],
             )
             .await?;
@@ -360,12 +398,26 @@ impl SearchOps {
             // that same column. Scoring a different column returns NULL rather
             // than failing, which would rank everything equally and look like a
             // bad corpus.
+            //
+            // ! `indexable` is applied OUTSIDE the index's top-k, ✗ beside the
+            // match. `indexable` is not in the BM25 index, so written as one
+            // WHERE clause pg_search turns it into a heap filter and checks the
+            // heap for every row that matches: measured on the 1.7M corpus,
+            // 343,626 page reads and 940 ms, against 303 reads and 35 ms for the
+            // index's own top-k. The inner query keeps that top-k (twice the
+            // rows the arm needs, since 1.5% of the corpus is not indexable)
+            // and the outer one drops what ingestion ruled out, by primary key.
             let rows = c
                 .query(
-                    "SELECT id, paradedb.score(id) AS score
-                     FROM chunks
-                     WHERE indexable AND id @@@ paradedb.match('body', $1)
-                     ORDER BY paradedb.score(id) DESC
+                    "SELECT s.id, s.score
+                     FROM (SELECT id, paradedb.score(id) AS score
+                             FROM chunks
+                            WHERE id @@@ paradedb.match('body', $1)
+                            ORDER BY paradedb.score(id) DESC
+                            LIMIT $2::int8 * 2) s
+                     JOIN chunks c ON c.id = s.id
+                     WHERE c.indexable
+                     ORDER BY s.score DESC
                      LIMIT $2",
                     &[&query, &(k * OVERFETCH)],
                 )
@@ -654,9 +706,21 @@ impl SearchOps {
         let titles: HashMap<String, String> = if named.is_empty() {
             HashMap::new()
         } else {
+            // ! ONE row per document, read from `chunks_doc_seq_idx`, ✗ `DISTINCT ON`
+            // over every chunk of it. The title is the document's, the same on all its
+            // chunks, and `DISTINCT ON ... ORDER BY doc_id, id` fetched and sorted all of
+            // them to keep one: measured 18.5 s against 0.6 ms for 40 revoking documents
+            // at 20M rows, and the slowest statement in the whole request.
+            //
+            // ! No ORDER BY. Any chunk carries the title, and ordering by `seq` named a
+            // column that corpora loaded before Ravel's schema do not have.
             c.query(
-                "SELECT DISTINCT ON (doc_id) doc_id, source_title
-                 FROM chunks WHERE doc_id = ANY($1) ORDER BY doc_id, id",
+                "SELECT d.doc_id, t.source_title
+                 FROM unnest($1::text[]) AS d(doc_id)
+                 CROSS JOIN LATERAL (
+                     SELECT source_title FROM chunks c
+                      WHERE c.doc_id = d.doc_id LIMIT 1
+                 ) t",
                 &[&named],
             )
             .await?
