@@ -79,7 +79,7 @@ fn ac_04_no_llm_completion_call_exists_anywhere_on_the_query_path() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .find(|p| p.join("crates").is_dir())
-        .expect("workspace root");
+        .unwrap_or_else(|| panic!("workspace root above {}", env!("CARGO_MANIFEST_DIR")));
 
     // Completion-shaped API surfaces. Substrings, so `/v1/chat/completions`,
     // `messages.create`, and `generate_content` are all caught.

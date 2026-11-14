@@ -26,6 +26,11 @@ FROM python:3.11-slim-bookworm
 # which is ~2 GB of driver libraries this image will never use.
 ARG TORCH_VERSION=2.5.1
 ARG TRANSFORMERS_VERSION=4.53.2
+# ! Retries and a long read timeout. The torch CPU wheel is ~200 MB from a CDN that
+# stalls on slow links, and pip's default 15 s timeout turned that into a failed
+# build on a first `docker compose up` (2026-11-14, ReadTimeoutError after 12 min).
+ENV PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=10
 RUN pip install --no-cache-dir \
       --index-url https://download.pytorch.org/whl/cpu \
       "torch==${TORCH_VERSION}" \

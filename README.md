@@ -4,7 +4,7 @@
 document corpus that returns ranked, **source-cited** results for an AI agent to
 summarize and a human to independently verify.
 
-Runs on **2 vCPU / 4 GB**, no GPU on the query path. Measured, not budgeted — see
+Runs on **2 vCPU / 8 GB**, no GPU on the query path, up to **20M rows** measured. Measured, not budgeted — see
 [docs/HARDWARE.md](docs/HARDWARE.md).
 
 ---
@@ -25,42 +25,31 @@ returns nothing rather than guessing.
 - Not an assistant. It never calls an LLM, never summarizes, never reranks with a model.
 - Not a generative system. It surfaces what exists and returns the receipt.
 
-## Current state
+## Current state · v0.1.0
+
+Measured 2026-11-14 on a Ravel-prepared corpus of Indonesian regulations, the whole stack
+pinned to two cores and 8 GB (`docker-compose.vps.yml`). Rows above 1.7M are replicas of
+the real corpus: their latency and memory are real, their recall is not measured.
+
+| | 1.7M (real) | 5.1M | 10.3M | 20.6M |
+|---|---|---|---|---|
+| p50 cold / warm | 556 / 430 ms | 530 / 430 ms | 604 / 480 ms | 708 / 629 ms |
+| p95 cold | 833 ms | 751 ms | 918 ms | 1,158 ms |
+| throughput, 4 clients | 2.7 q/s | 2.7 q/s | 2.7 q/s | 2.3 q/s |
+| engine memory | 30 MB | 56 MB | 105 MB | **15 MB** (two-level routing) |
+
+Quality on the real 1.7M corpus, 196 labelled questions (`docs/EVAL.md`):
 
 | | |
 |---|---|
-| Corpus under test | 355,621 chunks · 177 clusters · 2.4 GB |
-| Recall@20 / @50 | **82.1% / 87.2%** — the width an agent is actually handed |
-| Recall@5 | **56.8%** through the deployed server, `DENSE_WEIGHT=2.0` |
-| Routing | probing 5 of 177 clusters touches **2.8%** of the corpus for **93%** of flat-scan quality |
-| Memory, full stack | **4,019 MB** at 355K · the embedder is 2,580 MB of it, and the smallest box that runs this correctly is **8 GB**, ✗ 4 |
-| Latency, 2 cores | **p50 2,998 ms** at 355K, whole stack pinned, `DTYPE=float32` (`docs/HARDWARE.md` §3) · re-measured on a faster CPU 2026-11-02: **1,051 ms**, and 17-18 s at 5.0M (`docs/HARDWARE.md` §8) |
-| Embedder dtype | `float32`. Narrow dtypes are a **22× latency loss** on CPU and quantization is refused by the canary at cosine 0.6356 — it changes the vector space |
-| Recall at 512 dims | **identical** to 1024 at @5/@10/@50, better at @20 — 347 MB reclaimable, designed ✗ built (`docs/EMBEDDING.md` §5e) |
-| Engine RAM | **14 MB at 355K · 42 MB at 5.1M** — per-request cost is flat, the floor is the hot centroid table and grows with `k ∝ n` (`docs/HARDWARE.md` §2) |
-| Whole stack | **2,253 MB at 355K · 6,316 MB at 5.1M** — Postgres is the ceiling, peaking at 5,907 MB of a 6,336 MB cap |
-| Routing at scale | **proven at 14× with a warm cache** — corpus replicated to 5.0M rows / 23 GB, dense arm moved 46 → **57 ms** (`docs/HARDWARE.md` §6). Cold it was 8.3 s until vectors were stored in cluster order (91 ms) — `docs/HARDWARE.md` §8 |
-| Lexical arm | `pg_search` BM25 where available, `sparsevec` scan where not — **1,858 ms vs 6,282 ms at 5M**, same fused recall |
-| vs. a dedicated index | ParadeDB's IVF matches flat-scan recall but costs **2,409 ms against routing's 49 ms**, and its 2.6 GB index has no `halfvec` opclass (`docs/HARDWARE.md` §6b) |
-| Domain gate | 4/6 out-of-domain refused, **0/44 false refusals** |
-| Concurrency | 12 concurrent → 8 served, 4 refused with `503` + `Retry-After` |
+| Recall@5 / @10 / MRR | **57.1% / 68.4% / 0.438** (±6.9 points at 95%) |
+| answer inside the top 50 | **85.2%** |
+| real questions refused | **0 / 196** |
+| off-topic questions refused | **35 / 46** (the 11 admitted are mostly foreign-law questions) |
 
-All three arms now carry weight. The corpus was re-embedded on 2026-09-19 with the
-model's reference implementation, and the dense arm went from **0.0% to 61.4%
-Recall@5** — the strongest of the three, against 40.9% text and 38.6% sparse
-(`python dev_tools/eval/run.py`). [docs/EMBEDDING.md](docs/EMBEDDING.md) §5 records
-the defect that caused it and the measurement that closed it.
-
-! **Read Recall@20/@50, not Recall@5.** k=5 is the eval's strictness knob; a calling
-agent is handed 20–50 results and reasons over them. The ordering between
-configurations changes with k — at k=5 dense alone beats fusion, and from k=20 up
-fusion wins (`docs/EVAL.md` §4b).
-
-! Two numbers moved the *wrong* way and are stated rather than buried: the domain
-gate now lets 2 of 6 out-of-domain queries through, because in-domain and
-out-of-domain centroid scores overlap in the new space (`docs/EVAL.md` §4c); and
-latency has not been re-measured on the 2 vCPU / 4 GB profile since the re-embed, so
-the previous 1,059 ms p50 figure is withdrawn rather than restated.
+Nothing was OOM-killed at any size; past four clients extra load is refused with `503` +
+`Retry-After`, never queued. What this release does **not** prove is listed in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Run it
 
@@ -81,7 +70,7 @@ process cannot safely guess. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Architecture at a glance
 
-- **Engine** — stateless Rust MCP server, stdio and HTTP transports. ~12 MB resident, measured under load.
+- **Engine** — stateless Rust MCP server, stdio and HTTP transports. 15-105 MB resident from 1.7M to 20.6M rows.
 - **Store** — PostgreSQL + pgvector (`halfvec` dense, `sparsevec` BM25) + RUM for the
   text arm. No global ANN index: routing does the pruning, and an ANN graph would have
   to be resident over all `n` rows — reintroducing the term this design removes.
@@ -89,8 +78,8 @@ process cannot safely guess. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
   engine refuses to serve a provider that does not reproduce it.
 - **Fusion** — Reciprocal Rank Fusion over ranks. No reranker, no model in the loop.
 - **Scoring** — retrieval finds what is relevant; metadata factors (authority,
-  recency, structure) decide what matters. Designed, not yet built — see
-  [docs/SCORING.md](docs/SCORING.md).
+  structure, subject) reorder inside a bounded prior, and a revoked regulation never
+  outranks the one that revoked it. [docs/SCORING.md](docs/SCORING.md).
 
 ## Layout
 
@@ -119,6 +108,7 @@ dev_tools/       offline, operator-side: embedding, clustering, eval, fixtures
 | [docs/HARDWARE.md](docs/HARDWARE.md) | measured memory, latency, concurrency, disk, scaling |
 | [docs/EVAL.md](docs/EVAL.md) | the harness that gates retrieval quality |
 | [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md) | what breaks silently, and what stops it |
+| [docs/SCALING.md](docs/SCALING.md) | from 20M rows to 100M across databases: two-level routing built, the rest designed |
 | [docs/STANDARDS_COMPLIANCE.md](docs/STANDARDS_COMPLIANCE.md) | mapping to the upstream standard |
 
 ## Where the corpus comes from — [Ravel](https://github.com/azzindani/Ravel)
@@ -147,7 +137,7 @@ Shared between the two repositories:
 
 | Thing | Here | In Ravel | Rule |
 |---|---|---|---|
-| Labelled eval queries | [`dev_tools/eval/queries.json`](dev_tools/eval/queries.json) — 50 cases, the origin | [`eval/id_legal/queries@v1.jsonl`](https://github.com/azzindani/Ravel/blob/main/eval/id_legal) | Vera's copy is the origin; Ravel's is imported by [`tools/import_vera_queries.py`](https://github.com/azzindani/Ravel/blob/main/tools/import_vera_queries.py) and drops the chunk ids, which cannot survive a re-chunk |
+| Labelled eval queries | [`dev_tools/eval/queries.json`](dev_tools/eval/queries.json) — 244 cases, the origin | [`eval/id_legal/queries@v1.jsonl`](https://github.com/azzindani/Ravel/blob/main/eval/id_legal) | Vera's copy is the origin; Ravel's is imported by [`tools/import_vera_queries.py`](https://github.com/azzindani/Ravel/blob/main/tools/import_vera_queries.py) and drops the chunk ids, which cannot survive a re-chunk |
 | Byte-aware batching | [`dev_tools/pre_embed/batching.py`](dev_tools/pre_embed/batching.py) — frozen | [`src/runtime/batching.py`](https://github.com/azzindani/Ravel/blob/main/src/runtime/batching.py) | Ravel owns it now; Vera's copy is held only until `pre_embed`'s remaining scripts follow it |
 | Corpus schema | [`migrations/*.sql`](migrations) — applied by hand | [`src/bundle/schema.py`](https://github.com/azzindani/Ravel/blob/main/src/bundle/schema.py) — generated | Generated from the manifest there, never hand-written here |
 
