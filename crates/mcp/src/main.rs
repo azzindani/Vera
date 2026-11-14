@@ -234,6 +234,10 @@ impl Settings {
 
             pipeline: Config {
                 clusters_probed: parsed("CLUSTERS_PROBED", "positive integer", d.clusters_probed)?,
+                // ! 0 is valid and means one level: every leaf held and scanned, the
+                // routing every number before 2026-11-14 was measured with.
+                parents_probed: parsed("PARENTS_PROBED", "integer", d.parents_probed)?,
+                two_level_from: parsed("TWO_LEVEL_FROM", "integer", d.two_level_from)?,
                 // ! Config, ✗ a constant, because §7.12 forbids a hardcoded
                 // limit — not because it trades memory for speed. Measured
                 // engine RSS is flat across it; what it buys is −182 ms

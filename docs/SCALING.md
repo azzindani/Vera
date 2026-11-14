@@ -1,8 +1,8 @@
 # SCALING.md — from 20M rows to 100M across several databases
 
-> **Status: designed, ✗ built.** Every number below is either measured (named) or
-> labelled as an estimate. What is measured stops at 20.6M rows on 2 vCPU / 8 GB
-> (`HARDWARE.md` §9).
+> **Status (2026-11-14):** §2 two-level routing is **built and measured**; §3 and §4 are
+> designed, ✗ built. Every number below is measured (named) or labelled as an estimate.
+> What is measured stops at 20.6M rows on 2 vCPU / 8 GB (`HARDWARE.md` §9).
 
 ---
 
@@ -58,6 +58,48 @@ query ─► top level:  ~√k "super-centroids", held hot in the engine   (k=50
   the supers over the leaves (k-means on ~50K points, seconds) and writes `parent_id`.
   Clustering stays a deployment decision (`Ravel/CLAUDE.md` §5.17).
 
+### Built and measured · 2026-11-14
+
+Ravel's `db prepare` fits the parents (`src/db/routing.py`, √k by default, seeded; also
+`ravel db parents` for a database prepared before it); the engine uses them when the
+database has them, `PARENTS_PROBED > 0` and the corpus has at least `TWO_LEVEL_FROM`
+leaves (default 8,192, ~16M rows). Below that one level holds every leaf in a few tens of
+MB and loses nothing.
+
+**Routing recall**, 191 labelled questions on the real 1.7M corpus, 5 leaves probed
+(`dev_tools/eval/routing_levels.py`): the share whose answer chunk lies in a probed cluster.
+
+| | routing recall | leaves considered |
+|---|---|---|
+| one level, 846 leaves | **86.4%** | all |
+| 29 parents (√k), 4 probed | 80.6% | ~14% |
+| 29 parents, 8 probed | 83.8% | ~28% |
+| 58 parents, 8 probed | 82.2% | ~14% |
+| 58 parents, 16 probed | 85.3% | ~28% |
+
+! The loss follows the **share of leaves the probed parents cover**, ✗ the parent count:
+~28% coverage costs 1-2.6 points, ~14% costs 4-6. At 50K leaves √k parents and 8 probed
+cover ~4%, so the default must grow with the corpus. That is the measurement a real
+≥5M corpus has to make (§5); a replica cannot, because its centroids are copies.
+
+**End to end** on the 1.7M corpus, two levels forced (`TWO_LEVEL_FROM=0`, 8 of 29):
+Recall@5 56.6% against 57.1%, Recall@10 67.9% against 68.4%, MRR 0.432 against 0.438.
+One case each: the global BM25 arm recovers most of what routing gives up, as invariant 3
+intends.
+
+**Memory and latency** on the 20.6M replica (10,152 leaves, 101 parents, 8 probed), same
+box and profile as `HARDWARE.md` §9.2:
+
+| | one level | two levels |
+|---|---|---|
+| engine RSS | 184 MB | **15 MB** |
+| cold p50 / p95 | 676 / 1,035 ms | 708 / 1,158 ms |
+| warm p50 / p95 | 613 / 833 ms | 629 / 895 ms |
+| 4 clients | 2.41 q/s | 2.29 q/s |
+
+The engine's resident set no longer grows with the corpus: 101 parents are 0.4 MB. The
+leaf ranking costs ~20-30 ms in Postgres (808 leaves of 2 KB under 8 parents).
+
 Rejected: an HNSW index over the 50K centroids. Small and fast, but it puts an ANN
 structure, and its own recall loss, in front of the exact leaf ranking, and makes the
 leaf choice non-deterministic under concurrent inserts. Two exact levels are
@@ -105,7 +147,7 @@ A request still never names a domain (§7.13). It can only be narrowed by the ga
 | step | needs | proves |
 |---|---|---|
 | 1 | a real corpus of ≥5M rows (not a replica) | routing recall and BM25 at scale with real vocabulary |
-| 2 | two-level routing (§2) on the 1.7M and that corpus | engine RSS O(√k), recall loss vs one level |
+| 2 | ~~two-level routing (§2)~~ **built**: 184 MB -> 15 MB at 20.6M; recall loss measured at 846 leaves only | the loss at 10K+ leaves, on step 1's corpus |
 | 3 | a second database (any second corpus) | multi-database selection, cross-database fusion |
 | 4 | §3 option 1, only if step 1 shows BM25 over budget | lexical arm past the cache |
 

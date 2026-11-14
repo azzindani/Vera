@@ -149,6 +149,10 @@ services:
       MAX_CONCURRENCY: ${MAX_CONCURRENCY:-4}
       QUEUE_WAIT_MS: ${QUEUE_WAIT_MS:-2000}
       CLUSTERS_PROBED: ${CLUSTERS_PROBED:-5}
+      # Two-level routing when the database has a parent level (Ravel `db prepare`);
+      # 0 = one level. docs/SCALING.md §2.
+      PARENTS_PROBED: ${PARENTS_PROBED:-8}
+      TWO_LEVEL_FROM: ${TWO_LEVEL_FROM:-8192}
       # ! Latency only. Engine RSS measured flat at 14/12/14 MB across 1/2/5,
       # because the engine never holds a cluster -- Postgres does the scan and
       # returns ranked ids (docs/HARDWARE.md §6a). 5 is worth -182 ms.

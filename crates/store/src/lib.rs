@@ -104,6 +104,9 @@ pub struct CorpusMeta {
     /// tables for the first and honours the declaration for the second, and it
     /// says at startup which happened.
     pub scoring_vocabulary: Option<String>,
+    /// The domain gate's floors as Ravel measured them on this database's clusters
+    /// (`ravel db calibrate`), raw JSON. `None` for a corpus never calibrated.
+    pub gate: Option<String>,
 }
 
 impl CorpusMeta {
@@ -273,6 +276,7 @@ mod tests {
             sparse_dim: 20000,
             sparse_vocab_sha256: "abc".into(),
             scoring_vocabulary: None,
+            gate: None,
         }
     }
 

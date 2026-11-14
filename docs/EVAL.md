@@ -297,8 +297,30 @@ topic to an embedding; jurisdiction is not something this gate can see) and 3 of
 non-legal ones ("makanan khas Palembang", "ibu kota Australia", "ban sepeda kempes").
 
 ! A floor in a vector space is a property of the **corpus**, like the space itself
-(invariant 2). It is configuration today; it belongs in `corpus_meta`, written by Ravel
-with the calibration data `Ravel/docs/CLUSTERING.md` §4 already asks it to emit.
+(invariant 2). **Built 2026-11-14:** `ravel db calibrate` measures it on the prepared
+database's clusters with the corpus's own embedder and writes `corpus_meta.gate`; the
+engine uses it over `DOMAIN_FLOOR` / `DOMAIN_LEXICAL_FLOOR` and says so at startup. On
+this corpus it reproduced the measurement above exactly (0.52, lowest real 0.543, 35/46,
+AUC 0.987) from an independent implementation. A gate calibrated on a different cluster
+count is reported stale and not used.
+
+### 4c-quater. Fusion refitted · 2026-11-14, 166 training cases
+
+`DENSE_WEIGHT` and the arm depth (`PER_ARM_K` = `PER_CLUSTER_K`) through the engine,
+one restart per setting, `EVAL_SPLIT=train`:
+
+| depth \ `DENSE_WEIGHT` | 1.0 | 2.0 (shipped) | 3.0 | 4.0 |
+|---|---|---|---|---|
+| 10 | | 58.4% / 0.452 | | |
+| 15 | | 59.0% / 0.429 | | |
+| **20 (shipped)** | 60.2% / 0.451 | 59.0% / 0.442 | 59.0% / 0.449 | 59.6% / 0.453 |
+| 40 | 53.6% / 0.421 | 54.2% / 0.417 | 54.8% / 0.428 | 56.6% / 0.437 |
+
+(Recall@5 / MRR.) The weight is flat: every value at depth 20 is within two cases of the
+others, against ±7.5 points of noise. Depth 40 is worse at every weight, 3-6 points:
+a deeper per-arm list reshuffles RRF rather than extending it (§4b). **Nothing changes**:
+the shipped fusion is already at the top of what this set can see, so fusion tuning does
+not close the 27-point gap between the pool and the top 5 either (`SCORING.md` §9b).
 
 ### 4d. Routing, measured for the first time
 

@@ -93,6 +93,8 @@ safe.
 | Variable | Default | Effect |
 |---|---|---|
 | `CLUSTERS_PROBED` | `5` | layer-2 probe width. Recall vs latency — **not** vs RAM, because clusters load `CLUSTER_BATCH` at a time and this is not that number. |
+| `PARENTS_PROBED` | `8` | two-level routing: parents searched first when the database carries a parent level (`cluster_parents`, built by Ravel `db prepare` at ≥ 256 clusters); the engine then holds only the ~√k parents, ✗ every leaf. `0` = one level. Recall cost and memory saved: `SCALING.md` §2 |
+| `TWO_LEVEL_FROM` | `8192` | leaf clusters from which two-level routing is used; below it every leaf is held and scanned (no routing-recall cost, small memory) · `SCALING.md` §2 |
 | `CLUSTER_BATCH` | `1` | How many probed clusters are resident at once. The second term of the OOM guarantee: `peak RAM = fixed + (MAX_CONCURRENCY × CLUSTER_BATCH × one cluster)`, worst case 23.4 MB per cluster measured. `1` reproduces the original one-at-a-time scan and is the 2 vCPU / 4 GB number; higher buys back the 187 ms that separate statements cost. **Raise the container's memory limit with it** — they are one decision (`ARCHITECTURE.md` §4). |
 | `PER_CLUSTER_K` | `20` | candidates kept per cluster per arm |
 | `PER_ARM_K` | `20` | candidates each global arm contributes |

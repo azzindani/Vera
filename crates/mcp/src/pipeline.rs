@@ -25,6 +25,14 @@ use crate::identifier;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub clusters_probed: usize,
+    /// Parents searched first when the database carries a parent level (two-level
+    /// routing, `docs/SCALING.md` §2). `0` routes over every leaf even when it does.
+    pub parents_probed: usize,
+    /// Two levels only from this many leaf clusters. Below it every leaf is held and
+    /// scanned: one level loses no routing recall, and its memory is small (846 leaves
+    /// are ~3 MB, while two levels probing 8 of 29 parents cost 2.6 points of routing
+    /// recall on the 1.7M corpus, `SCALING.md` §2).
+    pub two_level_from: usize,
     /// How many probed clusters go into one statement.
     ///
     /// ! A **latency** dial, ✗ a memory one. Measured engine peak RSS is flat
@@ -112,6 +120,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             clusters_probed: 5,
+            parents_probed: 8,
+            two_level_from: 8192,
             cluster_batch: 1,
             per_cluster_k: 20,
             per_arm_k: 20,
@@ -185,9 +195,79 @@ pub struct Pipeline {
     ops: SearchOps,
     provider: Arc<dyn EmbeddingProvider>,
     vectorizer: QueryVectorizer,
+    /// Held hot: every leaf centroid (one level), or only the parents (two levels).
     centroids: Vec<Centroid>,
+    /// Whether `centroids` are parents, and leaves are ranked in Postgres.
+    two_level: bool,
+    /// Leaf clusters in the database, whichever level is held.
+    leaves: usize,
     meta: CorpusMeta,
     cfg: Config,
+}
+
+/// `corpus_meta.gate` as Ravel writes it (`Ravel/src/db/calibrate.py`). Only the fields
+/// the engine acts on are read; the rest (AUC, what was refused) is for a reader.
+#[derive(Debug, serde::Deserialize)]
+struct Gate {
+    centroid_floor: f32,
+    lexical_floor: f32,
+    clusters: usize,
+    in_domain: usize,
+    out_of_domain: usize,
+}
+
+impl Gate {
+    fn parse(raw: &str) -> Result<Self, String> {
+        let g: Self = serde_json::from_str(raw).map_err(|e| e.to_string())?;
+        if !(-1.0..=1.0).contains(&g.centroid_floor) || !(0.0..=1.0).contains(&g.lexical_floor) {
+            return Err(format!(
+                "floors out of range: centroid {}, lexical {}",
+                g.centroid_floor, g.lexical_floor
+            ));
+        }
+        Ok(g)
+    }
+}
+
+/// Use the corpus's own gate floors when it declares them.
+///
+/// ! The CORPUS's when declared, the same rule as the scoring vocabulary: a floor in a
+/// vector space belongs to that space and to the clusters it was measured on (`ravel db
+/// calibrate`). One fitted on another corpus sat below the median OFF-topic question of
+/// this one (`EVAL.md` §4c-ter). A calibration made against a different cluster count is
+/// stale and is not used; startup says so rather than serving a floor nobody measured
+/// on these clusters.
+fn apply_corpus_gate(
+    cfg: &mut Config,
+    declared: Option<&str>,
+    clusters: usize,
+) -> Result<(), StartupError> {
+    let source = match declared.map(Gate::parse) {
+        Some(Ok(g)) if g.clusters == clusters => {
+            cfg.domain_floor = g.centroid_floor;
+            cfg.domain_lexical_floor = g.lexical_floor;
+            format!(
+                "corpus_meta (calibrated on {} + {} questions)",
+                g.in_domain, g.out_of_domain
+            )
+        }
+        Some(Ok(g)) => format!(
+            "configuration · corpus_meta.gate is STALE: calibrated on {} clusters, {clusters} \
+             loaded · re-run `ravel db calibrate`",
+            g.clusters
+        ),
+        Some(Err(why)) => {
+            return Err(StartupError::CorpusVocabulary {
+                why: format!("corpus_meta.gate: {why}"),
+            });
+        }
+        None => "configuration".to_owned(),
+    };
+    eprintln!(
+        "[vera] domain gate · {source} · centroid ≥ {:.2}, lexical ≥ {:.2}",
+        cfg.domain_floor, cfg.domain_lexical_floor
+    );
+    Ok(())
 }
 
 fn log_canary(chunk_id: &str, got: f32) {
@@ -499,18 +579,45 @@ impl Pipeline {
             }
         }
 
-        let centroids = ops
-            .centroids()
-            .await?
+        // ! Two levels when the database has them and the operator has not turned them
+        // off: only the ~√k parents are held, so the resident set stops growing with the
+        // corpus (184 MB of leaf centroids at 20.6M rows, `HARDWARE.md` §9.2).
+        let leaf_count = ops.leaf_count().await?;
+        let two_level =
+            cfg.parents_probed > 0 && leaf_count >= cfg.two_level_from && ops.has_parents().await?;
+        let held = if two_level {
+            ops.parents().await?
+        } else {
+            ops.centroids().await?
+        };
+        let centroids: Vec<Centroid> = held
             .into_iter()
             .map(|(id, vector)| Centroid { id, vector })
             .collect();
+        let leaves = if two_level {
+            leaf_count
+        } else {
+            centroids.len()
+        };
+        if two_level {
+            eprintln!(
+                "[vera] routing · two levels · {} parents held, {leaves} leaves ranked in Postgres, {} parents probed",
+                centroids.len(),
+                cfg.parents_probed
+            );
+        }
+
+        let mut cfg = cfg;
+        apply_corpus_gate(&mut cfg, meta.gate.as_deref(), leaves)?;
+        let cfg = cfg;
 
         Ok(Self {
             ops,
             provider,
             vectorizer,
             centroids,
+            two_level,
+            leaves,
             meta,
             cfg,
         })
@@ -523,7 +630,29 @@ impl Pipeline {
 
     #[must_use]
     pub fn cluster_count(&self) -> usize {
-        self.centroids.len()
+        self.leaves
+    }
+
+    /// The leaf clusters to scan, best first · one level or two.
+    ///
+    /// ! Two levels: the nearest `parents_probed` parents in memory, then the nearest
+    /// `clusters_probed` leaves among their children, ranked by Postgres. A leaf under a
+    /// parent that was not probed cannot be chosen: that is the recall this trades for
+    /// an O(√k) resident set, measured in `docs/SCALING.md` §2.
+    async fn probe(&self, q: &[f32]) -> Result<Vec<(i32, f32)>, PipelineError> {
+        if !self.two_level {
+            return Ok(select_clusters(
+                q,
+                &self.centroids,
+                self.cfg.clusters_probed,
+            ));
+        }
+        let parents: Vec<i32> = select_clusters(q, &self.centroids, self.cfg.parents_probed)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        let k = i64::try_from(self.cfg.clusters_probed).unwrap_or(i64::MAX);
+        Ok(self.ops.leaves_near(&parents, q, k).await?)
     }
 
     /// Embed a query the way the corpus was embedded.
@@ -555,7 +684,7 @@ impl Pipeline {
     /// Embedding or database failure.
     pub async fn explain(&self, query: &str) -> Result<RouteExplain, PipelineError> {
         let q = self.embed_query(query).await?;
-        let scores = select_clusters(&q, &self.centroids, self.cfg.clusters_probed);
+        let scores = self.probe(&q).await?;
         let top_cluster = scores.first().map_or(0.0, |(_, s)| *s);
         let identifiers: Vec<String> = identifier::extract(query)
             .into_iter()
@@ -601,7 +730,7 @@ impl Pipeline {
             domain: passes.then(|| self.meta.id.clone()),
             clusters_probed: scores.iter().map(|(id, _)| *id).collect(),
             cluster_scores: scores,
-            total_clusters: self.centroids.len(),
+            total_clusters: self.leaves,
             lexical_evidence: lexical,
             centroid_similarity: top_cluster,
             lexical_floor: self.cfg.domain_lexical_floor,
@@ -690,11 +819,11 @@ impl Pipeline {
         let qvec = self.embed_query(query).await?;
         progress.push(format!("embedded query ({} dims)", qvec.len()));
 
-        let probed = select_clusters(&qvec, &self.centroids, self.cfg.clusters_probed);
+        let probed = self.probe(&qvec).await?;
         progress.push(format!(
             "probed {} of {} clusters",
             probed.len(),
-            self.centroids.len()
+            self.leaves
         ));
 
         let weights = self.arm_weights(applied.mode);
@@ -1377,7 +1506,7 @@ impl Pipeline {
             coverage: format!(
                 "{} results from {probed} of {} clusters",
                 results.len(),
-                self.centroids.len()
+                self.leaves
             ),
         };
         let results_len = results.len();
@@ -1608,6 +1737,54 @@ fn snippet(body: &str, max_chars: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const GATE: &str = r#"{"centroid_floor": 0.52, "lexical_floor": 0.0, "margin": 0.02,
+        "in_domain": 193, "out_of_domain": 46, "lowest_in_domain": 0.543,
+        "off_topic_refused": 35, "auc": 0.987, "clusters": 846,
+        "queries_sha256": "x", "calibrated_at": "2026-11-14T00:00:00+00:00"}"#;
+
+    fn configured() -> Config {
+        Config {
+            domain_floor: 0.39,
+            domain_lexical_floor: 0.40,
+            ..Config::default()
+        }
+    }
+
+    #[test]
+    fn a_corpus_calibrated_gate_replaces_the_configured_floors() {
+        let mut cfg = configured();
+        apply_corpus_gate(&mut cfg, Some(GATE), 846).expect("valid gate");
+        assert!((cfg.domain_floor - 0.52).abs() < 1e-6);
+        assert!(cfg.domain_lexical_floor.abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_gate_calibrated_on_other_clusters_is_not_used() {
+        // ! The floor belongs to the clusters it was measured on. After a re-cluster it
+        // is stale, and the configured floors serve until it is measured again.
+        let mut cfg = configured();
+        apply_corpus_gate(&mut cfg, Some(GATE), 2538).expect("stale is not an error");
+        assert!((cfg.domain_floor - 0.39).abs() < 1e-6);
+        assert!((cfg.domain_lexical_floor - 0.40).abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_corpus_without_a_gate_keeps_the_configuration() {
+        let mut cfg = configured();
+        apply_corpus_gate(&mut cfg, None, 846).expect("absent is supported");
+        assert!((cfg.domain_floor - 0.39).abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_malformed_gate_stops_startup() {
+        // ! Fatal, ✗ ignored: a declaration the engine cannot read is the same defect
+        // class as a typo in configuration that silently does nothing.
+        let mut cfg = configured();
+        assert!(apply_corpus_gate(&mut cfg, Some(r#"{"centroid_floor": "high"}"#), 846).is_err());
+        let bad = GATE.replace("0.52", "3.5");
+        assert!(apply_corpus_gate(&mut cfg, Some(&bad), 846).is_err());
+    }
 
     #[test]
     fn snippets_collapse_whitespace_and_stay_within_budget() {

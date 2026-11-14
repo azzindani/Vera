@@ -264,7 +264,8 @@ impl SearchOps {
                         to_jsonb(corpus_meta) ->> 'dense_instruction',
                         to_jsonb(corpus_meta) ->> 'scoring_vocabulary',
                         to_jsonb(corpus_meta) ->> 'dense_instruction_style',
-                        to_jsonb(corpus_meta) ->> 'dense_query_instruction'
+                        to_jsonb(corpus_meta) ->> 'dense_query_instruction',
+                        to_jsonb(corpus_meta) ->> 'gate'
                  FROM corpus_meta ORDER BY created_at DESC LIMIT 1",
                 &[],
             )
@@ -285,6 +286,7 @@ impl SearchOps {
                 row.get::<_, Option<String>>(11).as_deref(),
             )?,
             scoring_vocabulary: row.get(9),
+            gate: row.get(12),
         })
     }
 
@@ -301,6 +303,83 @@ impl SearchOps {
             .iter()
             .map(|r| (r.get(0), parse_vector(r.get(1))))
             .collect())
+    }
+
+    /// Whether this database carries a parent level for two-level routing
+    /// (`cluster_parents` and `clusters.parent_id`, written by Ravel's `db prepare`).
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn has_parents(&self) -> Result<bool, StoreError> {
+        let c = self.client().await?;
+        let row = c
+            .query_one(
+                "SELECT to_regclass('cluster_parents') IS NOT NULL
+                    AND EXISTS (SELECT 1 FROM information_schema.columns
+                                WHERE table_name = 'clusters' AND column_name = 'parent_id')",
+                &[],
+            )
+            .await?;
+        Ok(row.get(0))
+    }
+
+    /// The parent centroids · the only routing level held hot when there are two.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn parents(&self) -> Result<Vec<(i32, Vec<f32>)>, StoreError> {
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "SELECT id, centroid::text FROM cluster_parents ORDER BY id",
+                &[],
+            )
+            .await?;
+        Ok(rows
+            .iter()
+            .map(|r| (r.get(0), parse_vector(r.get(1))))
+            .collect())
+    }
+
+    /// How many leaf clusters exist · what `explain_routing` and the gate's staleness
+    /// check count, whether or not the leaves are held in memory.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn leaf_count(&self) -> Result<usize, StoreError> {
+        let c = self.client().await?;
+        let n: i64 = c
+            .query_one("SELECT count(*) FROM clusters", &[])
+            .await?
+            .get(0);
+        Ok(usize::try_from(n).unwrap_or(0))
+    }
+
+    /// The `k` leaf clusters nearest the query among the children of `parents`.
+    ///
+    /// ! Postgres ranks the leaves and returns `(id, similarity)`; the centroids never
+    /// cross the wire, the same rule every arm keeps (`CLAUDE.md` §7.5). Ties break on
+    /// id, as `engine::select_clusters` breaks them.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn leaves_near(
+        &self,
+        parents: &[i32],
+        query: &[f32],
+        k: i64,
+    ) -> Result<Vec<(i32, f32)>, StoreError> {
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "SELECT id, (1.0 - (centroid <=> $1::text::halfvec))::real AS sim
+                 FROM clusters WHERE parent_id = ANY($2)
+                 ORDER BY centroid <=> $1::text::halfvec, id
+                 LIMIT $3",
+                &[&dense_literal(query), &parents, &k],
+            )
+            .await?;
+        Ok(rows.iter().map(|r| (r.get(0), r.get(1))).collect())
     }
 
     /// Dense top-k within **one batch of clusters**.
