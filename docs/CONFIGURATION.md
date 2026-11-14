@@ -160,7 +160,7 @@ no weight here can promote a candidate that retrieval did not find.
 
 | Variable | Default | |
 |---|---|---|
-| `RELEVANCE_FLOOR` | `0.3` | **a floor, ✗ a weight.** Share of the query's content terms a candidate must contain to be ranked at all. ! `0.3`, ✗ the `0.4` this table carried: 0.4 was fitted against the **text arm alone**, and on the RRF pool the engine actually ranks it costs 2.5 points while 0.3 costs nothing (`SCORING.md` §3). |
+| `RELEVANCE_FLOOR` | `0.3` | **a floor, ✗ a weight.** Share of the query's content terms a candidate must contain to rank among the rest; below it, it ranks after them (demoted, ✗ removed, since 2026-11-14: Recall@5 within one case, the answer kept inside the top 50 for 7.1% more questions, `SCORING.md` §9b). ! `0.3`, ✗ the `0.4` this table carried: 0.4 was fitted against the **text arm alone**, and on the RRF pool the engine actually ranks it costs 2.5 points while 0.3 costs nothing (`SCORING.md` §3). |
 | `FACTOR_AUTHORITY` | `0.5` | how binding the instrument is — the published hierarchy |
 | `FACTOR_STRUCTURAL` | `0.25` | operative clause vs annex |
 | `FACTOR_TOPICAL` | `0.25` | subject match — earns its weight once the floor exists |

@@ -661,33 +661,28 @@ pub fn rescore<T: Copy>(
     // ! The relevance floor runs FIRST and it removes candidates. Ordering
     // alone cannot express "this does not belong in the answer", and the
     // measurement says the removal is where most of the gain is.
+    // ! Demotes, ✗ removes: the same rule as `rescore_composed`, see there.
+    let mut below: Vec<(f32, Facets<'_>, T)> = Vec::new();
     if w.relevance_floor > 0.0 && !query_terms.is_empty() {
-        let kept: Vec<_> = pool
-            .iter()
-            .filter(|(_, f, _)| {
-                coverage(f.body.unwrap_or_default(), query_terms, v) >= w.relevance_floor
-            })
-            .copied()
-            .collect();
-        // ! Never empty on account of the floor. "This corpus cannot answer
-        // the question" is the domain gate's decision (invariant 13), and a
-        // silent second refusal here would be indistinguishable from it.
-        if kept.is_empty() {
-            pool.truncate(1);
-        } else {
-            *pool = kept;
-        }
+        let (kept, under): (Vec<_>, Vec<_>) = pool.iter().copied().partition(|(_, f, _)| {
+            coverage(f.body.unwrap_or_default(), query_terms, v) >= w.relevance_floor
+        });
+        *pool = kept;
+        below = under;
     }
 
     let years: Vec<i32> = pool.iter().filter_map(|(_, f, _)| f.year).collect();
     let oldest = years.iter().copied().min().unwrap_or(0);
     let newest = years.iter().copied().max().unwrap_or(0);
 
-    pool.sort_by(|a, b| {
+    let by_score = |a: &(f32, Facets<'_>, T), b: &(f32, Facets<'_>, T)| {
         let sa = a.0 * (1.0 + prior(&a.1, w, query_terms, oldest, newest, v));
         let sb = b.0 * (1.0 + prior(&b.1, w, query_terms, oldest, newest, v));
         sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    };
+    pool.sort_by(by_score);
+    below.sort_by(by_score);
+    pool.extend(below);
 }
 
 // ---------------------------------------------------------------------------
@@ -1037,48 +1032,51 @@ pub fn contributions<'a>(
 /// Apply the floor, then rank on `relevance × (1 + prior)`.
 ///
 /// The composed twin of [`rescore`], and the one the pipeline calls.
+///
+/// Returns how many candidates fell below the floor and were ranked after the rest.
+///
+/// ! The floor **demotes, ✗ removes**. A candidate below it is ranked after every
+/// candidate above it, never deleted. Measured on 196 cases of the 1.7M corpus
+/// (`SCORING.md` §9b): removing them cost the answer at depth for 7.1% of questions
+/// (85.2% -> 78.1% inside the top 50) and bought one case at the top; demoting gives
+/// that case back (Recall@5 57.1% against 57.7%) and returns the depth (85.2% at 50,
+/// 76.5% at 20 against 75.5%). An agent is handed 20-50 results; a floor that empties positions 11-50 of
+/// the answer was paying for top-5 precision it did not improve.
 pub fn rescore_composed<T: Copy>(
     pool: &mut Vec<(f32, Facets<'_>, T)>,
     c: &Composition,
     cx: &Context<'_>,
-) {
+) -> usize {
     if c.is_inert() {
-        return;
+        return 0;
     }
+    let mut below: Vec<(f32, Facets<'_>, T)> = Vec::new();
     if c.relevance_floor > 0.0 && !cx.query_terms.is_empty() {
-        let kept: Vec<_> = pool
-            .iter()
-            .filter(|(_, f, _)| {
-                coverage(f.body.unwrap_or_default(), cx.query_terms, cx.vocabulary)
-                    >= c.relevance_floor
-            })
-            .copied()
-            .collect();
-        // ! Never empty on account of the floor. "This corpus cannot answer the
-        // question" is the domain gate's decision (invariant 13); a silent
-        // second refusal here would be indistinguishable from it.
-        if kept.is_empty() {
-            pool.truncate(1);
-        } else {
-            *pool = kept;
-        }
+        let (kept, under): (Vec<_>, Vec<_>) = pool.iter().copied().partition(|(_, f, _)| {
+            coverage(f.body.unwrap_or_default(), cx.query_terms, cx.vocabulary) >= c.relevance_floor
+        });
+        *pool = kept;
+        below = under;
     }
 
-    // ! Recomputed over the SURVIVORS, matching `rescore`. `Range` is relative
-    // to the pool it ranks, so measuring it before the floor would score against
-    // candidates that are no longer in the answer.
+    // ! Recomputed over the candidates ABOVE the floor, matching `rescore`. `Range`
+    // is relative to the pool it ranks, so the demoted tail must not move it.
     let years: Vec<i32> = pool.iter().filter_map(|(_, f, _)| f.year).collect();
     let cx = Context {
         oldest: years.iter().copied().min().unwrap_or(0),
         newest: years.iter().copied().max().unwrap_or(0),
         ..*cx
     };
-
-    pool.sort_by(|a, b| {
+    let by_score = |a: &(f32, Facets<'_>, T), b: &(f32, Facets<'_>, T)| {
         let sa = a.0 * (1.0 + composed_prior(&a.1, c, &cx));
         let sb = b.0 * (1.0 + composed_prior(&b.1, c, &cx));
         sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    };
+    pool.sort_by(by_score);
+    below.sort_by(by_score);
+    let demoted = below.len();
+    pool.extend(below);
+    demoted
 }
 
 #[cfg(test)]
@@ -1300,9 +1298,11 @@ mod tests {
     }
 
     #[test]
-    fn the_floor_removes_candidates_rather_than_reordering_them() {
-        // ! The floor is the one part of this module that FILTERS. Ordering
-        // alone cannot express "this does not belong in the answer".
+    fn the_floor_ranks_unrelated_candidates_last_rather_than_removing_them() {
+        // ! The floor DEMOTES (SCORING.md §9b). The unrelated candidate has the
+        // higher fused score and still ranks second: below the floor, it can only
+        // come after everything above it, but it stays in the answer for an agent
+        // reading past the top few.
         let mut pool = vec![
             (
                 0.010_f32,
@@ -1321,16 +1321,16 @@ mod tests {
             &["izin", "usaha", "pertambangan"],
             &v(),
         );
-        assert_eq!(pool.len(), 1, "the unrelated candidate must be dropped");
-        assert_eq!(pool[0].2, 2);
+        assert_eq!(pool.len(), 2, "nothing is removed");
+        assert_eq!(pool[0].2, 2, "the relevant candidate ranks first");
+        assert_eq!(pool[1].2, 1, "the unrelated one ranks after it");
     }
 
     #[test]
-    fn the_floor_never_empties_the_pool_on_its_own() {
+    fn a_pool_entirely_below_the_floor_keeps_every_candidate() {
         // ! "This corpus cannot answer the question" is the DOMAIN GATE's
-        // decision (invariant 13). A silent second refusal here would be
-        // indistinguishable from it, and the caller could not tell which
-        // component declined to answer.
+        // decision (invariant 13). A floor that emptied the answer, or cut it to
+        // one, would be a silent second refusal indistinguishable from it.
         let mut pool = vec![
             (0.010_f32, with_body("sama sekali tidak berkaitan"), 1_u8),
             (0.009, with_body("juga tidak berkaitan sedikit pun"), 2),
@@ -1341,7 +1341,8 @@ mod tests {
             &["izin", "usaha", "pertambangan"],
             &v(),
         );
-        assert_eq!(pool.len(), 1, "one survivor, never zero");
+        assert_eq!(pool.len(), 2, "every candidate survives");
+        assert_eq!(pool[0].2, 1, "and the fused order still decides among them");
     }
 
     #[test]

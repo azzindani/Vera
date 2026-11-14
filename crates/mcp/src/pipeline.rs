@@ -1113,17 +1113,15 @@ impl Pipeline {
             newest: 0,
             now: CORPUS_NOW,
         };
-        engine::rescore_composed(&mut scored, &composition, &cx);
+        let demoted = engine::rescore_composed(&mut scored, &composition, &cx);
 
-        let kept = scored.len();
         let order: Vec<usize> = scored.iter().map(|(_, _, i)| *i).collect();
         let mut taken: Vec<Option<Candidate<'_>>> = ranked.drain(..).map(Some).collect();
         *ranked = order.into_iter().filter_map(|i| taken[i].take()).collect();
 
-        let dropped = scored_len_before.saturating_sub(kept);
-        if dropped > 0 {
+        if demoted > 0 {
             progress.push(format!(
-                "relevance floor dropped {dropped} of {scored_len_before} candidates"
+                "relevance floor ranked {demoted} of {scored_len_before} candidates last"
             ));
         }
         if let (Some(was), Some(now)) = (before, ranked.first())

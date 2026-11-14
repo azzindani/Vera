@@ -127,7 +127,7 @@ clustering or `CLUSTERS_PROBED`.
 ## 4. Current results
 
 ! **Current numbers (2026-11-14) are on the 1.7M corpus and the 244-case set:** Recall@5
-57.7%, Recall@10 68.9%, MRR 0.439 on 196 answerable cases (±6.9 points at 95%), 0 of 196
+57.1%, Recall@10 68.4%, MRR 0.438, the answer inside the top 50 for 85.2%, on 196 answerable cases (±6.9 points at 95%), 0 of 196
 real questions refused and 35 of 46 off-topic refused (§4c-ter, `SCORING.md` §9b,
 `HARDWARE.md` §9). Everything below this line describes the 355K `spike-02` corpus.
 

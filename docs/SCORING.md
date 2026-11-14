@@ -101,7 +101,8 @@ rarely the answer to a question about obligations; an article usually is, and
 
 ```
 coverage = share of the query's content terms the chunk contains
-if coverage < RELEVANCE_FLOOR (0.3):  drop the candidate entirely
+if coverage < RELEVANCE_FLOOR (0.3):  rank it after every candidate above the floor
+                                     (dropped it entirely until 2026-11-14, §9b)
 ```
 
 Without this, authority weighting ranks the most prestigious document in the
@@ -557,7 +558,7 @@ example; no result from this corpus can carry one.
 |---|---|
 | arms | dense (weight 0.0 **at the time of this fit**; now 2.0), sparse, text |
 | fusion | RRF over ranks |
-| **relevance floor** | **0.3 of the query's content terms · drops candidates, reported in `progress`** |
+| **relevance floor** | **0.3 of the query's content terms · ranks candidates below it last (✗ drops them, since 2026-11-14, §9b), reported in `progress`** |
 | **factors** | **authority 0.5 · structural 0.25 · topical 0.25 · completeness 0.0 · temporal 0.0** |
 | **prior bound** | **2.00×, against a pool spanning 2.56× median** |
 | arm tie-breaks | each arm over-reads 3× and settles ties on id (`store::search::settle`) |
@@ -616,9 +617,22 @@ its pool is the text arm plus sparsevec BM25 with no dense arm, which nothing se
   fused pool for 85% of questions and in the top 5 for 58%; no weight vector in the grid
   moves that by more than noise. What could: a better relevance signal inside the pool
   (fusion depth and arm weights, query-side term weighting), ✗ more metadata prior.
-- **The relevance floor trades depth for nothing measurable.** It drops the answer from the
-  top 60 for 7.1% of questions and buys +1.1 points at top 5, inside the noise. It is left
-  at 0.3 pending a decision on the depth an agent is actually given (§4b: 20-50).
+- **The relevance floor now demotes, ✗ removes.** Removing cost the answer from the top 50
+  for 7.1% of questions and bought +1.1 points at top 5, inside the noise. Ranking a
+  below-floor candidate after every candidate above it keeps the top of the answer within
+  one case and returns the depth:
+
+  | floor | @5 | @10 | @20 | @50 | MRR |
+  |---|---|---|---|---|---|
+  | removes (before) | 57.7% | 68.9% | 75.5% | 78.1% | 0.439 |
+  | off | 56.6% | 67.9% | 73.0% | 85.2% | 0.429 |
+  | **demotes (shipped)** | **57.1%** | **68.4%** | **76.5%** | **85.2%** | **0.438** |
+
+  (`fit_pool.py`, the 196 cases, the engine's own pool; through the rebuilt engine
+  `e2e.py` gives the same 57.1% / 68.4% / 0.438, case for case.) The one case lost at
+  top 5 is the currency rule meeting the tail: a revoked chunk above the floor now waits
+  for its revoker, which used to be removed and is now ranked last. `progress` says how many were
+  ranked last. The "never empties the answer" rule of §3 now holds by construction.
 
 ## 10. Scoring is assembled · validated at 355K
 

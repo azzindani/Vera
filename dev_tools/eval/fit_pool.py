@@ -170,10 +170,12 @@ def rescore(case: dict, meta: dict, v: Vocab, w: dict) -> list[str]:
         return [i for i, _ in pool]
     qt = v.terms(case["query"])
     floor = 0.0 if case["exact"] else w["relevance_floor"]
+    below: list = []
     if floor > 0 and qt:
-        kept = [(i, s) for i, s in pool
-                if sum(t in set(v.terms(meta[i]["body"])) for t in qt) / len(qt) >= floor]
-        pool = kept or pool[:1]
+        # ! Demotes, ✗ removes (factors.rs::rescore_composed, since 2026-11-14).
+        cov = {i: sum(t in set(v.terms(meta[i]["body"])) for t in qt) / len(qt) for i, _ in pool}
+        below = [(i, s) for i, s in pool if cov[i] < floor]
+        pool = [(i, s) for i, s in pool if cov[i] >= floor]
     years = [meta[i]["year"] for i, _ in pool if meta[i]["year"] is not None]
     lo, hi = (min(years), max(years)) if years else (0, 0)
 
@@ -191,6 +193,7 @@ def rescore(case: dict, meta: dict, v: Vocab, w: dict) -> list[str]:
     # ! Stable sort, ✗ a key that breaks ties differently: factors.rs sorts the pool
     # with `sort_by` over the incoming (fused) order.
     order = [i for i, _ in sorted(pool, key=lambda p: -(p[1] * (1.0 + prior(p[0]))))]
+    order += [i for i, _ in sorted(below, key=lambda p: -(p[1] * (1.0 + prior(p[0]))))]
     # ! Currency only reorders when the floor applies (no named regulation) and ranking
     # is on, exactly the condition in `pipeline.rs::search_with`.
     return below_revokers(order, meta) if not case["exact"] else order
