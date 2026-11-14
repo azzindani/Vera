@@ -47,17 +47,44 @@ Quality on the real 1.7M corpus, 196 labelled questions (`docs/EVAL.md`):
 | real questions refused | **0 / 196** |
 | off-topic questions refused | **35 / 46** (the 11 admitted are mostly foreign-law questions) |
 
-Public benchmark, BEIR nDCG@10, same embedder and chunks for every engine (`docs/BEIR.md`):
-
-| | SciFact | NFCorpus | FiQA |
-|---|---|---|---|
-| Vera, hybrid | **0.718** | **0.368** | 0.428 |
-| pgvector HNSW / Qdrant, dense | 0.692 / 0.694 | 0.365 / 0.368 | 0.463 / **0.470** |
-| Qdrant hybrid (RRF) | 0.709 | 0.359 | 0.411 |
-
 Nothing was OOM-killed at any size; past four clients extra load is refused with `503` +
 `Retry-After`, never queued. What this release does **not** prove is listed in
 [CHANGELOG.md](CHANGELOG.md).
+
+### Public benchmark · BEIR, against pgvector and Qdrant
+
+Three BEIR test sets. Every engine gets the same chunks and the same query vectors
+(Qwen3-Embedding-0.6B), and nothing was tuned on BEIR. Full method:
+[docs/BEIR.md](docs/BEIR.md).
+
+| nDCG@10 | SciFact | NFCorpus | FiQA |
+|---|---|---|---|
+| **Vera, hybrid** | **0.718** | **0.368** | 0.428 |
+| pgvector HNSW | 0.692 | 0.365 | 0.463 |
+| Qdrant, dense | 0.694 | 0.368 | **0.470** |
+| Qdrant, hybrid (RRF) | 0.709 | 0.359 | 0.411 |
+| BM25 alone | 0.661 | 0.307 | 0.239 |
+
+- **Vera ranks best on SciFact, ties on NFCorpus, and loses on FiQA.**
+- **The setup checks out.** Exact dense search lands within 0.003 of the embedder's
+  published scores, so every engine was fed the right vectors.
+- **FiQA's 4.2 points go to two places:**
+  - Routing (scanning 5 of 29 clusters) costs 1.5.
+  - Fusing a weak BM25 arm at a fixed weight costs 2.7.
+
+  The same fusion adds 2.4 on SciFact, so no fixed weight is right for both. Qdrant's
+  hybrid has the same problem and loses more (−5.9).
+- **Routing at real-corpus sparsity.** With 288 clusters, the 5 probed cover 1.7% of the
+  corpus (close to the 1.7M corpus's 0.6%). Vera's dense arm still keeps **93%** of exact
+  search's nDCG@10.
+- **The legal ranking layer is a domain tool.** Even with the authority weight removed,
+  the remaining defaults cost 1-4 points on every set. Outside its domain, rank with
+  `literal`.
+- **Latency is not compared fairly here.** Vera takes about 370 ms, nearly all of it the
+  CPU query embedding. pgvector and Qdrant take 3-10 ms, but they were timed on the
+  search alone, with the vector precomputed. Vera's real difference is memory at 20M rows
+  (serving from 8 GB, where HNSW wants ~42 GB of vectors in RAM), and this benchmark does
+  not test it.
 
 ## Run it
 
