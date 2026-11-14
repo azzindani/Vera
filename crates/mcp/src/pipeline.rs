@@ -159,8 +159,8 @@ impl Default for Config {
             // subject. Lexical evidence alone cannot reject "what is the
             // capital of France" (0.789), because English function words do
             // occur in this corpus. Each covers the other's blind spot.
-            domain_floor: 0.45,
-            domain_lexical_floor: 0.40,
+            domain_floor: 0.52,
+            domain_lexical_floor: 0.0,
             gate_sample: 5,
             // ! p50 is 22 chunks per regulation and p95 is 210, so 5 seeds x 40
             // is the common case whole and the tail bounded. Measured cost of

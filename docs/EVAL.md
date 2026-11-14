@@ -70,6 +70,43 @@ conflate, and the reason the domain gate needs a lexical half as well as a seman
 
 ---
 
+### 2b. The 2026-11-14 expansion · n001-n154, o001-o040
+
+50 cases cannot gate anything: one case is 2-2.5 points, and every comparison in §4
+straddles it. The set now holds **244 cases**: 196 answerable on the 1.7M
+`id_reg_markdown` corpus, 46 out of domain.
+
+**How the n-cases were made.** A stratified sample of 240 article clauses (`Pasal`
+chunks of 400-2,000 characters, one per document, documents of the old set excluded):
+45% national (UU, PP, Perpu, Perpres, Keppres, Inpres), 15% provincial, 40% regency/city.
+Each clause was turned into one question, or skipped, under fixed rules:
+
+- answered by this article alone; phrased the way a citizen or official asks;
+  no 4+ word run copied from the clause; never the regulation's number or year;
+- skipped when the content appears in many regulations (entry into force, delegation
+  clauses, boilerplate definitions, purpose statements, bare cross-references);
+- a regional clause names its region only when the text names it, and is skipped
+  when no region is identifiable and nothing in it is distinctive, because many
+  regions enact near-identical text.
+
+85 of 240 were skipped. Then every case was checked by machine (labels resolve to the
+chunk they were drafted from; queries copying 6+ words were rewritten; one whose clause
+did not contain the answer was dropped) and 20 were read against their clause by hand
+(all 20 correct). **19 cases** carry `near_duplicates`: another document holds a
+near-identical clause (cosine distance < 0.03), so a hit on the twin scores as a miss.
+`e2e.py` reports Recall@5 with and without them.
+
+**o-cases.** 32 non-legal questions (everyday Indonesian how-to and trivia, which share
+vocabulary with legal text, plus English) and 8 about foreign law (`subtype:
+foreign_law`): a legal topic this corpus cannot answer.
+
+**Split.** `holdout: true` on 30 of the n-cases (md5 of the id). Weights are fitted on
+the rest; `EVAL_SPLIT=holdout` scores the winner once.
+
+! **Not reviewed by a domain expert**, like 38 of the original 50. The machine checks
+catch a label that does not resolve or a query that leaks; they cannot catch a clause
+that only seems to answer its question.
+
 ## 3. Metrics
 
 | Metric | Why |
@@ -88,6 +125,11 @@ clustering or `CLUSTERS_PROBED`.
 ---
 
 ## 4. Current results
+
+! **Current numbers (2026-11-14) are on the 1.7M corpus and the 244-case set:** Recall@5
+57.7%, Recall@10 68.9%, MRR 0.439 on 196 answerable cases (±6.9 points at 95%), 0 of 196
+real questions refused and 35 of 46 off-topic refused (§4c-ter, `SCORING.md` §9b,
+`HARDWARE.md` §9). Everything below this line describes the 355K `spike-02` corpus.
 
 **Re-measured 2026-09-19, after the corpus was re-embedded with the model's
 reference implementation (`EMBEDDING.md` §5).** Every figure below post-dates that
@@ -217,6 +259,46 @@ Sweeping the floors on the 39 gated in-domain and 6 out-of-domain cases (`pg_sea
 No setting separates them; 39 + 6 cases cannot choose between the trade-offs, and §4c's conclusion stands:
 the gate needs a better signal, not a new number. The rebuilt-versus-exact BM25 vocabulary made no difference
 (identical eval both ways, `EMBEDDING.md` §7).
+
+### 4c-ter. The gate refitted · 2026-11-14, 1.7M corpus, 193 real + 46 off-topic
+
+`dev_tools/eval/gate_signals.py` records every candidate signal per query, through the
+engine's own SQL and the corpus's own query instruction:
+
+| signal | AUC (real vs off-topic) | real min | off-topic median / max |
+|---|---|---|---|
+| **centroid** (nearest cluster) | **0.987** | 0.543 | 0.448 / 0.668 |
+| dense_mean5 (5 nearest chunks) | 0.975 | 0.552 | 0.492 / 0.746 |
+| dense_top1 (nearest chunk) | 0.973 | 0.561 | 0.515 / 0.767 |
+| bm25_top (raw score) | 0.962 | 22.5 | 25.9 / 40.8 |
+| agree_docs (dense ∩ BM25 docs) | 0.756 | 0 | 1 / 7 |
+| **lexical** (the gate's other half) | **0.523** | 0.334 | 0.615 / 1.000 |
+
+! **The lexical evidence is a coin flip** against off-topic questions with pg_search, and
+it caused every false refusal: at `0.40` it refused 8 of 196 real questions, all below
+its floor. **The centroid signal separates the two almost completely**; its floor of
+0.39 sat below the off-topic median of this embedding space, so it refused nothing and
+the lexical half did all the (wrong) work.
+
+| `DOMAIN_FLOOR` (lexical 0) | real refused | off-topic refused |
+|---|---|---|
+| 0.39 / lexical 0.40 (shipped before) | 8/196 | 13/46 |
+| 0.50 | 0/193 | 33/46 |
+| **0.52 (shipped)** | **0/196** | **35/46** (35/38 non-legal) |
+| 0.54 | 0/193 | 37/46 |
+| 0.57 | 1/193 | 42/46 |
+
+0.52 leaves 0.023 below the lowest real question seen. A floor fitted on half the cases
+refused one of the other half, so the margin is not cosmetic. The best two-signal rule
+(centroid with dense_top1) refuses 2 more and is not worth its fitting risk on 46 cases.
+
+What still gets through: 6 of the 8 foreign-law questions (a legal topic is a legal
+topic to an embedding; jurisdiction is not something this gate can see) and 3 of 38
+non-legal ones ("makanan khas Palembang", "ibu kota Australia", "ban sepeda kempes").
+
+! A floor in a vector space is a property of the **corpus**, like the space itself
+(invariant 2). It is configuration today; it belongs in `corpus_meta`, written by Ravel
+with the calibration data `Ravel/docs/CLUSTERING.md` §4 already asks it to emit.
 
 ### 4d. Routing, measured for the first time
 

@@ -161,8 +161,16 @@ def main():
     ood_n = ood_refused = 0
     rr = []
     misses = []
+    # ! EVAL_SPLIT=train|holdout|all (default all). `holdout: true` cases are the ones
+    # tuning must not see; a weight fitted on `train` is checked ONCE on `holdout`.
+    split = os.environ.get("EVAL_SPLIT", "all")
+    by_type: dict[str, list[int]] = {}
+    per_case = []
 
     for q in spec["queries"]:
+        held = bool(q.get("holdout"))
+        if (split == "train" and held) or (split == "holdout" and not held):
+            continue
         d = srv.search(q["query"])
         ids = [r.get("id") for r in d.get("results", [])]
 
@@ -182,11 +190,19 @@ def main():
         if not ids:
             refused_real += 1
             misses.append(f"  ! {q['id']} refused a real question")
-        hit5 += 1 if any(x in targets for x in ids[:5]) else 0
+        h5 = any(x in targets for x in ids[:5])
+        hit5 += 1 if h5 else 0
         hit10 += 1 if any(x in targets for x in ids[:10]) else 0
         rr.append(next((1 / (i + 1) for i, x in enumerate(ids) if x in targets), 0.0))
+        t = by_type.setdefault(q["type"], [0, 0])
+        t[0] += 1 if h5 else 0
+        t[1] += 1
+        per_case.append({"id": q["id"], "hit5": h5, "rr": rr[-1],
+                         "near_duplicates": q.get("near_duplicates", 0)})
 
     srv.close()
+    if os.environ.get("EVAL_CASES_OUT"):
+        Path(os.environ["EVAL_CASES_OUT"]).write_text(json.dumps(per_case), encoding="utf-8")
 
     def w(key, default):
         return os.environ.get(key, default)
@@ -202,8 +218,18 @@ def main():
     else:
         print(f"  weights  dense={w('DENSE_WEIGHT', '0.0')} "
               f"sparse={w('SPARSE_WEIGHT', '1.0')} text={w('TEXT_WEIGHT', '1.0')}")
+    print(f"  split {split}")
     print(f"  n={n}   Recall@5 {100 * hit5 / n:.1f}%   "
           f"Recall@10 {100 * hit10 / n:.1f}%   MRR {sum(rr) / len(rr):.3f}")
+    # ! With n this size a Recall@5 difference is only worth reading past its noise:
+    # the 95% half-width of a proportion near 60% is ~1.96 * sqrt(.24 / n).
+    print(f"  ±{196 * (0.24 / n) ** 0.5:.1f} points (95%, binomial) on Recall@5")
+    clean = [c for c in per_case if not c["near_duplicates"]]
+    if len(clean) < len(per_case):
+        print(f"  without near-duplicate labels: n={len(clean)}  Recall@5 "
+              f"{100 * sum(c['hit5'] for c in clean) / max(len(clean), 1):.1f}%")
+    print("  by type (Recall@5): " + " · ".join(
+        f"{k} {v[0]}/{v[1]}" for k, v in sorted(by_type.items(), key=lambda kv: -kv[1][1])))
     print(f"  gate     real refused {refused_real}/{n} · "
           f"out-of-domain refused {ood_refused}/{ood_n}")
     for m in misses:

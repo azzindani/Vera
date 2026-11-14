@@ -118,6 +118,7 @@ vera/
 │   ├── ARCHITECTURE.md  MCP_ENGINE.md  OUTPUT_CONTRACT.md  TOOL_SURFACE.md
 │   ├── CONFIGURATION.md  OPERATIONS.md  HARDWARE.md  SCORING.md
 │   ├── EMBEDDING.md  EVAL.md  FAILURE_MODES.md  STANDARDS_COMPLIANCE.md
+│   ├── SCALING.md              ← 20M → 100M across databases: designed, ✗ built
 │
 └── dev_tools/                  ← offline, operator-side. Never on the query path.
     ├── pre_embed/              ← ingest → chunk → embed → load

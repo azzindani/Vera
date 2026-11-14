@@ -590,6 +590,36 @@ worth making against an engine that returns the same answer twice.**
 
 ---
 
+## 9b. Refitted on the 1.7M corpus · 2026-11-14
+
+`dev_tools/eval/fit_pool.py` fits against the pool **the engine builds**: the engine at
+`TOP_K=60` with every factor off returns its whole fused pool, and a Python mirror of
+`factors.rs` (the corpus's vocabulary, the floor, and the currency rule) reranks it. The
+mirror reproduces the engine's top 10 at the shipped weights on **196 of 196** queries;
+it reached 163 until the currency rule was mirrored too. `fit_factors.py` is not used:
+its pool is the text arm plus sparsevec BM25 with no dense arm, which nothing serves.
+
+196 cases (`EVAL.md` §2b), 166 to fit and 30 held out:
+
+| | Recall@5 | Recall@10 | MRR | answer inside top 60 |
+|---|---|---|---|---|
+| `literal` (factors off) | 55.1% | 65.8% | 0.415 | 85.2% |
+| **`balanced` (shipped, unchanged)** | **57.7%** | **68.9%** | **0.439** | 78.1% |
+| `balanced` without the floor | 56.6% | 67.9% | 0.429 | 85.2% |
+| best of 300 on train (`topical` 0.5, `structural` 0) | train MRR 0.451 vs 0.444 shipped | | | |
+
+- **The shipped weights stand.** The top of the grid is flat; the best configuration is
+  0.007 MRR above the shipped one on the training cases and worse on the holdout.
+- **The factors are not a significant gain.** Against `literal` they win 16 cases and lose
+  11: +2.6 points Recall@5, 95% bootstrap CI **[-2.6, +7.7]**.
+- **Ranking is the bottleneck, and the factors cannot close it.** The answer is in the
+  fused pool for 85% of questions and in the top 5 for 58%; no weight vector in the grid
+  moves that by more than noise. What could: a better relevance signal inside the pool
+  (fusion depth and arm weights, query-side term weighting), ✗ more metadata prior.
+- **The relevance floor trades depth for nothing measurable.** It drops the answer from the
+  top 60 for 7.1% of questions and buys +1.1 points at top 5, inside the noise. It is left
+  at 0.3 pending a decision on the depth an agent is actually given (§4b: 20-50).
+
 ## 10. Scoring is assembled · validated at 355K
 
 `SCORING.md` §2's factors are no longer five compiled functions. A factor is

@@ -40,12 +40,12 @@
     "balanced": {
       "description": "The general case. Ranks on text, then lets an instrument's authority and structure reorder within what retrieval found. Start here.",
       "fitted": {
-        "recall_at_5": 0.545,
-        "recall_at_10": 0.591,
-        "mrr": 0.454,
-        "n": 44,
+        "recall_at_5": 0.577,
+        "recall_at_10": 0.689,
+        "mrr": 0.439,
+        "n": 196,
         "harness": "dev_tools/eval/e2e.py",
-        "note": "Three identical runs in situ. ! Fitted BEFORE the 2026-09-19 re-embed, on a corpus where the dense arm contributed 0.0%, so it is fitted to a retrieval mix that no longer exists and must be refitted (docs/SCORING.md §9). Σw = 1.0, prior bound 2.00x."
+        "note": "Refitted 2026-11-14 on the 1.7M id_reg_markdown corpus and 196 labelled cases (fit_pool.py over the pool the engine builds, mirror 196/196 identical): the shipped weights are within noise of the best of 300 configurations on the 166 training cases (MRR 0.444 vs 0.451), so they stand. Against `literal` they win 16 cases and lose 11, +2.6 points Recall@5, 95% CI [-2.6, +7.7]: not a significant gain. Σw = 1.0, prior bound 2.00x."
       },
       "factors": {
         "relevance_floor": 0.3,
@@ -60,12 +60,12 @@
     "literal": {
       "description": "No metadata prior at all: the arms' own fused order, unmodified. For a question where the wording is the answer, or to see what the retrieval layer alone believes.",
       "fitted": {
-        "recall_at_5": 0.5,
-        "recall_at_10": 0.523,
-        "mrr": 0.36,
-        "n": 44,
-        "harness": "dev_tools/eval/e2e.py",
-        "note": "The same binary with factor_weights zeroed, measured alongside `balanced` (docs/SCORING.md §9). Worse on all three metrics on THIS eval set, and it is the honest baseline: every point `balanced` claims is the difference between these two rows. Shares `balanced`'s staleness."
+        "recall_at_5": 0.551,
+        "recall_at_10": 0.658,
+        "mrr": 0.415,
+        "n": 196,
+        "harness": "dev_tools/eval/fit_pool.py",
+        "note": "2026-11-14, the engine's own fused pool with factors off, same 196 cases as `balanced`. ! Keeps the answer inside the top 60 for 85.2% of cases against 78.1% for `balanced`: the relevance floor drops it from the pool for 7.1% of cases, which costs nothing at top 5 and something at the 20-50 results an agent reads."
       },
       "factors": {
         "relevance_floor": 0.0,

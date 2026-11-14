@@ -258,8 +258,8 @@ dimensions and returns plausible nonsense rather than failing.
 | Variable | Default | Effect |
 |---|---|---|
 | `CANARY_MIN_COSINE` | `0.98` | startup vector-space check |
-| `DOMAIN_FLOOR` | `0.39` | nearest-centroid similarity below which results carry a weak-match hint · lowered 2026-09-19, `EVAL.md` §4c |
-| `DOMAIN_LEXICAL_FLOOR` | `0.40` | minimum IDF-mass of the query the evidence must account for |
+| `DOMAIN_FLOOR` | `0.52` | nearest-centroid similarity below which the query is refused · refitted 2026-11-14 on 193 real + 46 off-topic questions: 0/193 real and 35/46 off-topic refused (`EVAL.md` §4f) · a property of the vector space, refit with the corpus |
+| `DOMAIN_LEXICAL_FLOOR` | `0.0` (off) | minimum IDF-mass of the query the evidence must account for · off since 2026-11-14: AUC 0.52 against off-topic questions with pg_search, and the cause of every false refusal (`EVAL.md` §4f) · still reported in `progress` |
 | `GATE_SAMPLE` | `5` | how many sparse hits the lexical evidence pools over |
 
 ! Loosening the canary is a deliberate, visible act. There is no code path that
