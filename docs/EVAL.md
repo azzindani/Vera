@@ -107,6 +107,49 @@ the rest; `EVAL_SPLIT=holdout` scores the winner once.
 catch a label that does not resolve or a query that leaks; they cannot catch a clause
 that only seems to answer its question.
 
+### 2c. The Stage 0 expansion · s001-s301, o041-o100 (`ROADMAP.md`)
+
+**604 cases**: 498 answerable on the 1.7M corpus (496 resolve), 106 out of domain. The
+v0.1.0 baseline on this set is in `ROADMAP.md` (Stage 0).
+
+**How the s-cases were made** (`dev_tools/eval/draft/`):
+
+1. `sample.py`: clauses were sampled for each question type wherever that type's marker
+   appears (*pidana / denda* for `sanction`, *kecuali* for `exception`, *wajib* for
+   `obligation`, ...). The strata were 45% national, 15% provincial and 40%
+   regency/city, with one clause per document. Documents already labelled were excluded.
+   Three types need pairs or groups:
+   * `multi_tier`: an implementing clause plus the law article it cites.
+   * `hard_negative`: a clause plus its nearest neighbour on a different subject.
+   * `underspecified`: a clause plus at least 3 near-identical twins.
+2. Drafting under the rules of §2b: no 4-word copying, the regional rule, and skipping
+   boilerplate. 290 of 650 clauses were skipped.
+3. `check.py build`: **labels are read back from the corpus**. The drafter names chunk ids
+   and never types a label. Each case then had to pass the machine checks:
+   * a run of 6+ words copied from the clause rejects it;
+   * outside `exact_ref`, naming the regulation's number and year rejects it;
+   * the label must resolve to its own chunk;
+   * `near_duplicates` is counted.
+
+   None of the 361 drafted cases was rejected.
+4. A second reading of 36 cases against the full clause found 0 wrong. One `hard_negative`
+   was dropped by hand, because its foil has identical text.
+
+**Holdout** is `md5(id) % 100 < 36` for s-cases and `< 30` for new o-cases, decided once
+and never changed. That puts **134 of 496** answerable cases (27%) in the holdout.
+
+**`underspecified` scoring:** any returned chunk within cosine distance 0.03 of a labelled
+chunk counts as a hit. The labelled twins are a sample of the regions enacting that
+clause, not all of them.
+
+**Two hit levels:** `e2e.py` reports the right regulation in the top 5 next to the right
+article. For `exact_ref` it reports whether the named regulation and the named article
+come first.
+
+! **Not reviewed by a domain expert.** `draft/review.py export` writes a stratified sheet
+(`dev_tools/eval/review/review-001.csv`, 120 cases); `import` records the verdicts, and
+`EVAL_REVIEWED=1 e2e.py` scores only labels a reviewer marked BENAR.
+
 ## 3. Metrics
 
 | Metric | Why |

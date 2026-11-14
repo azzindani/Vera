@@ -35,6 +35,37 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).parent))
 from run import resolve_targets  # noqa: E402
 
+
+def same_regulation(row, ref) -> bool:
+    """A result chunk's regulation against a label's, by the label's own prefix rule.
+
+    ! The regulation level is scored apart from the article level (`ROADMAP.md`
+    Stage 0): the right law with the wrong pasal is a ranking miss inside a document,
+    the wrong law is a retrieval miss, and a legal user needs to know which one.
+    """
+    rtype, rnum, year, about = row
+    if (rtype, rnum, year) != (ref["regulation_type"], ref["regulation_number"], ref["year"]):
+        return False
+    if not ref.get("about"):
+        return True     # `answer_regulation` names type, number and year only
+    a, b = (about or "").strip().upper(), ref["about"].strip().upper()
+    return bool(a) and (a.startswith(b) or b.startswith(a))
+
+
+def regulation_hits(cur, q, ids) -> list[bool]:
+    """Per returned id: does it belong to a labelled regulation?"""
+    refs = list(q.get("answer_articles", []))
+    if q.get("answer_regulation"):
+        refs.append(q["answer_regulation"])
+    if not ids or not refs:
+        return [False] * len(ids)
+    cur.execute(
+        "SELECT id, regulation_type, regulation_number, year, about FROM chunks"
+        " WHERE id = ANY(%s)", (ids,))
+    meta = {r[0]: r[1:] for r in cur.fetchall()}
+    return [any(same_regulation(meta[i], ref) for ref in refs) if i in meta else False
+            for i in ids]
+
 # ! Platform-resolved, not hardcoded to one. A default with .exe in it is a
 # default that only works on one developer's machine.
 _DEFAULT_EXE = "target/release/vera-mcp" + (".exe" if os.name == "nt" else "")
@@ -157,7 +188,8 @@ def main():
         (Path(__file__).parent / "queries.json").read_text(encoding="utf-8")
     )
 
-    n = hit5 = hit10 = refused_real = 0
+    n = hit5 = hit10 = refused_real = reg5 = 0
+    named = [0, 0, 0]   # exact_ref cases: n, article at rank 1, regulation at rank 1
     ood_n = ood_refused = 0
     rr = []
     misses = []
@@ -171,6 +203,11 @@ def main():
         held = bool(q.get("holdout"))
         if (split == "train" and held) or (split == "holdout" and not held):
             continue
+        # ! EVAL_REVIEWED=1 scores only labels a domain reviewer marked BENAR
+        # (`draft/review.py`); out-of-domain cases are kept, they have no label to review.
+        if (os.environ.get("EVAL_REVIEWED") == "1" and q["type"] != "out_of_domain"
+                and q.get("review", {}).get("verdict") != "BENAR"):
+            continue
         d = srv.search(q["query"])
         ids = [r.get("id") for r in d.get("results", [])]
 
@@ -182,6 +219,14 @@ def main():
             continue
 
         targets = resolve_targets(cur, q)
+        # ! `underspecified`: any equally correct answer is a pass, and the labelled twins
+        # are a sample of them, not all. A returned chunk within cosine distance 0.03 of a
+        # labelled chunk is the same clause in another region's regulation, so it counts.
+        if q["type"] == "underspecified" and targets and ids:
+            cur.execute(
+                "SELECT r.id FROM chunks r, chunks t WHERE r.id = ANY(%s) AND t.id = ANY(%s)"
+                " AND r.dense <=> t.dense < 0.03", (ids, list(targets)))
+            targets = targets | {r[0] for r in cur.fetchall()}
         if not targets:
             print(f"! {q['id']} has no resolvable target — skipped", file=sys.stderr)
             continue
@@ -194,10 +239,18 @@ def main():
         hit5 += 1 if h5 else 0
         hit10 += 1 if any(x in targets for x in ids[:10]) else 0
         rr.append(next((1 / (i + 1) for i, x in enumerate(ids) if x in targets), 0.0))
+        regs = regulation_hits(cur, q, ids)
+        r5 = any(regs[:5])
+        reg5 += 1 if r5 else 0
+        if q["type"] == "exact_ref":
+            named[0] += 1
+            named[1] += 1 if ids and ids[0] in targets else 0
+            named[2] += 1 if regs and regs[0] else 0
         t = by_type.setdefault(q["type"], [0, 0])
         t[0] += 1 if h5 else 0
         t[1] += 1
-        per_case.append({"id": q["id"], "hit5": h5, "rr": rr[-1],
+        per_case.append({"id": q["id"], "type": q["type"], "hit5": h5, "reg5": r5,
+                         "rr": rr[-1], "holdout": held,
                          "near_duplicates": q.get("near_duplicates", 0)})
 
     srv.close()
@@ -224,6 +277,11 @@ def main():
     # ! With n this size a Recall@5 difference is only worth reading past its noise:
     # the 95% half-width of a proportion near 60% is ~1.96 * sqrt(.24 / n).
     print(f"  ±{196 * (0.24 / n) ** 0.5:.1f} points (95%, binomial) on Recall@5")
+    print(f"  right regulation in top 5 {100 * reg5 / n:.1f}%   "
+          f"(right law, wrong article {100 * (reg5 - hit5) / n:.1f}%)")
+    if named[0]:
+        print(f"  exact_ref n={named[0]}   article at rank 1 {100 * named[1] / named[0]:.1f}%   "
+              f"named regulation at rank 1 {100 * named[2] / named[0]:.1f}%")
     clean = [c for c in per_case if not c["near_duplicates"]]
     if len(clean) < len(per_case):
         print(f"  without near-duplicate labels: n={len(clean)}  Recall@5 "

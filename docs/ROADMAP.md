@@ -24,13 +24,39 @@
 The precondition. No engine change is claimed until this is done: at ±6.9 points a real
 5-point gain is invisible.
 
-| target | why |
-|---|---|
-| ≥ 600 in-domain cases (±4 points on Recall@5) | to see a 5-point change |
-| every query type ≥ 40 cases, `exact_ref` ≥ 60 | per-type numbers that mean something |
-| 30% frozen holdout, never used to fit anything | so a fit cannot grade itself |
-| ≥ 100 cases reviewed by a domain reviewer, disagreement rate published | labels are the ceiling of every number here |
-| two hit levels per case: right **regulation**, right **article** | a correct law with the wrong pasal is a different failure from a wrong law |
+| target | why | status 2026-11-14 |
+|---|---|---|
+| ≥ 600 in-domain cases (±4 points on Recall@5) | to see a 5-point change | **496** (±4.3), 604 with off-topic |
+| every query type ≥ 40 cases, `exact_ref` ≥ 60 | per-type numbers that mean something | 8 of 12 types; short: obligation 37, sanction 36, hard_negative 22, multi_tier 17; `exact_ref` 51 |
+| 30% frozen holdout, never used to fit anything | so a fit cannot grade itself | **27%** (134); raising it means moving cases the v0.1.0 fit already saw |
+| ≥ 100 cases reviewed by a domain reviewer, disagreement rate published | labels are the ceiling of every number here | sheet ready (`dev_tools/eval/review/review-001.csv`, 120 cases), **0 reviewed** |
+| two hit levels per case: right **regulation**, right **article** | a correct law with the wrong pasal is a different failure from a wrong law | **done** (`e2e.py`) |
+
+### Baseline on the Stage 0 set · v0.1.0 engine, unchanged
+
+| measure | all (496) | holdout (134) |
+|---|---|---|
+| Recall@5 / @10 / MRR | 57.1% / 67.9% / 0.425 (±4.3) | 51.5% / 61.9% / 0.388 (±8.3) |
+| right regulation in top 5 | 72.4% | 68.7% |
+| right law, wrong article | 15.3% | 17.2% |
+| `exact_ref`: article at rank 1 · named regulation at rank 1 | 31.4% · 54.9% (n 51) | 40.0% · 66.7% (n 15) |
+| real questions refused | 0 / 496 | 0 / 134 |
+| off-topic refused | 62 / 106 (the 60 new ones add foreign law and near-domain traps) | 10 / 20 |
+
+Every later stage is measured against this table, on the holdout.
+
+### Found while building it
+
+* **Explanatory notes labelled as articles.** About 48K of the corpus's 1.01M `Pasal`
+  chunks (4.8%, at least 5,740 documents) are *penjelasan* text: "Ayat (1) ... Cukup
+  jelas". They carry the article number they explain, so the engine can cite the
+  explanation of Pasal 6 as Pasal 6. The drafters skipped 4 clauses for this, and the
+  `multi_tier` drafter rejected 29 of 60 pairs, largely because the cited "parent"
+  article was explanation or the wrong text. This is a Ravel labelling defect (no
+  `penjelasan` flag on the chunk), and it bears on Stage 1.
+* **Regional boilerplate is the corpus's majority.** About half of the sampled regional
+  clauses were skipped because hundreds of regions enact the same text, so no single label
+  would be fair. That is why `underspecified` scores any near-identical twin as a pass.
 
 ## Stage 1 · exactness · what a legal user cannot forgive
 
