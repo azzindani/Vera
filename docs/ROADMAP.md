@@ -26,9 +26,9 @@ The precondition. No engine change is claimed until this is done: at ±6.9 point
 
 | target | why | status 2026-11-14 |
 |---|---|---|
-| ≥ 600 in-domain cases (±4 points on Recall@5) | to see a 5-point change | **496** (±4.3), 604 with off-topic |
-| every query type ≥ 40 cases, `exact_ref` ≥ 60 | per-type numbers that mean something | 8 of 12 types; short: obligation 37, sanction 36, hard_negative 22, multi_tier 17; `exact_ref` 51 |
-| 30% frozen holdout, never used to fit anything | so a fit cannot grade itself | **27%** (134); raising it means moving cases the v0.1.0 fit already saw |
+| ≥ 600 in-domain cases (±4 points on Recall@5) | to see a 5-point change | **567** (±4.1), 675 with off-topic (top-up 2026-11-15) |
+| every query type ≥ 40 cases, `exact_ref` ≥ 60 | per-type numbers that mean something | **done** 2026-11-15: 12 of 12 types ≥ 41, `exact_ref` 63 |
+| 30% frozen holdout, never used to fit anything | so a fit cannot grade itself | **27%** (152); raising it means moving cases the v0.1.0 fit already saw |
 | ≥ 100 cases reviewed by a domain reviewer, disagreement rate published | labels are the ceiling of every number here | sheet ready (`dev_tools/eval/review/review-001.csv`, 120 cases), **0 reviewed** |
 | two hit levels per case: right **regulation**, right **article** | a correct law with the wrong pasal is a different failure from a wrong law | **done** (`e2e.py`) |
 
@@ -218,6 +218,13 @@ unless the article exists solely as explanation (7 cases). The honest baseline d
 Every Stage 3 number above this section used the old targets and stays as recorded; from
 here the strict row, on the relabelled corpus, is the baseline: **Recall@5 59.1%
 [50.7%], Recall@10 68.1% [58.2%], MRR 0.472 [0.415].**
+
+**After the type top-up (2026-11-15, 567 cases [152], same engine):** Recall@5 **58.6%**
+(±4.1) [52.6%, ±7.9], Recall@10 67.5% [60.5%], MRR 0.463 [0.433]; right regulation in
+top 5 74.4% [71.7%]; `exact_ref` 63/63 [17/17] at rank 1. The 71 new cases score
+54.9% Recall@5 (39/71); by type: multi_tier 16/27, obligation 5/6, sanction 3/6,
+hard_negative 3/20, exact_ref 12/12. `hard_negative` stays the weakest type (17/42).
+This is the baseline from here (`vera.sh e2e s6topup`).
 
 **Tried on the strict baseline and dropped (2026-11-15):**
 

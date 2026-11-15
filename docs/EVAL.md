@@ -135,8 +135,14 @@ v0.1.0 baseline on this set is in `ROADMAP.md` (Stage 0).
 4. A second reading of 36 cases against the full clause found 0 wrong. One `hard_negative`
    was dropped by hand, because its foil has identical text.
 
+**Top-up · s301-s371 (2026-11-15).** The four short types and `exact_ref` were filled
+the same way, from a fresh sample (seed 20261115) that excludes `PENJELASAN` chunks:
+74 drafted, 3 rejected (2 copied 7–8 words, 1 parent law with no title), 71 merged.
+Counts now: every type ≥ 41, `exact_ref` 63; **675 cases**, 569 answerable (567 resolve).
+The second reading was the drafter's own, against the full clause; no other reader.
+
 **Holdout** is `md5(id) % 100 < 36` for s-cases and `< 30` for new o-cases, decided once
-and never changed. That puts **134 of 496** answerable cases (27%) in the holdout.
+and never changed. That puts **152 of 567** answerable cases (27%) in the holdout.
 
 **`underspecified` scoring:** any returned chunk within cosine distance 0.03 of a labelled
 chunk counts as a hit. The labelled twins are a sample of the regions enacting that

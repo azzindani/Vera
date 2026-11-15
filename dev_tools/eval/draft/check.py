@@ -43,7 +43,7 @@ QUERIES = Path(__file__).resolve().parents[1] / "queries.json"
 WORD = re.compile(r"\w+")
 META = ("SELECT id, doc_id, regulation_type, regulation_number, year, about, article, body, "
         "enacting_body, cluster_id FROM chunks WHERE id = ANY(%s)")
-TODAY = "2026-11-14"
+TODAY = __import__("datetime").date.today().isoformat()
 
 
 def longest_run(a: str, b: str) -> int:

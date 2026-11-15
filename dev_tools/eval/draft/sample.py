@@ -85,7 +85,9 @@ def candidates(conn, types: list[str], marker: str, limit: int, seed: int,
                lo: int = 400, hi: int = 2000, pct: float = 4) -> list[tuple]:
     return conn.execute(
         f"SELECT {COLS} FROM chunks TABLESAMPLE SYSTEM ({pct}) REPEATABLE (%s) "
-        "WHERE indexable AND article LIKE 'Pasal %%' AND about <> '' "
+        # ! Operative text only: an explanation is filed under the article it explains.
+        "WHERE indexable AND article LIKE 'Pasal %%' AND chapter NOT LIKE 'PENJELASAN%%' "
+        "AND about <> '' "
         "AND regulation_type = ANY(%s) AND length(body) BETWEEN %s AND %s AND body ~* %s "
         "LIMIT %s",
         (seed, types, lo, hi, marker, limit)).fetchall()
@@ -153,7 +155,8 @@ def main() -> None:
             continue
         law = conn.execute(
             f"SELECT {COLS} FROM chunks WHERE regulation_type='UNDANG-UNDANG' AND regulation_number=%s"
-            " AND year=%s AND article=%s AND indexable AND length(body) BETWEEN 200 AND 2500 LIMIT 1",
+            " AND year=%s AND article=%s AND indexable AND chapter NOT LIKE 'PENJELASAN%%'"
+            " AND length(body) BETWEEN 200 AND 2500 LIMIT 1",
             (m.group(2), int(m.group(3)), f"Pasal {m.group(1)}")).fetchone()
         if not law or law[1] in seen:
             continue
