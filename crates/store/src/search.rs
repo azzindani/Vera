@@ -681,10 +681,11 @@ impl SearchOps {
             .query(
                 "SELECT id, body, source_title, source_url, chapter, article,
                         regulation_type, regulation_number, year, about,
-                        truncated_at_source, cluster_id, explained
+                        truncated_at_source, cluster_id, doc_id, explained
                  FROM (SELECT o.id, o.body, o.source_title, o.source_url, o.chapter,
                               o.article, o.regulation_type, o.regulation_number, o.year,
-                              o.about, o.truncated_at_source, o.cluster_id, e.id AS explained,
+                              o.about, o.truncated_at_source, o.cluster_id, o.doc_id,
+                              e.id AS explained,
                               row_number() OVER (PARTITION BY e.id ORDER BY o.seq) AS n
                          FROM chunks e
                          JOIN chunks o ON o.doc_id = e.doc_id AND o.article = e.article
@@ -697,7 +698,7 @@ impl SearchOps {
             .await?;
         Ok(rows
             .iter()
-            .map(|r| (r.get(12), ChunkRow::from_row(r)))
+            .map(|r| (r.get(13), ChunkRow::from_row(r)))
             .collect())
     }
 
@@ -725,7 +726,7 @@ impl SearchOps {
             .query(
                 "SELECT id, body, source_title, source_url, chapter, article,
                         regulation_type, regulation_number, year, about,
-                        truncated_at_source, cluster_id
+                        truncated_at_source, cluster_id, doc_id
                  FROM chunks
                  WHERE indexable
                    AND regulation_type = $1
@@ -1088,7 +1089,7 @@ impl SearchOps {
                 // against real subject lines and evaluated against NULL.
                 "SELECT id, body, source_title, source_url, chapter, article,
                         regulation_type, regulation_number, year, about,
-                        truncated_at_source, cluster_id
+                        truncated_at_source, cluster_id, doc_id
                  FROM chunks WHERE id = ANY($1)",
                 &[&ids],
             )
@@ -1116,6 +1117,12 @@ pub struct ChunkRow {
     pub about: Option<String>,
     pub truncated_at_source: bool,
     pub cluster_id: Option<i32>,
+    /// The document this chunk belongs to · what "one regulation" means.
+    ///
+    /// ! ✗ `source_title`. Titles are file names, and 912 of them are shared by
+    /// about 2,100 regulations of different regions (`Perda_No._5_Tahun_2016` names
+    /// six). Grouping by title mixed one region's law into another's slots.
+    pub doc_id: String,
 }
 
 impl ChunkRow {
@@ -1133,6 +1140,7 @@ impl ChunkRow {
             about: r.get(9),
             truncated_at_source: r.get(10),
             cluster_id: r.get(11),
+            doc_id: r.get(12),
         }
     }
 
@@ -1240,6 +1248,7 @@ mod tests {
             about: Some("PAJAK DAERAH DAN RETRIBUSI DAERAH".into()),
             truncated_at_source: false,
             cluster_id: Some(3),
+            doc_id: "d".to_owned(),
         };
         assert!(!row.provenance_complete());
         let with_url = ChunkRow {

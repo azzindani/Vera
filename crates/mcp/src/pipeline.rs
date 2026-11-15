@@ -1459,7 +1459,7 @@ impl Pipeline {
         let asked = vocab.definitions.as_ref().is_some_and(|d| d.asked(query));
         let moved = engine::tiered_within(
             ranked,
-            |c| Some(c.row.source_title.clone()).filter(|t| !t.is_empty()),
+            |c| Some(c.row.doc_id.clone()).filter(|d| !d.is_empty()),
             |c| {
                 if engine::factors::structural(&Self::facets_of(&c.row), vocab) < top {
                     return 2;
@@ -1545,7 +1545,7 @@ impl Pipeline {
                 c.row
                     .article
                     .as_ref()
-                    .map(|a| (c.row.source_title.clone(), a.clone()))
+                    .map(|a| (c.row.doc_id.clone(), a.clone()))
             },
             |c| engine::factors::structural(&Self::facets_of(&c.row), vocab),
         );
@@ -2238,6 +2238,7 @@ mod tests {
             about: None,
             truncated_at_source: false,
             cluster_id: None,
+            doc_id: "d".into(),
         }
     }
 
