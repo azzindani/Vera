@@ -262,6 +262,7 @@ impl Settings {
                 dense_weight: parsed("DENSE_WEIGHT", "number", d.dense_weight)?,
                 sparse_weight: parsed("SPARSE_WEIGHT", "number", d.sparse_weight)?,
                 text_weight: parsed("TEXT_WEIGHT", "number", d.text_weight)?,
+                rrf_k: parsed("RRF_K", "number", d.rrf_k)?,
                 text_min_idf: parsed("TEXT_MIN_IDF", "number", d.text_min_idf)?,
                 // ! Loosening the canary is a deliberate, visible act. There is
                 // no code path that quietly skips it.
@@ -361,6 +362,14 @@ impl Settings {
                 key: "TEXT_MIN_IDF",
                 value: self.pipeline.text_min_idf.to_string(),
                 kind: "non-negative number",
+            });
+        }
+        // ! `k` ≤ 0 divides by zero at rank 1 or inverts the fusion; NaN ranks nothing.
+        if !(self.pipeline.rrf_k.is_finite() && self.pipeline.rrf_k > 0.0) {
+            return Err(ConfigError::Invalid {
+                key: "RRF_K",
+                value: self.pipeline.rrf_k.to_string(),
+                kind: "positive number",
             });
         }
         // ! All three weights at zero fuses nothing and returns nothing, which
@@ -971,6 +980,17 @@ mod tests {
         let mut s = settings();
         s.pipeline.cluster_batch = 64;
         assert!(s.validate().is_ok());
+    }
+
+    #[test]
+    fn an_rrf_k_that_cannot_fuse_is_refused() {
+        // ! 0 divides by zero at rank 1; a negative k inverts the arms' order.
+        for k in [0.0, -1.0, f32::NAN] {
+            let mut s = settings();
+            s.pipeline.rrf_k = k;
+            let e = s.validate().unwrap_err();
+            assert!(e.to_string().contains("RRF_K"), "{e}");
+        }
     }
 
     #[test]

@@ -64,6 +64,14 @@ pub struct Config {
     pub dense_weight: f32,
     pub sparse_weight: f32,
     pub text_weight: f32,
+    /// The `k` of reciprocal rank fusion: `weight / (k + rank)`.
+    ///
+    /// ! A property of the corpus, like the arm weights. A large `k` flattens the
+    /// arms' ranks (rank 1 and rank 10 differ by 13% at 60) and leaves the ordering
+    /// to the metadata prior; a small one lets each arm's own top ranks decide. On
+    /// the regulation corpus `k` 2 and 60 rank within a point of each other through
+    /// the engine, so 60 stands (`ROADMAP.md` Stage 3).
+    pub rrf_k: f32,
     /// Corpus IDF below which a query term is withheld from the `text` arm.
     ///
     /// ! `0.0` (off) by default, so every published number stays reproducible. At
@@ -162,6 +170,7 @@ impl Default for Config {
             dense_weight: 0.0,
             sparse_weight: 1.0,
             text_weight: 0.0,
+            rrf_k: DEFAULT_K,
             text_min_idf: 0.0,
             canary_min_cosine: 0.98,
             // ! Measured on the 50-case set in dev_tools/eval/, not chosen. With
@@ -846,7 +855,7 @@ impl Pipeline {
                     weight: w_text,
                 },
             ],
-            DEFAULT_K,
+            self.cfg.rrf_k,
         )
     }
 

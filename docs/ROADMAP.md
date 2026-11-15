@@ -142,9 +142,9 @@ pool recall) and `dev_tools/eval/pool_loss.py`:
 * **Tried and dropped:** a region-scoped dense arm. The right region's chunks are scattered
   across clusters, and a scan of Yogyakarta's 110K rows took 30–41 s on cold reads.
 
-**Carried to Stage 3:** refit the factor weights on a 60-deep, 8-probe pool (the current
-`fit_factors.py` predates the dense arm and cannot), then adopt that depth only if
-Recall@10 holds. Region as a ranking signal over the pool, ✗ as an arm.
+**Carried to Stage 3:** refit the factor weights on a 60-deep, 8-probe pool
+(`fit_pool.py`, which ranks the engine's own pool, dense arm included), then adopt that
+depth only if Recall@10 holds. Region as a ranking signal over the pool, ✗ as an arm.
 
 ## Stage 3 · ranking · the v0.2.0 headline
 
@@ -155,6 +155,38 @@ Recall@10 holds. Region as a ranking signal over the pool, ✗ as an arm.
 | MRR | 0.50 | **0.55** | 0.438 |
 | right regulation in top 5 | | **≥ 85%** | not measured |
 | no query type below | | **50%** Recall@5 | exception 45% |
+
+**Status (604-case set, 2026-11-15).** ✗ Not reached, and nothing shipped changed.
+Reweighting is exhausted: every fusion and prior setting tried ranks within about a point
+of what ships, through the engine and in the fit. Measured with `fit_pool.py fuse` over
+the engine's own 120-deep pool (8 probes, `PER_ARM_K` 60, per-arm ranks from the reply),
+which reproduces the engine's Recall@5 and @10 exactly at both `k` 60 and `k` 2, and
+confirmed with `e2e.py`:
+
+| configuration (through the engine, all 496) | Recall@5 | Recall@10 | MRR |
+|---|---|---|---|
+| shipped: 5 probes, 20 per arm, `k` 60, dense:sparse 2:1, `balanced` | 60.7% | 70.4% | 0.481 |
+| same, `k` 2, 1.5:1, floor 0.2, no prior | 60.1% | 70.8% | 0.490 |
+| 8 probes, 60 per arm, pool 120, `k` 60, `balanced` | 60.9% | 67.3% | 0.495 |
+| same, `k` 2, 1.5:1, floor 0.2, no prior | 60.7% | 70.8% | 0.497 |
+
+* **Fit, chosen on train, scored once on the holdout:** `k` 60, 3:1, floor 0.2,
+  authority 0.5, region 0.5: holdout Recall@5 55.2%, @10 67.2%, MRR 0.462. Within noise of
+  what ships. The grid's top 8 on train span 0.515–0.520 MRR across `k` 2 to 60.
+* **Region** (`enacting_body` named in the query as a whole phrase, 1.0 or 0): on the 140
+  cases whose pool holds such a chunk it lifts holdout MRR 0.356 → 0.397 and Recall@5 by
+  one case of 35; on all 496, MRR +0.008 and Recall@5 −0.2. Real in direction, too small to
+  carry a new variable, a new transform and an algorithms file into the deployment.
+* **`RRF_K` is now configuration** (it was compiled in), default 60, validated at start.
+* **A false gain, caught.** The first fit showed `k` 2 +5 points on the holdout. Its mirror
+  skipped the currency rule whenever every prior was 0, though the engine treats a floor
+  alone as ranking, so revoked answers rose above their revokers. Fixed, the gain is gone.
+
+**What is left is not a weight.** The answer is in the pool for 86–91% of questions and in
+the top 10 for 70%; no ordering of today's signals closes that. The measured defects that
+plausibly do: explanatory notes indexed as articles (Stage 0, ~5% of `Pasal` chunks — the
+"right law, wrong article" 13%), regional boilerplate twins (`underspecified` 16–25 of 54),
+and unreviewed labels (`review-001.csv`, 0 of 120). The first is a Ravel re-chunk.
 
 ## Guardrails · every change, every stage
 
