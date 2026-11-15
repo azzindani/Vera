@@ -219,5 +219,6 @@ fn load_vocab(rel: &str) -> engine::Vocabulary {
             .and_then(serde_json::Value::as_u64)
             .and_then(|n| usize::try_from(n).ok())
             .unwrap_or(3),
+        definitions: None,
     }
 }

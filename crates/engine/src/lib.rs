@@ -17,12 +17,12 @@ pub mod structure;
 
 pub use currency::rank_below_revokers;
 pub use factors::{
-    Composition, Context, Facets, FactorSpec, Field, StructuralRule, Transform, Variable,
-    Vocabulary, Weights, contributions, rescore, rescore_composed,
+    Composition, Context, Definitions, Facets, FactorSpec, Field, StructuralRule, Transform,
+    Variable, Vocabulary, Weights, contributions, rescore, rescore_composed,
 };
 pub use fusion::{Arm, DEFAULT_K, Fused, reciprocal_rank_fusion};
 pub use routing::{Centroid, DomainAnchor, Route, cosine, detect_domain, route, select_clusters};
-pub use structure::{operative_above_annex, operative_first_within, place_above};
+pub use structure::{operative_above_annex, place_above, tiered_within};
 
 /// How much the engine trusts a result set · mirrors `contract::Confidence`.
 ///

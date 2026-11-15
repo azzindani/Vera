@@ -52,22 +52,26 @@ pub fn operative_above_annex<T, K: PartialEq>(
     moved
 }
 
-/// Within each `key` group (one regulation), refill the group's slots with its operative
-/// members first, then the rest, each in their existing order. Other groups and ungrouped
-/// items keep their slots. Returns how many slots changed hands.
+/// Within each `key` group (one regulation), refill the group's slots by `tier`, lowest
+/// first, each tier in its existing order. Other groups and ungrouped items keep their slots.
+/// Returns how many slots changed hands.
+///
+/// The pipeline's tiers: operative text 0, the rest 1; and when the corpus declares its
+/// definitions provision ([`crate::factors::Definitions`]), that provision sits after the
+/// law's other operative text unless the question asks for a meaning.
 ///
 /// ! Why (`ROADMAP.md` Stage 3, `dev_tools/eval/article_sim.py`): of 91 right-law,
 /// wrong-article misses, the same law's explanation outranked the answer in 37, its preamble
 /// in 35. The structural ladder scores both low, but a bounded prior moves a score by
 /// ~20% while fusion keeps the pool within ~13%, so a strong explanation still wins. This
 /// keeps the law's place in the ranking and changes only which of its chunks fills it.
-pub fn operative_first_within<T, K: PartialEq>(
+pub fn tiered_within<T, K: PartialEq>(
     items: &mut [T],
     key: impl Fn(&T) -> Option<K>,
-    operative: impl Fn(&T) -> bool,
+    tier: impl Fn(&T) -> u8,
 ) -> usize {
     let keys: Vec<Option<K>> = items.iter().map(&key).collect();
-    let ops: Vec<bool> = items.iter().map(&operative).collect();
+    let tiers: Vec<u8> = items.iter().map(&tier).collect();
     let mut target: Vec<usize> = (0..items.len()).collect();
     let mut done = vec![false; items.len()];
     for i in 0..items.len() {
@@ -78,12 +82,8 @@ pub fn operative_first_within<T, K: PartialEq>(
         let slots: Vec<usize> = (i..items.len())
             .filter(|&j| keys[j].as_ref() == Some(k))
             .collect();
-        let order: Vec<usize> = slots
-            .iter()
-            .copied()
-            .filter(|&j| ops[j])
-            .chain(slots.iter().copied().filter(|&j| !ops[j]))
-            .collect();
+        let mut order = slots.clone();
+        order.sort_by_key(|&j| tiers[j]);
         for (&slot, &from) in slots.iter().zip(&order) {
             target[slot] = from;
             done[slot] = true;
@@ -218,10 +218,26 @@ mod tests {
             ("art", Some("d"), true),
             ("none", None, false),
         ];
-        let moved = operative_first_within(&mut v, |c| c.1, |c| c.2);
+        let moved = tiered_within(&mut v, |c| c.1, |c| u8::from(!c.2));
         let order: Vec<_> = v.iter().map(|c| c.0).collect();
         assert_eq!(order, ["art", "x", "expl", "pre", "none"]);
         assert_eq!(moved, 3);
+    }
+
+    #[test]
+    fn tiers_order_inside_a_law_and_keep_order_within_a_tier() {
+        // (name, document, tier): definitions 1 after the law's other operative text 0
+        let mut v = vec![
+            ("defs", Some("d"), 1),
+            ("x", Some("e"), 0),
+            ("art", Some("d"), 0),
+        ];
+        let moved = tiered_within(&mut v, |c| c.1, |c| c.2);
+        assert_eq!(
+            v.iter().map(|c| c.0).collect::<Vec<_>>(),
+            ["art", "x", "defs"]
+        );
+        assert_eq!(moved, 2);
     }
 
     #[test]
@@ -231,7 +247,7 @@ mod tests {
             ("b", Some("d"), false),
             ("c", Some("e"), false),
         ];
-        assert_eq!(operative_first_within(&mut v, |c| c.1, |c| c.2), 0);
+        assert_eq!(tiered_within(&mut v, |c| c.1, |c| u8::from(!c.2)), 0);
         assert_eq!(v.iter().map(|c| c.0).collect::<Vec<_>>(), ["a", "b", "c"]);
     }
 

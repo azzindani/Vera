@@ -137,6 +137,87 @@ pub struct Vocabulary {
     /// threshold fitted on one tokenisation applied to another is a cut nothing
     /// measured (`docs/SCORING.md` §3).
     pub min_term_chars: usize,
+    /// The corpus's definitions provision, and the questions that ask for one.
+    /// `None`: the corpus declares none, and nothing is reordered for it.
+    pub definitions: Option<Definitions>,
+}
+
+/// A definitions provision ("In this Regulation, X means ...") and the questions it answers.
+///
+/// ! Why it is declared (`ROADMAP.md` Stage 3, `dev_tools/eval/definition_sim.py`): a law's
+/// definitions article mentions every term the law uses, so it matches nearly any question
+/// about that law and takes the law's first slot. Within one regulation's slots it now goes
+/// after the law's other operative text, ✗ before, unless the question asks what something
+/// means. Measured over the engine's own pool: 10 wins, 3 losses (holdout 2 and 0). How a
+/// definitions provision opens and how a question asks for a meaning are both language, so
+/// the corpus declares them; none is compiled in.
+#[derive(Debug, Clone)]
+pub struct Definitions {
+    /// Matched, case-insensitively, within the first `window` characters of a chunk's body.
+    pub marker: regex::Regex,
+    /// Matched against the question, case-insensitively, on word boundaries.
+    pub cues: regex::Regex,
+    /// How far into the body `marker` may start · the provision's opening, ✗ a mention.
+    pub window: usize,
+}
+
+impl Definitions {
+    /// Compile the declared phrases (each a regular expression).
+    ///
+    /// # Errors
+    /// A phrase did not compile, or a list is empty: an empty alternation matches
+    /// everything, which would make every chunk a definition and every question a request
+    /// for one.
+    pub fn new(marker: &[String], cues: &[String], window: usize) -> Result<Self, String> {
+        let join = |xs: &[String], what: &str| -> Result<String, String> {
+            if xs.iter().all(|x| x.trim().is_empty()) {
+                return Err(format!("definitions.{what} is empty"));
+            }
+            Ok(xs
+                .iter()
+                .filter(|x| !x.trim().is_empty())
+                .map(|x| format!("(?:{x})"))
+                .collect::<Vec<_>>()
+                .join("|"))
+        };
+        let marker = regex::Regex::new(&format!("(?i)(?:{})", join(marker, "marker")?))
+            .map_err(|e| e.to_string())?;
+        let cues = regex::Regex::new(&format!(r"(?i)\b(?:{})\b", join(cues, "cues")?))
+            .map_err(|e| e.to_string())?;
+        if window == 0 {
+            return Err("definitions.window is 0 · no provision could open within it".to_owned());
+        }
+        Ok(Self {
+            marker,
+            cues,
+            window,
+        })
+    }
+
+    /// Whether `body` opens as a definitions provision.
+    #[must_use]
+    pub fn opens(&self, body: &str) -> bool {
+        let end = body
+            .char_indices()
+            .nth(self.window)
+            .map_or(body.len(), |(i, _)| i);
+        self.marker.is_match(&body[..end])
+    }
+
+    /// Whether `question` asks what something means.
+    #[must_use]
+    pub fn asked(&self, question: &str) -> bool {
+        self.cues.is_match(question)
+    }
+}
+
+/// ! Compared by source text, as [`StructuralRule`] is.
+impl PartialEq for Definitions {
+    fn eq(&self, other: &Self) -> bool {
+        self.marker.as_str() == other.marker.as_str()
+            && self.cues.as_str() == other.cues.as_str()
+            && self.window == other.window
+    }
 }
 
 /// Which stored label a [`StructuralRule`] reads.
@@ -292,6 +373,7 @@ impl Vocabulary {
             structural_default: 0.5,
             stopwords: STOP_ID.iter().map(|s| (*s).to_owned()).collect(),
             min_term_chars: 3,
+            definitions: None,
         }
     }
 
@@ -1580,6 +1662,7 @@ mod tests {
             structural_default: 0.5,
             stopwords: vec!["the".to_owned(), "and".to_owned()],
             min_term_chars: 2,
+            definitions: None,
         };
 
         let std_doc = Facets {

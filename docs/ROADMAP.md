@@ -155,14 +155,15 @@ depth only if Recall@10 holds. Region as a ranking signal over the pool, ✗ as 
 
 | target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-15 |
 |---|---|---|---|---|
-| Recall@5 | 65% | **70%** | 57.1% | 63.7% [66.1%] |
-| Recall@10 | 75% | **80%** | 68.4% | 70.8% [75.3%] |
-| MRR | 0.50 | **0.55** | 0.438 | **0.509** [0.520] · step a reached |
+| Recall@5 | 65% | **70%** | 57.1% | 64.9% [67.2%] · one holdout case short |
+| Recall@10 | 75% | **80%** | 68.4% | 72.0% [75.8%] |
+| MRR | 0.50 | **0.55** | 0.438 | **0.519** [0.528] · step a reached |
 | right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [78.3%] |
 | no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 44%; holdout: authority 3/7, hard_negative 6/13 |
 
-**Now** is the region arm plus the in-document ordering (sections below). Step a is
-reached on the holdout for MRR only; Recall@5 is 1.3 points short of it.
+**Now** is the region arm, the in-document ordering and the definitions rule (sections
+below). Step a is reached on the holdout for MRR; Recall@5 is 109 of 168, one case short
+of 65%; Recall@10 is 3 points short.
 
 **Status (604-case set, 2026-11-15).** ✗ Not reached, and nothing shipped changed.
 Reweighting is exhausted: every fusion and prior setting tried ranks within about a point
@@ -350,7 +351,54 @@ engine (`vera.sh e2e doc1`, `doc1_h`):
 * **Unchanged:** off-topic refused 74 of 106, real questions refused 0, `exact_ref` 63/63.
 * **Not re-measured:** BEIR. Its chunks carry no article label, so neither rule acts there.
 
-**This is the baseline from here** (`vera.sh e2e doc1`).
+### The definitions article · 2026-11-15 · shipped
+
+A law's definitions article (`Pasal 1`, "yang dimaksud dengan: 1. … 2. …") names every term
+the law uses, so it matches nearly any question about that law and takes the law's first
+slot. It is operative text, so the rule above leaves it there.
+
+The rule: within one regulation's slots, the definitions provision goes after the law's
+other operative text, unless the question asks what something means, in which case it goes
+first. How the provision opens (`marker`, within the body's first `window` characters) and
+how a question asks (`cues`) are language, so the corpus declares both
+(`scoring_vocabulary.definitions`, stamped by Ravel's profile; `engine::Definitions`).
+A corpus that declares none reorders nothing.
+
+Offline over the engine's own pool (`dev_tools/eval/definition_sim.py`): 10 wins, 3 losses
+(holdout 2 and 0). Each half alone: definitions-last for every question 7 and 7;
+definitions-first only when asked 3 and 0. Neither half has a weight. Through the engine
+(`vera.sh e2e defs1`, `defs1_h`):
+
+| engine (604 [168]) | Recall@5 | Recall@10 | MRR | right law, wrong article |
+|---|---|---|---|---|
+| inside the regulation | 66.1% [63.7%] | 75.3% [70.8%] | 0.520 [0.509] | 12.3% [10.7%] |
+| **+ definitions article** | **67.2%** [**64.9%**] | **75.8%** [**72.0%**] | **0.528** [**0.519**] | **11.1%** [**9.5%**] |
+
+* **Types:** none moved down on the holdout. On all cases `multi_tier` lost one case; the
+  gains were definitional 32 → 34, sanction 27 → 29, and one each in conceptual, numeric,
+  obligation and hard_negative.
+* **Unchanged:** off-topic refused 74 of 106, real questions refused 0, `exact_ref` 63/63.
+
+**This is the baseline from here** (`vera.sh e2e defs1`).
+
+### Tried after it, and dropped · 2026-11-15
+
+Where the 205 remaining misses sit (`dev_tools/eval/miss_map.py`, 541 cases without
+`exact_ref`, the engine's 60-deep pool): rank 6–10 in 56, deeper in the pool in 80, not in
+the pool with the right law in 45, and the wrong law entirely in 24.
+
+* **A re-rank inside each regulation by dense similarity** (`doc_rescore_sim.py`), over the
+  pool or over the whole document: 26 wins, 25 losses at best. The arms already order a
+  law's chunks about as well as the question's vector does.
+* **Phrase evidence**, adjacent question words found adjacent in the text
+  (`phrase_sim.py`): hurts above a weight of 0.25 and loses on the holdout at 0.25.
+* **The older version of the same rule.** Only 8 of 175 misses had the answer's text,
+  verbatim, in an earlier regulation the engine ranked instead.
+
+A read of 30 misses, sampled at random, found about a quarter where the engine's first
+result answers the question as well as the label does: the same clause in a sister
+regulation, or the same text in an older one. That share is a property of the labels, ✗ a
+ranking error, and no ordering rule recovers it.
 
 ## Stage 4 · performance and efficiency · v0.2.0
 

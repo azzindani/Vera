@@ -1008,7 +1008,7 @@ impl Pipeline {
         // ! And only when ranking is on, for the same reason as currency below.
         let ranking_on = Self::ranking_on(&applied);
         if ranking_on {
-            self.order_within_documents(&mut ranked, &mut progress)
+            self.order_within_documents(&mut ranked, query, &mut progress)
                 .await?;
         }
 
@@ -1438,28 +1438,44 @@ impl Pipeline {
     /// 1. An explanation never above its own article (both retrieved).
     /// 2. An explanation in the pool pulls in its article's operative text, fetched if
     ///    absent, directly above it.
-    /// 3. Within each regulation, its operative chunks take its slots first.
+    /// 3. Within each regulation, its operative chunks take its slots first; when the
+    ///    corpus declares its definitions provision, that goes after the law's other
+    ///    operative text unless the question asks what something means.
     ///
     /// ! Measured offline over the engine's own pool (`dev_tools/eval/article_sim.py`):
-    /// 2 and 3 together win 16 cases and lose 2 (holdout 9 and 0). Neither has a weight
-    /// to fit, so nothing here was tuned on the eval set.
+    /// 2 and 3 together win 16 cases and lose 2 (holdout 9 and 0); the definitions rule
+    /// another 10 and 3 (`definition_sim.py`, holdout 2 and 0). None has a weight to fit,
+    /// so nothing here was tuned on the eval set.
     async fn order_within_documents(
         &self,
         ranked: &mut Vec<Candidate<'_>>,
+        query: &str,
         progress: &mut Vec<String>,
     ) -> Result<(), PipelineError> {
         let vocab = &self.cfg.vocabulary;
         Self::rank_articles_above_explanations(ranked, vocab, progress);
         self.pull_in_explained_articles(ranked, progress).await?;
         let top = vocab.operative_score();
-        let moved = engine::operative_first_within(
+        let asked = vocab.definitions.as_ref().is_some_and(|d| d.asked(query));
+        let moved = engine::tiered_within(
             ranked,
             |c| Some(c.row.source_title.clone()).filter(|t| !t.is_empty()),
-            |c| engine::factors::structural(&Self::facets_of(&c.row), vocab) >= top,
+            |c| {
+                if engine::factors::structural(&Self::facets_of(&c.row), vocab) < top {
+                    return 2;
+                }
+                let defines = vocab
+                    .definitions
+                    .as_ref()
+                    .is_some_and(|d| d.opens(&c.row.body));
+                u8::from(defines != asked)
+            },
         );
         if moved > 0 {
             progress.push(format!(
-                "structure: {moved} slot(s) given to a regulation's operative text first"
+                "structure: {moved} slot(s) reordered within a regulation (operative text \
+                 first; its definitions {})",
+                if asked { "first, as asked" } else { "after it" }
             ));
         }
         Ok(())

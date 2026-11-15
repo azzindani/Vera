@@ -60,6 +60,9 @@ pub struct VocabularyFile {
     pub stopwords: Vec<String>,
     #[serde(default = "default_min_term")]
     pub min_term_chars: usize,
+    /// The corpus's definitions provision · absent: nothing is reordered for one.
+    #[serde(default)]
+    pub definitions: Option<DefinitionsFile>,
 }
 
 const fn default_max_tier() -> f32 {
@@ -70,6 +73,37 @@ const fn default_structural() -> f32 {
 }
 const fn default_min_term() -> usize {
     3
+}
+
+/// How a corpus's definitions provision opens, and how a question asks for a meaning
+/// (`engine::Definitions`). Each entry is a regular expression, matched case-insensitively.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DefinitionsFile {
+    /// Found within the first `window` characters of a chunk's body.
+    pub marker: Vec<String>,
+    /// Found in the question, on word boundaries.
+    pub cues: Vec<String>,
+    #[serde(default = "default_definitions_window")]
+    pub window: usize,
+}
+
+const fn default_definitions_window() -> usize {
+    200
+}
+
+impl DefinitionsFile {
+    fn compile(def: Option<&Self>) -> Result<Option<engine::Definitions>, VocabError> {
+        def.map(|d| {
+            engine::Definitions::new(&d.marker, &d.cues, d.window).map_err(|why| {
+                VocabError::BadScore {
+                    label: "definitions".to_owned(),
+                    why,
+                }
+            })
+        })
+        .transpose()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -207,6 +241,7 @@ impl VocabularyFile {
                 .map(|s| s.trim().to_lowercase())
                 .collect(),
             min_term_chars: me.min_term_chars,
+            definitions: DefinitionsFile::compile(me.definitions.as_ref())?,
         })
     }
 }
@@ -253,6 +288,9 @@ pub struct CorpusVocabulary {
     pub stopwords: Vec<String>,
     #[serde(default = "default_min_term")]
     pub min_term_chars: usize,
+    /// The corpus's definitions provision · absent: nothing is reordered for one.
+    #[serde(default)]
+    pub definitions: Option<DefinitionsFile>,
 }
 
 const fn default_max_tier_u() -> u32 {
@@ -335,6 +373,7 @@ impl CorpusVocabulary {
                 .map(|s| s.trim().to_lowercase())
                 .collect(),
             min_term_chars: me.min_term_chars,
+            definitions: DefinitionsFile::compile(me.definitions.as_ref())?,
         })
     }
 }
@@ -441,5 +480,30 @@ mod tests {
     #[test]
     fn the_builtin_vocabulary_reports_itself_as_builtin() {
         assert!(engine::Vocabulary::id_regulation().is_builtin());
+    }
+
+    #[test]
+    fn a_declared_definitions_provision_opens_a_body_and_answers_a_meaning_question() {
+        let v = CorpusVocabulary::load(
+            r#"{"definitions": {"marker": ["yang dimaksud dengan"],
+                "cues": ["apa itu", "pengertian"], "window": 40}}"#,
+        )
+        .unwrap();
+        let d = v.definitions.unwrap();
+        assert!(d.opens("Dalam Peraturan ini YANG DIMAKSUD DENGAN: 1. Daerah"));
+        // ! Past the window it is a mention, ✗ the provision's opening.
+        assert!(!d.opens(&format!("{} yang dimaksud dengan", "x".repeat(60))));
+        assert!(d.asked("Apa itu PT Jamkrida?"));
+        assert!(!d.asked("berapa lama pengertiannya")); // word boundary
+        assert!(!d.asked("Siapa yang menetapkan tarif?"));
+    }
+
+    #[test]
+    fn no_definitions_block_reorders_nothing_and_an_empty_one_is_refused() {
+        assert!(CorpusVocabulary::load("{}").unwrap().definitions.is_none());
+        // ! An empty alternation matches everything: every chunk a definition.
+        assert!(
+            CorpusVocabulary::load(r#"{"definitions": {"marker": [], "cues": ["x"]}}"#).is_err()
+        );
     }
 }
