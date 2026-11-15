@@ -1,8 +1,10 @@
-# ROADMAP.md — v0.2.0 · accuracy on regulations
+# ROADMAP.md — v0.2.0 · accuracy on regulations, then speed
 
 > v0.1.0 proved the hardware story (20M rows on 2 vCPU / 8 GB). v0.2.0 is about being
 > **right** on the corpus that demands it most: Indonesian regulation. A wrong article
-> cited with confidence is worse than no answer.
+> cited with confidence is worse than no answer. It is also about being **fast and lean**
+> enough to serve that answer on the target box (Stage 4): accuracy bought with latency
+> is a regression in disguise.
 >
 > Every target is checked by `dev_tools/eval/e2e.py` through the deployed engine on the
 > real 1.7M corpus. The baseline is the v0.1.0 tag. A stage counts as reached only when it
@@ -151,13 +153,16 @@ depth only if Recall@10 holds. Region as a ranking signal over the pool, ✗ as 
 
 ## Stage 3 · ranking · the v0.2.0 headline
 
-| target | step a | v0.2.0 | v0.1.0 |
-|---|---|---|---|
-| Recall@5 | 65% | **70%** | 57.1% |
-| Recall@10 | 75% | **80%** | 68.4% |
-| MRR | 0.50 | **0.55** | 0.438 |
-| right regulation in top 5 | | **≥ 85%** | not measured |
-| no query type below | | **50%** Recall@5 | exception 45% |
+| target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-15 |
+|---|---|---|---|---|
+| Recall@5 | 65% | **70%** | 57.1% | 63.7% [66.1%] |
+| Recall@10 | 75% | **80%** | 68.4% | 70.8% [75.3%] |
+| MRR | 0.50 | **0.55** | 0.438 | **0.509** [0.520] · step a reached |
+| right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [78.3%] |
+| no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 44%; holdout: authority 3/7, hard_negative 6/13 |
+
+**Now** is the region arm plus the in-document ordering (sections below). Step a is
+reached on the holdout for MRR only; Recall@5 is 1.3 points short of it.
 
 **Status (604-case set, 2026-11-15).** ✗ Not reached, and nothing shipped changed.
 Reweighting is exhausted: every fusion and prior setting tried ranks within about a point
@@ -302,14 +307,91 @@ Chosen on train, scored once on the holdout (`vera.sh e2e rw2`, `rw2_h`):
 
 The holdout gain (+3.5) is inside its ±7.4 interval; it is the train sweep's shape and
 the per-type sign that carry it, and the holdout agrees in direction on every type.
-**This is the baseline from here** (`vera.sh e2e rw2`).
+This was the baseline until the in-document ordering below (`vera.sh e2e rw2`).
+
+### Inside the regulation · 2026-11-15 · shipped
+
+With the region arm on, the largest miss is the right law with the wrong article: 91 of 487
+cases (`exact_ref` and `underspecified` excluded, `dev_tools/eval/article_diag.py` over the
+engine's whole 60-deep pool).
+
+* **Where the answer is.** Rank 6–10 in 31 cases, deeper in the pool in 27, and not in the
+  pool in 33.
+* **What outranks it, within the same law.** Other articles in 82 cases, but also the
+  law's own explanation in 37, its preamble in 35 and its definitions in 38.
+* **Why the ladder misses it.** The structural ladder scores explanation 0.2 and
+  articles 1.0. At weight 0.25 that moves a score by about 20%, while fusion keeps the pool
+  within about 13%, so a strong explanation still wins.
+
+Two ordering rules, neither with a weight (`engine::structure`,
+`Pipeline::order_within_documents`):
+
+1. **An explanation in the pool pulls in its article.** The penjelasan of `Pasal 6` names
+   the clause the question is about. Its first two operative chunks are fetched if absent
+   (`SearchOps::same_article`, by `doc_id` + `article`) and placed directly above it,
+   marked `expanded_from`.
+2. **Operative text first within a regulation.** The law keeps its slots in the ranking;
+   its operative chunks fill them before its explanation, preamble and annex.
+
+Offline over the engine's own pool (`dev_tools/eval/article_sim.py`): 16 wins, 2 losses
+(holdout 9 and 0). Rule 1 alone: 6 wins, 0 losses. Rule 2 alone: 9 wins, 2 losses. Neither
+rule has a parameter, so nothing was fitted; the holdout was looked at in that comparison,
+which is why the decision rests on wins against losses, ✗ on its headline. Through the
+engine (`vera.sh e2e doc1`, `doc1_h`):
+
+| engine (604 [168]) | Recall@5 | Recall@10 | MRR | right law, wrong article |
+|---|---|---|---|---|
+| region arm | 63.6% [57.7%] | 72.5% [65.5%] | 0.502 [0.481] | 15.1% [17.3%] |
+| **+ inside the regulation** | **66.1%** [**63.7%**] | **75.3%** [**70.8%**] | **0.520** [**0.509**] | **12.3%** [**10.7%**] |
+
+* **Types:** none moved down on the holdout. On all cases `numeric` lost one case (the
+  loss the simulation predicted). The biggest gains were definitional 27 → 32,
+  conceptual 30 → 34 and hard_negative 18 → 21.
+* **Unchanged:** off-topic refused 74 of 106, real questions refused 0, `exact_ref` 63/63.
+* **Not re-measured:** BEIR. Its chunks carry no article label, so neither rule acts there.
+
+**This is the baseline from here** (`vera.sh e2e doc1`).
+
+## Stage 4 · performance and efficiency · v0.2.0
+
+Stages 1–3 bought accuracy without asking what it cost. v0.2.0 also has to serve it on the
+target box. Measured on 1.7M, the whole stack pinned to two cores by
+`docker-compose.vps.yml`, through the deployed HTTP server with
+`dev_tools/eval/load_test.py` (warm; cold not re-measured).
+
+| target | v0.2.0 | now · 2026-11-15 | v0.1.0 · `HARDWARE.md` §9.2 |
+|---|---|---|---|
+| warm p50 / p95, 1 client | **≤ 350 / 500 ms** | 480–552 / 603–864 ms | 430 / 569 ms |
+| cold p50 / p95 | **≤ 600 / 900 ms** | not re-measured | 556 / 833 ms |
+| throughput at 4 clients | **≥ 4 q/s, p50 ≤ 1 s** | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
+| CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.5 core-s** | 0.81 core-s | 0.73 core-s |
+| 8 clients | **≤ 5% refused, 0 errors** | 2 of 64 refused, 0 errors | 3 of 64 |
+| embedder resident | **≤ 1.5 GB** | 2.7 GB | 2.0 GB |
+| engine resident at 1.7M | **≤ 64 MB** | 24 MB ✓ | 30 MB |
+| what an accuracy change may cost | **≤ +10% warm p50** | region arm: none measurable | — |
+
+* **Comparing the columns.** "Now" runs the 712-case set, off-topic questions included;
+  v0.1.0 ran the 50-case set. Two back-to-back runs here read 552 and 480 ms p50, so the
+  spread is noise and query mix. The region arm on against off reads 480 against 498 ms:
+  the accuracy work of Stage 3 cost no measurable latency.
+* **Where the time goes.** The query embedding: about 300 ms of CPU, with the embedder at
+  150–194% of the two cores while Postgres sits at 24–44% and the engine at 4%.
+  Throughput is set by the embedder, which is why it barely moves from 1 to 8 clients.
+* **What reaching these targets takes is the embedder, ✗ the arms.** Candidates, none
+  measured yet:
+  * a bounded cache of query embeddings, which is exact and leaves the space unchanged;
+  * fewer, pinned embedder threads, so it stops competing with Postgres;
+  * a faster runtime, admitted only if the startup canary still reproduces the corpus
+    space (principle 2).
+
+  Each is measured here before it is claimed.
 
 ## Guardrails · every change, every stage
 
 * The holdout does not get worse beyond its confidence interval, overall or for any type.
 * BEIR (`docs/BEIR.md`) with `literal` does not drop more than 1 point on any set. A
   gain that only works on our own labels is a fit, not an improvement.
-* p50 ≤ 1 s on 2 vCPU / 8 GB at 1.7M rows. Speed only has to stay decent; it is not the
-  target.
+* p50 ≤ 1 s on 2 vCPU / 8 GB at 1.7M rows, and no accuracy change costs more than +10%
+  warm p50 (Stage 4).
 * The engine still never calls a model to rank (principle 1). Accuracy has to come from
   retrieval, structure and metadata.

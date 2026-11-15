@@ -223,6 +223,15 @@ fn rule(label: &str, field: Field, score: f32, anchored: bool) -> StructuralRule
 }
 
 impl Vocabulary {
+    /// The top of the structural ladder · what an operative provision scores.
+    #[must_use]
+    pub fn operative_score(&self) -> f32 {
+        self.structural
+            .iter()
+            .map(|r| r.score)
+            .fold(self.structural_default, f32::max)
+    }
+
     /// The vocabulary of the corpus this engine was first built for.
     ///
     /// ! A **fallback, ✗ a default** — [`Vocabulary::is_builtin`] is reported

@@ -398,6 +398,14 @@ const CORPUS_NOW: i32 = 2026;
 /// that changes when the sidecar ships.
 const ENRICHMENT_KEYS: &[&str] = &[];
 
+/// Same-article rows read per explanation, before the operative ones are kept.
+const EXPLAINED_FETCH: i64 = 8;
+/// Operative chunks of an explained article placed above its explanation.
+///
+/// ! Two, as measured (`dev_tools/eval/article_sim.py`): a long article is split, and its
+/// first chunks carry the clause the explanation's "Ayat (1)" refers to.
+const EXPLAINED_ARTICLE_CHUNKS: usize = 2;
+
 /// Everything `assemble` needs to build the response.
 ///
 /// A struct rather than eight positional arguments: at that width the compiler
@@ -1000,7 +1008,8 @@ impl Pipeline {
         // ! And only when ranking is on, for the same reason as currency below.
         let ranking_on = Self::ranking_on(&applied);
         if ranking_on {
-            Self::rank_articles_above_explanations(&mut ranked, vocab, &mut progress);
+            self.order_within_documents(&mut ranked, &mut progress)
+                .await?;
         }
 
         // ! Expansion runs AFTER ranking, ✗ before. Its seeds are the
@@ -1424,6 +1433,91 @@ impl Pipeline {
     }
 
     /// An explanation never above the article it explains (`engine::structure`).
+    /// The orderings inside one regulation, when ranking is on (`ROADMAP.md` Stage 3).
+    ///
+    /// 1. An explanation never above its own article (both retrieved).
+    /// 2. An explanation in the pool pulls in its article's operative text, fetched if
+    ///    absent, directly above it.
+    /// 3. Within each regulation, its operative chunks take its slots first.
+    ///
+    /// ! Measured offline over the engine's own pool (`dev_tools/eval/article_sim.py`):
+    /// 2 and 3 together win 16 cases and lose 2 (holdout 9 and 0). Neither has a weight
+    /// to fit, so nothing here was tuned on the eval set.
+    async fn order_within_documents(
+        &self,
+        ranked: &mut Vec<Candidate<'_>>,
+        progress: &mut Vec<String>,
+    ) -> Result<(), PipelineError> {
+        let vocab = &self.cfg.vocabulary;
+        Self::rank_articles_above_explanations(ranked, vocab, progress);
+        self.pull_in_explained_articles(ranked, progress).await?;
+        let top = vocab.operative_score();
+        let moved = engine::operative_first_within(
+            ranked,
+            |c| Some(c.row.source_title.clone()).filter(|t| !t.is_empty()),
+            |c| engine::factors::structural(&Self::facets_of(&c.row), vocab) >= top,
+        );
+        if moved > 0 {
+            progress.push(format!(
+                "structure: {moved} slot(s) given to a regulation's operative text first"
+            ));
+        }
+        Ok(())
+    }
+
+    /// Step 2 of [`Self::order_within_documents`].
+    ///
+    /// ! A pulled-in chunk no arm retrieved is marked `expanded_from` its explanation, as
+    /// any expansion is: it is a different kind of result and the caller can see it. One
+    /// already in the pool keeps its own score and is only moved.
+    async fn pull_in_explained_articles(
+        &self,
+        ranked: &mut Vec<Candidate<'_>>,
+        progress: &mut Vec<String>,
+    ) -> Result<(), PipelineError> {
+        let vocab = &self.cfg.vocabulary;
+        let top = vocab.operative_score();
+        let below =
+            |row: &store::ChunkRow| engine::factors::structural(&Self::facets_of(row), vocab) < top;
+        let anchors: Vec<String> = ranked
+            .iter()
+            .filter(|c| c.row.article.is_some() && below(&c.row))
+            .map(|c| c.row.id.clone())
+            .collect();
+        let fetched = self.ops.same_article(&anchors, EXPLAINED_FETCH).await?;
+        let mut additions: Vec<(String, Vec<Candidate<'_>>)> = Vec::new();
+        for (anchor, row) in fetched {
+            if below(&row) {
+                continue;
+            }
+            let Some(seed) = ranked.iter().find(|c| c.row.id == anchor) else {
+                continue;
+            };
+            let at = if let Some(at) = additions.iter().position(|(a, _)| *a == anchor) {
+                at
+            } else {
+                additions.push((anchor.clone(), Vec::new()));
+                additions.len() - 1
+            };
+            if additions[at].1.len() >= EXPLAINED_ARTICLE_CHUNKS {
+                continue;
+            }
+            let existing = ranked.iter().find(|c| c.row.id == row.id);
+            additions[at].1.push(Candidate {
+                relevance: existing.map_or(seed.relevance, |c| c.relevance),
+                expanded_from: existing.map_or(Some(anchor.clone()), |c| c.expanded_from.clone()),
+                row: existing.map_or(std::borrow::Cow::Owned(row), |c| c.row.clone()),
+            });
+        }
+        let placed = engine::place_above(ranked, additions, |c| c.row.id.clone());
+        if placed > 0 {
+            progress.push(format!(
+                "structure: {placed} article chunk(s) placed above the explanation citing them"
+            ));
+        }
+        Ok(())
+    }
+
     fn rank_articles_above_explanations(
         ranked: &mut Vec<Candidate<'_>>,
         vocab: &engine::Vocabulary,

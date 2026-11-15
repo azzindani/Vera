@@ -22,7 +22,7 @@ pub use factors::{
 };
 pub use fusion::{Arm, DEFAULT_K, Fused, reciprocal_rank_fusion};
 pub use routing::{Centroid, DomainAnchor, Route, cosine, detect_domain, route, select_clusters};
-pub use structure::operative_above_annex;
+pub use structure::{operative_above_annex, operative_first_within, place_above};
 
 /// How much the engine trusts a result set · mirrors `contract::Confidence`.
 ///

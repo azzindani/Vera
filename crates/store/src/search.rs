@@ -658,6 +658,49 @@ impl SearchOps {
         Ok(settle(rows.iter().map(scored_f32).collect(), k))
     }
 
+    /// For each explanation id, the other chunks of the same document that carry the same
+    /// article label, in document order, at most `per` each: `(explanation id, row)`.
+    ///
+    /// ! Keyed on `doc_id` + `article`, served by `chunks_doc_seq_idx`. Which of the rows
+    /// are the operative text is the caller's decision, on the corpus's structural ladder:
+    /// this returns every same-label row, explanation chunks of the same article included.
+    /// A corpus without `doc_id` returns nothing, and the rule that uses it is off.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn same_article(
+        &self,
+        explanation_ids: &[String],
+        per: i64,
+    ) -> Result<Vec<(String, ChunkRow)>, StoreError> {
+        if explanation_ids.is_empty() || !self.has_currency().await? {
+            return Ok(Vec::new());
+        }
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "SELECT id, body, source_title, source_url, chapter, article,
+                        regulation_type, regulation_number, year, about,
+                        truncated_at_source, cluster_id, explained
+                 FROM (SELECT o.id, o.body, o.source_title, o.source_url, o.chapter,
+                              o.article, o.regulation_type, o.regulation_number, o.year,
+                              o.about, o.truncated_at_source, o.cluster_id, e.id AS explained,
+                              row_number() OVER (PARTITION BY e.id ORDER BY o.seq) AS n
+                         FROM chunks e
+                         JOIN chunks o ON o.doc_id = e.doc_id AND o.article = e.article
+                                      AND o.id <> e.id AND o.indexable
+                        WHERE e.id = ANY($1)) s
+                 WHERE n <= $2
+                 ORDER BY explained, n",
+                &[&explanation_ids, &per],
+            )
+            .await?;
+        Ok(rows
+            .iter()
+            .map(|r| (r.get(12), ChunkRow::from_row(r)))
+            .collect())
+    }
+
     /// Other chunks of the same regulation · the sibling expansion of
     /// `docs/SCORING.md` §7.
     ///
