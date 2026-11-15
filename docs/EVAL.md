@@ -146,6 +146,12 @@ clause, not all of them.
 article. For `exact_ref` it reports whether the named regulation and the named article
 come first.
 
+! **An article is its operative text, ✗ its explanation** (since 2026-11-15). Ravel files
+the PENJELASAN of `Pasal 6` under `article = 'Pasal 6'`, chapter `PENJELASAN - ...`;
+`resolve_targets` counts those chunks only when the article has no operative text. Before,
+162 of 496 cases accepted the explanation as the answer, worth 2.8 points of Recall@5
+(`ROADMAP.md` Stage 3).
+
 ! **Not reviewed by a domain expert.** `draft/review.py export` writes a stratified sheet
 (`dev_tools/eval/review/review-001.csv`, 120 cases); `import` records the verdicts, and
 `EVAL_REVIEWED=1 e2e.py` scores only labels a reviewer marked BENAR.

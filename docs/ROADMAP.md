@@ -52,8 +52,11 @@ Every later stage is measured against this table, on the holdout.
   jelas". They carry the article number they explain, so the engine can cite the
   explanation of Pasal 6 as Pasal 6. The drafters skipped 4 clauses for this, and the
   `multi_tier` drafter rejected 29 of 60 pairs, largely because the cited "parent"
-  article was explanation or the wrong text. This is a Ravel labelling defect (no
-  `penjelasan` flag on the chunk), and it bears on Stage 1.
+  article was explanation or the wrong text. ~~This is a Ravel labelling defect (no
+  `penjelasan` flag on the chunk)~~ — **corrected 2026-11-15:** Ravel does flag it. 92,498
+  `Pasal` chunks carry chapter `PENJELASAN - ...`; only ~2.3K (0.2%) open like an
+  explanation without it. The defects were Vera's: the eval counted an article's
+  explanation as its answer, and the named lookup could promote it (Stage 3).
 * **Regional boilerplate is the corpus's majority.** About half of the sampled regional
   clauses were skipped because hundreds of regions enact the same text, so no single label
   would be fair. That is why `underspecified` scores any near-identical twin as a pass.
@@ -182,10 +185,35 @@ confirmed with `e2e.py`:
   skipped the currency rule whenever every prior was 0, though the engine treats a floor
   alone as ranking, so revoked answers rose above their revokers. Fixed, the gain is gone.
 
+### Explanations are not articles · 2026-11-15
+
+`resolve_targets` matched labels on `article` alone, so the PENJELASAN of a labelled
+article counted as its answer in **162 of 496 cases**. Now only operative text counts,
+unless the article exists solely as explanation (7 cases). The honest baseline drops:
+
+| engine (all 496; holdout in brackets) | Recall@5 | Recall@10 | MRR | right law, wrong article |
+|---|---|---|---|---|
+| shipped, old targets | 60.7% | 70.4% | 0.481 | 13.3% |
+| shipped, strict targets | 57.9% | 67.9% | 0.460 | 16.3% |
+| + named lookup puts operative text first | 57.9% [50.0%] | 67.9% [59.7%] | 0.462 [0.411] | 16.3% [20.9%] |
+| + an explanation never above its own article | **59.3%** [**51.5%**] | **68.8%** [**60.4%**] | **0.473** [**0.425**] | **14.9%** [19.4%] |
+
+* **Named lookup** (`SearchOps::named`): an article's explanation was the chunk promoted to
+  rank 1 for 2 of 51 `exact_ref` queries (100% → 96.1% under strict targets). Hits are now
+  ordered by the corpus's structural ladder first, distance second: back to 51/51.
+* **Structure rule** (`engine::structure`): when an annex chunk of a document's article
+  ranks above that article's operative chunk, the operative one moves to just above it. An
+  ordering rule like currency, ✗ a prior; it acts only when both were retrieved, and not
+  with factors off. No type moved down, overall or on the holdout. BEIR is untouched by
+  construction (its chunks carry no article label), ✗ re-measured; p50 not re-measured.
+
+Every Stage 3 number above this section used the old targets and stays as recorded; from
+here the strict row is the baseline.
+
 **What is left is not a weight.** The answer is in the pool for 86–91% of questions and in
 the top 10 for 70%; no ordering of today's signals closes that. The measured defects that
-plausibly do: explanatory notes indexed as articles (Stage 0, ~5% of `Pasal` chunks — the
-"right law, wrong article" 13%), regional boilerplate twins (`underspecified` 16–25 of 54),
+plausibly do: explanatory notes (the section above, +1.4 points), regional
+boilerplate twins (`underspecified` 16–25 of 54),
 and unreviewed labels (`review-001.csv`, 0 of 120). The first is a Ravel re-chunk.
 
 ## Guardrails · every change, every stage

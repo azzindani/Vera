@@ -13,6 +13,7 @@ pub mod currency;
 pub mod factors;
 pub mod fusion;
 pub mod routing;
+pub mod structure;
 
 pub use currency::rank_below_revokers;
 pub use factors::{
@@ -21,6 +22,7 @@ pub use factors::{
 };
 pub use fusion::{Arm, DEFAULT_K, Fused, reciprocal_rank_fusion};
 pub use routing::{Centroid, DomainAnchor, Route, cosine, detect_domain, route, select_clusters};
+pub use structure::operative_above_annex;
 
 /// How much the engine trusts a result set · mirrors `contract::Confidence`.
 ///

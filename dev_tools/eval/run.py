@@ -180,13 +180,19 @@ def resolve_targets(cur, q):
         # different place ("E N E R G I" against "E N E R G I DENGAN RAHMAT ...").
         about = ref["about"].strip()
         cur.execute(
-            "SELECT id FROM chunks WHERE regulation_type=%s AND regulation_number=%s"
-            " AND year=%s AND article=%s AND about <> ''"
+            "SELECT id, chapter ILIKE 'PENJELASAN%%' FROM chunks WHERE regulation_type=%s"
+            " AND regulation_number=%s AND year=%s AND article=%s AND about <> ''"
             " AND (starts_with(upper(about), upper(%s)) OR starts_with(upper(%s), upper(about)))",
             (ref["regulation_type"], ref["regulation_number"], ref["year"],
              ref["article"], about, about),
         )
-        ids |= {r[0] for r in cur.fetchall()}
+        rows = cur.fetchall()
+        # ! The article, ✗ its explanation. Ravel puts the PENJELASAN of `Pasal 6` under
+        # `article = 'Pasal 6'` with chapter `PENJELASAN - ...`, so matching on the article
+        # alone counted the explanation as the answer for 162 of 496 cases (2026-11-15).
+        # Only a label whose article exists solely as explanation keeps those chunks.
+        operative = {i for i, expl in rows if not expl}
+        ids |= operative or {i for i, _ in rows}
     reg = q.get("answer_regulation")
     if reg:
         cur.execute(

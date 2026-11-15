@@ -956,6 +956,11 @@ impl Pipeline {
             &mut progress,
             vocab,
         );
+        // ! And only when ranking is on, for the same reason as currency below.
+        let ranking_on = Self::ranking_on(&applied);
+        if ranking_on {
+            Self::rank_articles_above_explanations(&mut ranked, vocab, &mut progress);
+        }
 
         // ! Expansion runs AFTER ranking, ✗ before. Its seeds are the
         // candidates that actually ranked; walking the whole pool would be a
@@ -980,11 +985,6 @@ impl Pipeline {
         // produced (`zeroed_factor_weights_are_the_identity_on_the_fused_order`): an
         // ordering rule that ignored the switch would be a second ranking layer nobody
         // could turn off. The labels stay either way.
-        let ranking_on = !composition_from_contract(
-            applied.factor_weights.relevance_floor,
-            &applied.composition,
-        )
-        .is_inert();
         if apply_floor && ranking_on && !currency.is_empty() {
             Self::rank_revoked_below_revokers(&mut ranked, &currency, &mut progress);
         }
@@ -1335,6 +1335,36 @@ impl Pipeline {
     /// regulation is partly in force, and its amender has no claim to outrank it. Nothing
     /// is removed, no score changes, and a revoked regulation whose revoker is not among the
     /// candidates keeps its place (`docs/SCORING.md` §11).
+    /// Is any ranking applied? "Factors off" must mean exactly the fused order, so the
+    /// ordering rules (structure, currency) run only when this is true.
+    fn ranking_on(applied: &contract::AppliedOptions) -> bool {
+        !composition_from_contract(applied.factor_weights.relevance_floor, &applied.composition)
+            .is_inert()
+    }
+
+    /// An explanation never above the article it explains (`engine::structure`).
+    fn rank_articles_above_explanations(
+        ranked: &mut Vec<Candidate<'_>>,
+        vocab: &engine::Vocabulary,
+        progress: &mut Vec<String>,
+    ) {
+        let moved = engine::operative_above_annex(
+            ranked,
+            |c| {
+                c.row
+                    .article
+                    .as_ref()
+                    .map(|a| (c.row.source_title.clone(), a.clone()))
+            },
+            |c| engine::factors::structural(&Self::facets_of(&c.row), vocab),
+        );
+        if moved > 0 {
+            progress.push(format!(
+                "structure: {moved} article(s) placed above their own explanation"
+            ));
+        }
+    }
+
     fn rank_revoked_below_revokers(
         ranked: &mut Vec<Candidate<'_>>,
         currency: &std::collections::HashMap<String, store::Currency>,
@@ -1517,7 +1547,23 @@ impl Pipeline {
                 article: id.article.as_deref(),
             };
             let k = i64::try_from(self.cfg.named_chunks).unwrap_or(5);
-            let hits = self.ops.named(&named, qvec, k).await?;
+            let mut hits = self.ops.named(&named, qvec, k).await?;
+            // ! Operative text before an annex of the same article, by the corpus's own
+            // structural ladder; stable, so distance to the query orders within each.
+            // The explanation of `Pasal 6` is also stored as `Pasal 6`, and was the chunk
+            // promoted to rank 1 for 2 of 51 named-article queries (`ROADMAP.md` Stage 3).
+            let vocab = &self.cfg.vocabulary;
+            let structural = |h: &store::ExactHit| {
+                engine::factors::structural(
+                    &engine::Facets {
+                        article: h.article.as_deref(),
+                        chapter: h.chapter.as_deref(),
+                        ..engine::Facets::default()
+                    },
+                    vocab,
+                )
+            };
+            hits.sort_by(|a, b| structural(b).total_cmp(&structural(a)));
             if let Some(first) = hits.first() {
                 progress.push(format!(
                     "named {}: {} chunks (routing bypassed)",

@@ -71,6 +71,11 @@ impl<'a> SiblingKey<'a> {
 pub struct ExactHit {
     pub id: String,
     pub matched_on: String,
+    /// The chunk's structural labels, so the caller can put operative text before
+    /// an annex of the same article (`chunks.chapter` is `PENJELASAN - ...` for the
+    /// explanation of `Pasal 6`, whose `article` is also `Pasal 6`).
+    pub chapter: Option<String>,
+    pub article: Option<String>,
 }
 
 /// A reference the query named, as `SearchOps::named` looks it up.
@@ -672,6 +677,8 @@ impl SearchOps {
                 let yr: Option<i32> = r.get(3);
                 ExactHit {
                     id: r.get(0),
+                    chapter: None,
+                    article: None,
                     matched_on: format!(
                         "{} {}/{}",
                         rtype.unwrap_or_default(),
@@ -729,7 +736,7 @@ impl SearchOps {
             for article in &articles {
                 let rows = c
                     .query(
-                        "SELECT id, regulation_type, regulation_number, year, article
+                        "SELECT id, regulation_type, regulation_number, year, article, chapter
                          FROM chunks
                          WHERE indexable AND dense IS NOT NULL
                            AND (cardinality($1::text[]) = 0 OR regulation_type = ANY($1))
@@ -763,7 +770,7 @@ impl SearchOps {
                         );
                         if article.is_some() {
                             on.push(' ');
-                            on.push_str(&art.unwrap_or_default());
+                            on.push_str(art.as_deref().unwrap_or_default());
                         } else if r.article.is_some() {
                             on.push_str(" (named article not found, ranked within the regulation)");
                         }
@@ -773,6 +780,8 @@ impl SearchOps {
                         ExactHit {
                             id: row.get(0),
                             matched_on: on.trim().to_owned(),
+                            chapter: row.get(5),
+                            article: art,
                         }
                     })
                     .collect());
