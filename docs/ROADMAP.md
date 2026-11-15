@@ -207,8 +207,17 @@ unless the article exists solely as explanation (7 cases). The honest baseline d
   with factors off. No type moved down, overall or on the holdout. BEIR is untouched by
   construction (its chunks carry no article label), ✗ re-measured; p50 not re-measured.
 
+* **The ~2.3K Ravel missed, relabelled** (Ravel `id_regulation_md@1.3`, `ravel bundle
+  relabel` + `ravel db relabel`): 3,077 chunks in 537 documents now read `PENJELASAN`,
+  re-embedded (the chapter is in the embedded header), corpus `add1aa61` → `9ff77c4d`,
+  published as revision 2 of `Azzindani/ID_REG_RAG_2611`. Recall@5 59.3 → 59.1% [51.5 →
+  50.7%], Recall@10 68.8 → 68.1% [60.4 → 58.2%]. The drop is the eval getting stricter: 13
+  cases (6 holdout) labelled an article whose chunks included one of those explanations,
+  which no longer counts as the answer.
+
 Every Stage 3 number above this section used the old targets and stays as recorded; from
-here the strict row is the baseline.
+here the strict row, on the relabelled corpus, is the baseline: **Recall@5 59.1%
+[50.7%], Recall@10 68.1% [58.2%], MRR 0.472 [0.415].**
 
 **What is left is not a weight.** The answer is in the pool for 86–91% of questions and in
 the top 10 for 70%; no ordering of today's signals closes that. The measured defects that
