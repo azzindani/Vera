@@ -219,6 +219,16 @@ Every Stage 3 number above this section used the old targets and stays as record
 here the strict row, on the relabelled corpus, is the baseline: **Recall@5 59.1%
 [50.7%], Recall@10 68.1% [58.2%], MRR 0.472 [0.415].**
 
+**Tried on the strict baseline and dropped (2026-11-15):**
+
+* **Collapsing regional twins.** 156 of 496 top 10s hold a near-identical twin (cosine
+  distance < 0.03), 50 hold three or more. Moving twins below the first copy costs Recall@5
+  58.1 → 57.1% [53.7 → 52.2%] offline (mirror over the harvested pool): the labelled answer is
+  often one of the twins, the copy from the right region. Choosing *which* twin is the region
+  question, measured above as small.
+* **Sibling expansion** (`expand: ["siblings"]`, off by default): Recall@5 59.1 → 55.4%,
+  Recall@10 68.1 → 65.5%, right law wrong article 15.1 → 16.3%, through the engine. Stays off.
+
 **What is left is not a weight.** The answer is in the pool for 86–91% of questions and in
 the top 10 for 70%; no ordering of today's signals closes that. The measured defects that
 plausibly do: explanatory notes (the section above, +1.4 points), regional
