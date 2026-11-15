@@ -77,7 +77,7 @@ def build(a) -> None:
     cur = conn.cursor()
     spec = json.loads(QUERIES.read_text("utf-8"))
     known = {q["query"].strip().lower() for q in spec["queries"]}
-    n_s = sum(1 for q in spec["queries"] if q["id"].startswith("s"))
+    n_s = max(int(q["id"][1:]) for q in spec["queries"] if q["id"].startswith("s"))
     n_o = max(int(q["id"][1:]) for q in spec["queries"] if q["id"].startswith("o"))
     staged, rejected, skips = [], [], []
     for path in sorted(Path(a.drafts).glob("*.json")):

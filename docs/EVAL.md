@@ -138,11 +138,15 @@ v0.1.0 baseline on this set is in `ROADMAP.md` (Stage 0).
 **Top-up · s301-s371 (2026-11-15).** The four short types and `exact_ref` were filled
 the same way, from a fresh sample (seed 20261115) that excludes `PENJELASAN` chunks:
 74 drafted, 3 rejected (2 copied 7–8 words, 1 parent law with no title), 71 merged.
-Counts now: every type ≥ 41, `exact_ref` 63; **675 cases**, 569 answerable (567 resolve).
-The second reading was the drafter's own, against the full clause; no other reader.
+A second round (s372-s408) added 37 to the broad types from the same sample: 41 drafted,
+4 rejected for copying 6–8 words, then reworded and accepted. Counts now: every type ≥ 42,
+`exact_ref` 63; **712 cases**, 606 answerable (**604 resolve**). The second reading was the
+drafter's own, against the full clause; no other reader. (`check.py` numbered new s-cases
+by count, not by the highest id, so round 1 reused `s301`; that case is now `s409`, and the
+counter is fixed.)
 
 **Holdout** is `md5(id) % 100 < 36` for s-cases and `< 30` for new o-cases, decided once
-and never changed. That puts **152 of 567** answerable cases (27%) in the holdout.
+and never changed. That puts **168 of 604** answerable cases (28%) in the holdout.
 
 **`underspecified` scoring:** any returned chunk within cosine distance 0.03 of a labelled
 chunk counts as a hit. The labelled twins are a sample of the regions enacting that

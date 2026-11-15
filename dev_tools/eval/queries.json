@@ -12949,7 +12949,7 @@
       "holdout": false
     },
     {
-      "id": "s301",
+      "id": "s409",
       "type": "exact_ref",
       "difficulty": null,
       "query": "Apa yang dilarang oleh Pasal 19 UU Nomor 5 Tahun 1990 tentang konservasi sumber daya alam hayati?",
@@ -12964,7 +12964,7 @@
         }
       ],
       "provenance": "drafted 2026-11-15 from chunk 251b2ec28bf90dd457f15833ca409b97 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15, second read by the drafter only",
-      "holdout": false
+      "holdout": true
     },
     {
       "id": "s302",
@@ -14478,6 +14478,675 @@
         }
       ],
       "provenance": "drafted 2026-11-15 from chunk d27288a76d1caf4156890ede65515df2 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s372",
+      "type": "exception",
+      "difficulty": null,
+      "query": "Layanan bank apa saja yang dikeluarkan dari kelompok jasa perbankan dalam pengaturan pajak pertambahan nilai atas jasa?",
+      "source": "PERATURAN PEMERINTAH 50/1994 Pasal 13 — jasa perbankan yang dikecualikan",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "50",
+          "year": 1994,
+          "about": "PELAKSANAAN UNDANG-UNDANG NOMOR 8 TAHUN 1983 TENTANG PAJAK PERTAMBAHANNILAI BARANG DAN JASA DAN PAJAK PENJUALAN ATAS BARANG MEWAH SEBAGAIMANA TELAH DIUBAH DENGAN UNDANG-UNDANG NOMOR 11 TAHUN 1994",
+          "article": "Pasal 13"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 6d383b0cca392835e15704cf96373b3d of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s373",
+      "type": "exception",
+      "difficulty": null,
+      "query": "Siapa warga binaan yang tidak berhak atas pembebasan bersyarat, dan berapa bagian masa pidana yang harus dijalani dulu?",
+      "source": "PERATURAN PEMERINTAH 99/2012 Pasal 43 — pembebasan bersyarat narapidana",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "99",
+          "year": 2012,
+          "about": "PERUBAHAN KEDUA ATAS PERATURAN PEMERINTAH NOMOR 32 TAHUN 1999 TENTANG SYARAT DAN TATA CARA PELAKSANAAN HAK WARGA BINAAN PEMASYARAKATAN",
+          "article": "Pasal 43"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 7920fb15ec75510e5704be577056d6c3 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s374",
+      "type": "exception",
+      "difficulty": null,
+      "query": "Kapan kepala inspeksi keuangan tidak lagi boleh membetulkan salah tulis atau salah hitung dalam surat kuasa menyetor sumbangan?",
+      "source": "UNDANG-UNDANG 3/1964 Pasal 12 — batas waktu pembetulan surat kuasa menyetor",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "3",
+          "year": 1964,
+          "about": "PENETAPAN PERATURAN PEMERINTAH PENGGANTI UNDANG-UNDANG NO. 16 TAHUN 1962 TENTANG SUMBANGAN WAJIB ISTIMEWA TAHUN 1962 ATAS BAHAN BANGUNAN (LEMBARAN NEGARA TAHUN 1962 NO. 70), MENJADI UNDANG-UNDANG",
+          "article": "Pasal 12"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk e06ba34ff8120f6b3605564865f9834b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s375",
+      "type": "exception",
+      "difficulty": null,
+      "query": "Bila ZEE kita bertumpukan dengan zona milik negara tetangga dan perjanjian belum ada, garis batas apa yang berlaku?",
+      "source": "UNDANG-UNDANG 5/1983 Pasal 3 — batas ZEE yang tumpang tindih",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "5",
+          "year": 1983,
+          "about": "ZONA EKONOMI EKSKLUSIF INDONESIA",
+          "article": "Pasal 3"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 9552975e79c6bd9b1119110834b4d683 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s376",
+      "type": "exception",
+      "difficulty": null,
+      "query": "Layanan sedot kakus mana yang tidak termasuk objek retribusi daerah?",
+      "source": "UNDANG-UNDANG 28/2009 Pasal 120 — pengecualian retribusi sedot kakus",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "28",
+          "year": 2009,
+          "about": "PAJAK DAERAH DAN RETRIBUSI DAERAH",
+          "article": "Pasal 120"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk fceb060c2561c09860df0c9bf3158933 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s377",
+      "type": "exception",
+      "difficulty": null,
+      "query": "Pajak apa yang boleh terus dipungut desapraja, dengan batasan apa, dan kapan peraturannya mulai berlaku?",
+      "source": "UNDANG-UNDANG 19/1965 Pasal 53 — pungutan pajak oleh desapraja",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "19",
+          "year": 1965,
+          "about": "DESAPRAJA SEBAGAI BENTUK PERALIHAN UNTUK MEMPERCEPAT TERWUJUDNYA DAERAH TINGKAT III DI SELURUH WILAYAH REPUBLIK INDONESIA",
+          "article": "Pasal 53"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk b7f2cdb85ed7697c8727234e54082856 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s378",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Saat menangkap tersangka, apa saja yang boleh digeledah oleh penyelidik dan apa yang boleh digeledah oleh penyidik?",
+      "source": "UNDANG-UNDANG 8/1981 Pasal 37 — penggeledahan saat penangkapan",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "8",
+          "year": 1981,
+          "about": "HUKUM ACARA PIDANA",
+          "article": "Pasal 37"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 38873609ceb7ad0f27fa3da65c0fee55 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s379",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Siapa yang memegang kekuasaan tertinggi atas TNI dan Polri dalam pengelolaan pertahanan keamanan negara?",
+      "source": "UNDANG-UNDANG 20/1982 Pasal 35 — kekuasaan tertinggi atas angkatan bersenjata",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "20",
+          "year": 1982,
+          "about": "KETENTUAN-KETENTUAN POKOK PERTAHANAN KEAMANAN NEGARA REPUBLIK INDONESIA",
+          "article": "Pasal 35"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 2aa9e5170257a970ce439bffe2ea2ff3 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s380",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Bentuk pembinaan apa yang diberikan pemerintah pusat kepada pemerintahan desa dan lembaga kemasyarakatannya?",
+      "source": "PERATURAN PEMERINTAH 72/2005 Pasal 99 — pembinaan pemerintah atas desa",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "72",
+          "year": 2005,
+          "about": "DESA",
+          "article": "Pasal 99"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 22a2b7e5457da34e84c40375d62f1610 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s381",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Kepada siapa bank syariah dan unit usaha syariah wajib melaporkan neraca dan laba rugi tahunannya?",
+      "source": "UNDANG-UNDANG 21/2008 Pasal 35 — laporan keuangan bank syariah",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "21",
+          "year": 2008,
+          "about": "PERBANKAN SYARIAH",
+          "article": "Pasal 35"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 0e0a630d50c14998bec63bd97bd05127 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s382",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Siapa yang berwenang memberi izin tertulis kepada majikan yang ingin mempekerjakan tenaga asing?",
+      "source": "UNDANG-UNDANG 3/1958 Pasal 2 — izin mempekerjakan orang asing",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "3",
+          "year": 1958,
+          "about": "PENEMPATAN TENAGA ASING Presiden Republik Indonesia",
+          "article": "Pasal 2"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 20d1ff0122d45298e4545927d2d5e60f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s383",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Bagaimana jabatan anggota Dewan Jaminan Sosial Nasional yang kosong sebelum masa jabatannya habis diisi?",
+      "source": "PERATURAN PRESIDEN 46/2014 Pasal 32 — penggantian antarwaktu anggota DJSN",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PRESIDEN",
+          "regulation_number": "46",
+          "year": 2014,
+          "about": "SUSUNAN ORGANISASI DAN TATA KERJA, TATA CARA PENGANGKATAN, PENGGANTIAN, DAN PEMBERHENTIAN ANGGOTA DEWAN JAMINAN SOSIAL NASIONAL",
+          "article": "Pasal 32"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 26752c772544c10346924c604d2fce55 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s384",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Bagaimana perolehan kursi partai politik untuk DPRD provinsi dihitung dari suara sah dan siapa yang menetapkannya?",
+      "source": "UNDANG-UNDANG 10/2008 Pasal 211 — penghitungan kursi DPRD provinsi",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "10",
+          "year": 2008,
+          "about": "PEMILIHAN UMUM ANGGOTA DEWAN PERWAKILAN RAKYAT, DEWAN PERWAKILAN DAERAH, DAN DEWAN PERWAKILAN RAKYAT DAERAH",
+          "article": "Pasal 211"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 3c4e063ba79746d2d3e0d5a0bed5ea8f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s385",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Setelah pemekaran, pemerintah mana yang menyusun RTRW Mahakam Ulu dan harus selaras dengan rencana tata ruang apa?",
+      "source": "UNDANG-UNDANG 2/2013 Pasal 6 — RTRW Kabupaten Mahakam Ulu",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "2",
+          "year": 2013,
+          "about": "PEMBENTUKAN KABUPATEN MAHAKAM ULU DI PROVINSI KALIMANTAN TIMUR",
+          "article": "Pasal 6"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 5106e7bc7bd5bb0ad21bd18f49323fd0 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s386",
+      "type": "authority",
+      "difficulty": null,
+      "query": "Siapa yang mengawasi perusahaan industri yang sudah memegang izin usaha industri?",
+      "source": "PERATURAN PEMERINTAH 13/1987 Pasal 12 — pengawasan perusahaan industri",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "13",
+          "year": 1987,
+          "about": "IZIN USAHA INDUSTRI",
+          "article": "Pasal 12"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 4c4b46d441710a297621ebce58b0cf1c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s387",
+      "type": "numeric",
+      "difficulty": null,
+      "query": "Berapa realisasi penerimaan sumber daya alam dalam perhitungan anggaran negara tahun anggaran 2003?",
+      "source": "UNDANG-UNDANG 2/2006 Pasal 3 — realisasi penerimaan SDA 2003",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "2",
+          "year": 2006,
+          "about": "PERHITUNGAN ANGGARAN NEGARA TAHUN ANGGARAN 2003",
+          "article": "Pasal 3"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 1ae18469b4da88439f4b09a0dbf2d176 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s388",
+      "type": "numeric",
+      "difficulty": null,
+      "query": "Sampai jumlah berapa bunga obligasi dan dividen saham pasar modal milik wajib pajak dalam negeri tidak dipotong PPh?",
+      "source": "PERATURAN PEMERINTAH 42/1985 Pasal 13 — batas bebas potong PPh bunga obligasi",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "42",
+          "year": 1985,
+          "about": "PELAKSANAAN UNDANG-UNDANG PAJAK PENGHASILAN 1984",
+          "article": "Pasal 13"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 11bbd59c8c304440afc221cac7cac6a6 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s389",
+      "type": "numeric",
+      "difficulty": null,
+      "query": "Berapa SAL yang dipakai menambal kekurangan anggaran dalam perubahan APBN 2010, dan siapa yang mengauditnya?",
+      "source": "UNDANG-UNDANG 2/2010 Pasal 22E — SAL untuk defisit 2010",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "2",
+          "year": 2010,
+          "about": "PERUBAHAN ATAS UNDANG-UNDANG NOMOR 47 TAHUN 2009 TENTANG ANGGARAN PENDAPATAN DAN BELANJA NEGARA TAHUN ANGGARAN 2010",
+          "article": "Pasal 22E"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 0c9acbbbe5782e72d28b001eb47aceb2 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s390",
+      "type": "numeric",
+      "difficulty": null,
+      "query": "Berapa saldo anggaran lebih pemerintah sampai akhir tahun anggaran 2009 dan berapa SAL akhir 2008?",
+      "source": "UNDANG-UNDANG 7/2010 Pasal 3 — SAL akhir 2009",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "7",
+          "year": 2010,
+          "about": "PERTANGGUNGJAWABAN ATAS PELAKSANAAN ANGGARAN PENDAPATAN DAN BELANJA NEGARA TAHUN ANGGARAN 2009",
+          "article": "Pasal 3"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 038787771419dea5ee80097c0a0375a9 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s391",
+      "type": "numeric",
+      "difficulty": null,
+      "query": "Untuk berapa tahun RPJMD Provinsi Bali disusun gubernur, dan apa saja isinya?",
+      "source": "PERATURAN GUBERNUR 21/2016 Pasal 17 — jangka waktu RPJMD Bali",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "21",
+          "year": 2016,
+          "about": "TATA CARA, MEKANISME DAN TAHAPAN PERENCANAAN PEMBANGUNAN DAERAH",
+          "article": "Pasal 17"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 11417087e31fd0995893e552135326f7 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s392",
+      "type": "procedural",
+      "difficulty": null,
+      "query": "Apa yang terjadi pada sengketa tata usaha negara di PTUN Ujung Pandang ketika PTUN Kupang dan Ambon dibentuk?",
+      "source": "KEPUTUSAN PRESIDEN 16/1993 Pasal 5 — pelimpahan sengketa ke PTUN baru",
+      "answer_articles": [
+        {
+          "regulation_type": "KEPUTUSAN PRESIDEN",
+          "regulation_number": "16",
+          "year": 1993,
+          "about": "PEMBENTUKAN PENGADILAN TATA USAHA NEGARA DI KUPANG, AMBON, DAN JAYAPURA",
+          "article": "Pasal 5"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 27890a597b6a1722080bdccec64e9ae3 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s393",
+      "type": "procedural",
+      "difficulty": null,
+      "query": "Keterangan apa saja yang dimuat dalam pengumuman permintaan pendaftaran merek?",
+      "source": "UNDANG-UNDANG 19/1992 Pasal 21 — isi pengumuman pendaftaran merek",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "19",
+          "year": 1992,
+          "about": "MEREK",
+          "article": "Pasal 21"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 84457de1a3b6f2b4795a30d6842b4493 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s394",
+      "type": "procedural",
+      "difficulty": null,
+      "query": "Bagaimana perpanjangan hak guna usaha untuk kepentingan investasi dapat dibayar sekaligus di awal?",
+      "source": "PERATURAN PEMERINTAH 40/1996 Pasal 11 — perpanjangan HGU untuk penanaman modal",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "40",
+          "year": 1996,
+          "about": "HAKGUNAUSAHA, HAK GUNA BANGUNAN DAN HAK ATAS TANAH",
+          "article": "Pasal 11"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 6b3488dcd4b72477d7b7f0cd540880c2 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s395",
+      "type": "procedural",
+      "difficulty": null,
+      "query": "Persyaratan apa yang paling sedikit harus dipenuhi oleh pengolah limbah radioaktif?",
+      "source": "PERATURAN PEMERINTAH 27/2002 Pasal 24 — syarat pengolah limbah radioaktif",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "27",
+          "year": 2002,
+          "about": "PENGELOLAAN LIMBAH RADIOAKTIF",
+          "article": "Pasal 24"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 0013a4c5ecd4c2b20f2466e9250cb83b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s396",
+      "type": "procedural",
+      "difficulty": null,
+      "query": "Berapa lama inspektur masih dapat membetulkan salah hitung atau membatalkan ketetapan pajak peredaran yang keliru?",
+      "source": "UNDANG-UNDANG 12/1950 Pasal 46 — pembetulan ketetapan pajak peredaran",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "12",
+          "year": 1950,
+          "about": "PAJAK PEREDARAN",
+          "article": "Pasal 46"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 571814b42e4a47bc886711e8f110afe8 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s397",
+      "type": "procedural",
+      "difficulty": null,
+      "query": "Bagaimana pimpinan Badan Legislasi DPR dipilih dan berapa wakil ketuanya?",
+      "source": "UNDANG-UNDANG 42/2014 Pasal 104 — pemilihan pimpinan Badan Legislasi DPR",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "42",
+          "year": 2014,
+          "about": "PERUBAHAN ATAS UNDANG-UNDANG NOMOR 17 TAHUN 2014 TENTANG MAJELIS PERMUSYAWARATAN RAKYAT, DEWAN PERWAKILAN RAKYAT, DEWAN PERWAKILAN DAERAH, DAN DEWAN PERWAKILAN RAKYAT DAERAH",
+          "article": "Pasal 104"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-15 from chunk 31a76331853f92742572aedcae1ae8a9 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s398",
+      "type": "procedural",
+      "difficulty": null,
+      "query": "Jika ketua pengadilan negeri mengabulkan permohonan pemeriksaan perseroan terbatas, berapa ahli yang boleh diangkat?",
+      "source": "UNDANG-UNDANG 1/1995 Pasal 111 — pemeriksaan perseroan oleh ahli",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "1",
+          "year": 1995,
+          "about": "PERSEROAN TERBATAS",
+          "article": "Pasal 111"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 2b2712bb1997f841e3f567752d9f9f3c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s399",
+      "type": "definitional",
+      "difficulty": null,
+      "query": "Apa yang dimaksud investigasi kecelakaan transportasi?",
+      "source": "PERATURAN PEMERINTAH 62/2013 Pasal 1 — investigasi kecelakaan transportasi",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "62",
+          "year": 2013,
+          "about": "INVESTIGASI KECELAKAAN TRANSPORTASI",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 5d0ffd3f108f4c7558e6c9eabec7a2c8 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s400",
+      "type": "definitional",
+      "difficulty": null,
+      "query": "Apa pengertian partai politik dalam aturan bantuan keuangan negara kepada partai politik?",
+      "source": "PERATURAN PEMERINTAH 5/2009 Pasal 1 — partai politik dalam bantuan keuangan",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "5",
+          "year": 2009,
+          "about": "BANTUAN KEUANGAN KEPADA PARTAI POLITIK",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 1abc605ea636fe45448865b8d9648e0e of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s401",
+      "type": "definitional",
+      "difficulty": null,
+      "query": "Apa yang dimaksud kawasan berikat Daerah Industri Pulau Batam dalam perlakuan PPN dan PPnBM?",
+      "source": "PERATURAN PEMERINTAH 39/1998 Pasal 1 — kawasan berikat Batam",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "39",
+          "year": 1998,
+          "about": "PERLAKUAN PAJAK PERTAMBAHAN NILAI DAN PAJAK PENJUALAN ATAS BARANG MEWAH DI KAWASAN BERIKAT (BONDED ZONE) DAERAH INDUSTRI PULAU BATAM",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-15 from chunk 0abb837eec82cb06d21ecf643ed8df83 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s402",
+      "type": "definitional",
+      "difficulty": null,
+      "query": "Apa pengertian badan hukum penerbit SBSN dan untuk apa ia didirikan?",
+      "source": "PERATURAN PEMERINTAH 57/2008 Pasal 1 — perusahaan penerbit SBSN",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "57",
+          "year": 2008,
+          "about": "PENDIRIAN PERUSAHAAN PENERBIT SURAT BERHARGA SYARIAH NEGARA INDONESIA",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 5,
+      "provenance": "drafted 2026-11-15 from chunk 15e12c8cf40a0b602bcb6faaa75b85f1 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s403",
+      "type": "definitional",
+      "difficulty": null,
+      "query": "Apa yang dimaksud dengan Kerangka Kualifikasi Nasional Indonesia?",
+      "source": "PERATURAN PRESIDEN 8/2012 Pasal 1 — KKNI",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PRESIDEN",
+          "regulation_number": "8",
+          "year": 2012,
+          "about": "KERANGKA KUALIFIKASI NASIONAL INDONESIA",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 9b3a0e2206106049f98ea77366089399 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s404",
+      "type": "definitional",
+      "difficulty": null,
+      "query": "Apa yang dimaksud perjalanan dinas bagi pimpinan dan anggota DPR?",
+      "source": "PERATURAN PEMERINTAH 61/1990 Pasal 1 — perjalanan dinas anggota DPR",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "61",
+          "year": 1990,
+          "about": "PERJALANAN DINAS PIMPINAN DAN ANGGOTA DEWAN PERWAKILAN RAKYAT REPUBLIK INDONESIA",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 4f721e0988b0b59c9ecc66115f76d567 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s405",
+      "type": "conceptual",
+      "difficulty": null,
+      "query": "Berapa anggota DPRD yang dapat mengusulkan hak angket terhadap kebijakan kepala daerah, dan bagaimana usulnya disampaikan?",
+      "source": "PERATURAN PEMERINTAH 25/2004 Pasal 24 — usul hak angket DPRD",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "25",
+          "year": 2004,
+          "about": "PEDOMAN PENYUSUNAN PERATURAN TATA TERTIB DEWAN PERWAKILAN RAKYAT DAERAH",
+          "article": "Pasal 24"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 11f3d23ba68ef5e5c0b16bf237f4b168 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s406",
+      "type": "conceptual",
+      "difficulty": null,
+      "query": "Bagaimana partai politik menyeleksi calon anggota DPR dan DPRD yang diajukannya dalam pemilu, dan ke mana nama mereka diserahkan?",
+      "source": "UNDANG-UNDANG 12/2003 Pasal 67 — seleksi calon legislatif oleh partai",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "12",
+          "year": 2003,
+          "about": "PEMILIHAN UMUM ANGGOTA DEWAN PERWAKILAN RAKYAT, DEWANPERWAKILAN DAERAH, DAN DEWAN PERWAKILAN RAKYAT DAERAH",
+          "article": "Pasal 67"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 0fc38e468b84c54f9a954891ad5ee7ad of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": false
+    },
+    {
+      "id": "s407",
+      "type": "conceptual",
+      "difficulty": null,
+      "query": "Kapan direksi Perum Jaminan Kredit Indonesia harus menyerahkan laporan triwulanan kepada dewan pengawas, dan siapa yang menandatanganinya?",
+      "source": "PERATURAN PEMERINTAH 41/2008 Pasal 47 — laporan triwulanan direksi Perum Jamkrindo",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "41",
+          "year": 2008,
+          "about": "PERUSAHAAN UMUM (PERUM) JAMINAN KREDIT INDONESIA",
+          "article": "Pasal 47"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 0636be6f39c59a444ba5e408813c8a99 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
+      "holdout": true
+    },
+    {
+      "id": "s408",
+      "type": "conceptual",
+      "difficulty": null,
+      "query": "Berapa tunjangan bersifat pensiun untuk prajurit dengan masa dinas militer antara 10 dan 20 tahun?",
+      "source": "UNDANG-UNDANG 6/1966 Pasal 3 — tunjangan bersifat pensiun militer",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "6",
+          "year": 1966,
+          "about": "PEMBERIAN PENSIUN, TUNJANGAN BERSIFAT PENSIUN DAN TUNJANGAN KEPADA MILITER SUKARELA",
+          "article": "Pasal 3"
+        }
+      ],
+      "provenance": "drafted 2026-11-15 from chunk 068a9e62181e7457292123e0fa56d444 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15 round 2, second read by the drafter only",
       "holdout": false
     }
   ]
