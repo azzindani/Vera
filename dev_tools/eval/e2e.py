@@ -36,6 +36,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 from run import resolve_targets  # noqa: E402
 
 
+def search_args(query):
+    """EVAL_ARGS='{"profile": "literal"}' adds per-request options (`TOOL_SURFACE.md`) to
+    every search, to score one algorithm or weight vector instead of the server's default."""
+    return {"query": query, **json.loads(os.environ.get("EVAL_ARGS", "{}"))}
+
+
 def same_regulation(row, ref) -> bool:
     """A result chunk's regulation against a label's, by the label's own prefix rule.
 
@@ -111,7 +117,7 @@ class HttpServer:
 
     def search(self, query):
         r = self.call("tools/call", {
-            "name": "search_knowledge", "arguments": {"query": query},
+            "name": "search_knowledge", "arguments": search_args(query),
         })
         return json.loads(r["result"]["content"][0]["text"])
 
@@ -172,7 +178,7 @@ class Server:
 
     def search(self, query):
         r = self.call("tools/call", {
-            "name": "search_knowledge", "arguments": {"query": query},
+            "name": "search_knowledge", "arguments": search_args(query),
         })
         return json.loads(r["result"]["content"][0]["text"])
 
@@ -188,7 +194,8 @@ def main():
         (Path(__file__).parent / "queries.json").read_text(encoding="utf-8")
     )
 
-    n = hit5 = hit10 = refused_real = reg5 = 0
+    n = hit5 = hit10 = hitall = refused_real = reg5 = 0
+    depth = 0   # the deepest reply seen: TOP_K on the server, ✗ known here
     named = [0, 0, 0]   # exact_ref cases: n, article at rank 1, regulation at rank 1
     ood_n = ood_refused = 0
     rr = []
@@ -241,6 +248,11 @@ def main():
         h5 = any(x in targets for x in ids[:5])
         hit5 += 1 if h5 else 0
         hit10 += 1 if any(x in targets for x in ids[:10]) else 0
+        # ! Anywhere in the reply. With TOP_K = CANDIDATE_POOL on the server this is
+        # pool recall, the Stage 2 ceiling: what ranking could reach at best.
+        hall = any(x in targets for x in ids)
+        hitall += 1 if hall else 0
+        depth = max(depth, len(ids))
         rr.append(next((1 / (i + 1) for i, x in enumerate(ids) if x in targets), 0.0))
         regs = regulation_hits(cur, q, ids)
         r5 = any(regs[:5])
@@ -253,7 +265,7 @@ def main():
         t[0] += 1 if h5 else 0
         t[1] += 1
         per_case.append({"id": q["id"], "type": q["type"], "hit5": h5, "reg5": r5,
-                         "rr": rr[-1], "holdout": held,
+                         "rr": rr[-1], "pool": hall, "holdout": held,
                          "near_duplicates": q.get("near_duplicates", 0)})
 
     srv.close()
@@ -274,11 +286,14 @@ def main():
     else:
         print(f"  weights  dense={w('DENSE_WEIGHT', '0.0')} "
               f"sparse={w('SPARSE_WEIGHT', '1.0')} text={w('TEXT_WEIGHT', '1.0')}")
-    print(f"  split {split}")
+    print(f"  split {split}" + (f" · args {os.environ['EVAL_ARGS']}"
+                                 if os.environ.get("EVAL_ARGS") else ""))
     print(f"  n={n}   Recall@5 {100 * hit5 / n:.1f}%   "
           f"Recall@10 {100 * hit10 / n:.1f}%   MRR {sum(rr) / len(rr):.3f}")
     # ! With n this size a Recall@5 difference is only worth reading past its noise:
     # the 95% half-width of a proportion near 60% is ~1.96 * sqrt(.24 / n).
+    if depth > 10:
+        print(f"  answer anywhere in the reply (depth {depth}) {100 * hitall / n:.1f}%")
     print(f"  ±{196 * (0.24 / n) ** 0.5:.1f} points (95%, binomial) on Recall@5")
     print(f"  right regulation in top 5 {100 * reg5 / n:.1f}%   "
           f"(right law, wrong article {100 * (reg5 - hit5) / n:.1f}%)")

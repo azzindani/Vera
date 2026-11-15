@@ -46,6 +46,21 @@ WIDTHS = (1, 2, 3, 5, 8, 12, 20, 40)
 SKIP = {"out_of_domain", "exact_ref"}
 
 
+def query_prefix(cur) -> str:
+    """The corpus's own query instruction, the rule `store::query_prefix` applies.
+    ! Omitting it embeds a query the engine never runs: until 2026-11-15 this script
+    did, and its routing recall described instruction-less queries."""
+    cur.execute("SELECT to_jsonb(m) ->> 'dense_instruction_style',"
+                " to_jsonb(m) ->> 'dense_query_instruction', to_jsonb(m) ->> 'dense_instruction'"
+                " FROM corpus_meta m ORDER BY created_at DESC LIMIT 1")
+    style, q, legacy = cur.fetchone()
+    if style is None:
+        return legacy or ""
+    if style == "prefix":
+        return f"Instruct: {q}\nQuery: " if q else ""
+    raise SystemExit(f"instruction style {style!r} is not one this script reproduces")
+
+
 def embed(text: str) -> list[float]:
     req = urllib.request.Request(
         f"{EP}/embed",
@@ -76,6 +91,7 @@ def main() -> None:
              if c["type"] not in SKIP]
 
     with psycopg.connect(PG) as pg, pg.cursor() as cur:
+        prefix = query_prefix(cur)
         cur.execute("SELECT id, centroid::text, row_count FROM clusters ORDER BY id")
         cl_ids, cents, sizes = [], [], []
         for cid, c, n in cur.fetchall():
@@ -98,7 +114,7 @@ def main() -> None:
                         (sorted(tgt),))
             want = {r[0] for r in cur.fetchall() if r[0] is not None}
 
-            qv = embed(c["query"])
+            qv = embed(prefix + c["query"])
             lit = "[" + ",".join(f"{x:.6g}" for x in qv) + "]"
             nrm = math.sqrt(sum(a * a for a in qv)) or 1.0
             qn = [a / nrm for a in qv]

@@ -66,7 +66,7 @@ Every later stage is measured against this table, on the holdout.
 | named-regulation queries: the named regulation is rank 1 ≥ **95%** | not measured |
 | a revoked regulation never above its revoker: **100%** (kept as a test) | holds |
 | real questions refused: **0%** | 0 / 196 |
-| off-topic refused ≥ **90%**, foreign-law questions included | 76% |
+| off-topic refused ≥ ~~90%~~ **70%**, foreign-law questions included (revised, below) | 76% |
 
 **Status (Stage 1 engine, 604-case set; holdout in brackets).** Measured with
 `dev_tools/eval/e2e.py` against the 1.7M corpus on the `docker-compose.vps.yml` profile.
@@ -77,7 +77,7 @@ Every later stage is measured against this table, on the holdout.
 | named regulation at rank 1 | 54.9% | **100%** (51/51) [15/15] |
 | revoked never above its revoker | holds | holds (`naming_a_revoked_regulation_does_not_reorder_it`) |
 | real questions refused | 0 / 496 | **0 / 496** [0 / 134] |
-| off-topic refused | 62 / 106 (58%) | **74 / 106 (70%)** [13 / 20] — ✗ short of 90% |
+| off-topic refused | 62 / 106 (58%) | **74 / 106 (70%)** [13 / 20] — meets the revised 70% |
 
 Side effects, all types: Recall@5 57.1 → 60.7% [51.5 → 55.2%], MRR 0.425 → 0.481, right
 regulation in top 5 72.4 → 74.2%. No type moved down. BEIR SciFact `literal` 0.7175,
@@ -98,7 +98,7 @@ and foreign questions whose country appears in Indonesian treaty text ("Inggris"
 the language). The centroid gate separates in-domain from off-topic at AUC 0.971, but the
 floor that refuses no real question stops at ~60%; adding BM25 evidence reached 81% on
 train and refused a real question in the holdout, so it was rejected. Separating the rest
-needs a model reading the question, which principle 1 excludes. **Proposed revision:**
+needs a model reading the question, which principle 1 excludes. **Revised (accepted):**
 off-topic refused ≥ 70% at 0 real refused, with the remainder left to the agent, which
 sees the cited evidence and can decline.
 
@@ -110,6 +110,41 @@ Ranking cannot surface what retrieval never found.
 |---|---|
 | answer inside the candidate pool (60) ≥ **92%** | 85.2% (top 50) |
 | routing recall ≥ **93%** | 86.4% |
+
+**Status (604-case set, 2026-11-15).** ✗ Not reached. Nothing in the engine changed: every
+lever that raises the ceiling lowers what ships, and Stage 2 does not trade Recall@10 for a
+ceiling. Measured with `e2e.py` (`TOP_K` raised to the pool so "anywhere in the reply" is
+pool recall) and `dev_tools/eval/pool_loss.py`:
+
+| configuration | pool recall | Recall@5 | Recall@10 |
+|---|---|---|---|
+| shipped: 5 probes, `PER_ARM_K` 20 | 85.9% | 60.7% | 70.4% |
+| 8 probes | 86.1% | 61.5% | 70.6% |
+| 12 probes | 86.3% | 60.7% | 71.2% |
+| `PER_ARM_K` 60, pool 120 | 89.7% | 59.7% | **64.9%** |
+| `PER_ARM_K` 60, 8 probes, pool 120 | **90.9%** | 60.9% | **67.3%** |
+| same, scoring pool cut back to 60 | 79.4% | 61.5% | 67.5% |
+
+* **Routing recall on the larger set is 84.0%** at 5 probes (86.4% was the 191-case set,
+  `routing_levels.py`), 89.2% at 8, 91.7% at 12, 93.5% at 20. Wider probing alone barely
+  moves the pool (+0.4 at 12 probes), because the global sparse arm already covers most
+  routing misses (principle 3 doing its job). `routing_recall.py` embedded queries without
+  the corpus's query instruction, unlike the engine and `routing_levels.py`; fixed.
+* **Where the 70 pool misses are** (`pool_loss.py`, exact_ref excluded):
+  routing 15 · dense rank 21–100 in a probed cluster 20 · sparse rank 21–100 9 ·
+  **no arm within 100: 26** · lost in fusion 0. The 26 cannot be reached by any depth; a
+  third of them name a region the answer's regulation belongs to (Sleman, Kulon Progo,
+  Samarinda …) and no arm uses that.
+* **Why depth costs ranking.** With factors off, deeper arms leave Recall@10 flat; with them
+  on it drops 3–5 points. The weights were fitted on a 20-deep pool, and a deeper pool hands
+  the bounded prior more low-relevance candidates to lift. A deeper pool is only worth it
+  with weights refitted on it — which is Stage 3's work, so the ceiling moves there.
+* **Tried and dropped:** a region-scoped dense arm. The right region's chunks are scattered
+  across clusters, and a scan of Yogyakarta's 110K rows took 30–41 s on cold reads.
+
+**Carried to Stage 3:** refit the factor weights on a 60-deep, 8-probe pool (the current
+`fit_factors.py` predates the dense arm and cannot), then adopt that depth only if
+Recall@10 holds. Region as a ranking signal over the pool, ✗ as an arm.
 
 ## Stage 3 · ranking · the v0.2.0 headline
 

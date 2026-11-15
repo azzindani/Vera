@@ -451,6 +451,17 @@ arm alone to increasing depth:
 python dev_tools/eval/pool_depth.py
 ```
 
+! Superseded for the shipped pool by two measurements through every arm
+(`ROADMAP.md` Stage 2): `e2e.py` with `TOP_K` = `CANDIDATE_POOL` on the server prints
+"answer anywhere in the reply", which is pool recall, and `pool_loss.py` takes that run's
+`EVAL_CASES_OUT` file and names, per miss, where the answer was lost: routing, dense or
+sparse depth, fusion, or no arm at all within 100.
+
+```bash
+EVAL_CASES_OUT=cases.json python dev_tools/eval/e2e.py   # server at TOP_K=60
+python dev_tools/eval/pool_loss.py cases.json
+```
+
 | pool depth | labelled article present | right regulation, wrong clause | regulation absent |
 |---|---|---|---|
 | 5 | 40.0% | 15.0% | 45.0% |
