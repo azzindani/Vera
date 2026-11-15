@@ -72,6 +72,12 @@ pub struct Config {
     /// the regulation corpus `k` 2 and 60 rank within a point of each other through
     /// the engine, so 60 stands (`ROADMAP.md` Stage 3).
     pub rrf_k: f32,
+    /// Fusion weight of the region arm: BM25 within the region the question names
+    /// (`region.rs`, migration 0007). `0.0` turns it off.
+    ///
+    /// ! Runs only when the question names a region the corpus holds and the database
+    /// can filter on it; every other question is served exactly as without it.
+    pub region_weight: f32,
     /// Corpus IDF below which a query term is withheld from the `text` arm.
     ///
     /// ! `0.0` (off) by default, so every published number stays reproducible. At
@@ -171,6 +177,10 @@ impl Default for Config {
             sparse_weight: 1.0,
             text_weight: 0.0,
             rrf_k: DEFAULT_K,
+            // ! Fitted on train, scored once on the holdout (`ROADMAP.md` Stage 3):
+            // 0 / 0.5 / 1 / 2 / 3 / 4 / 6 gave train Recall@5 61.0 / 61.7 / 63.8 /
+            // 65.8 / 65.6 / 65.1 / 64.0%; holdout 54.2 -> 57.7% at 2.
+            region_weight: 2.0,
             text_min_idf: 0.0,
             canary_min_cosine: 0.98,
             // ! Measured on the 50-case set in dev_tools/eval/, not chosen. With
@@ -208,6 +218,14 @@ impl Default for Config {
     }
 }
 
+/// What the arms return, in fusion order: dense, sparse, text, region.
+type Arms = (
+    Vec<store::Scored>,
+    Vec<store::Scored>,
+    Vec<store::Scored>,
+    Vec<store::Scored>,
+);
+
 /// Everything the query path needs, assembled once at startup.
 pub struct Pipeline {
     ops: SearchOps,
@@ -219,6 +237,8 @@ pub struct Pipeline {
     two_level: bool,
     /// Leaf clusters in the database, whichever level is held.
     leaves: usize,
+    /// The regions a question may name · empty when the corpus cannot be searched by one.
+    regions: crate::region::Regions,
     meta: CorpusMeta,
     cfg: Config,
 }
@@ -333,6 +353,26 @@ fn foreign_unanswered(query: &str, bodies: &[String], foreign: &[String]) -> Opt
         .into_iter()
         .find(|f| !text.contains(&format!(" {f} ")))
         .cloned()
+}
+
+/// The regions a question may name, when the region arm is weighted (migration 0007).
+async fn load_regions(
+    ops: &SearchOps,
+    weight: f32,
+) -> Result<crate::region::Regions, StartupError> {
+    if weight <= 0.0 {
+        return Ok(crate::region::Regions::default());
+    }
+    let regions = crate::region::Regions::new(ops.regions().await?);
+    eprintln!(
+        "[vera] region arm · {}",
+        if regions.is_empty() {
+            "off (no corpus_regions or no region field in chunks_bm25, migration 0007)"
+        } else {
+            "on"
+        }
+    );
+    Ok(regions)
 }
 
 fn log_canary(chunk_id: &str, got: f32) {
@@ -674,9 +714,9 @@ impl Pipeline {
 
         let mut cfg = cfg;
         apply_corpus_gate(&mut cfg, meta.gate.as_deref(), leaves)?;
-        let cfg = cfg;
 
         Ok(Self {
+            regions: load_regions(&ops, cfg.region_weight).await?,
             ops,
             provider,
             vectorizer,
@@ -832,27 +872,33 @@ impl Pipeline {
     fn fuse(
         &self,
         mode: contract::Mode,
-        dense_ids: &[String],
-        sparse_ids: &[String],
-        text_ids: &[String],
+        [dense, sparse, text, region]: [&[store::Scored]; 4],
     ) -> Vec<engine::Fused> {
         let (w_dense, w_sparse, w_text) = self.arm_weights(mode);
+        let ids = |arm: &[store::Scored]| arm.iter().map(|s| s.id.clone()).collect::<Vec<_>>();
+        let (dense_ids, sparse_ids, text_ids, region_ids) =
+            (ids(dense), ids(sparse), ids(text), ids(region));
         reciprocal_rank_fusion(
             &[
                 Arm {
                     name: "dense",
-                    ids: dense_ids,
+                    ids: &dense_ids,
                     weight: w_dense,
                 },
                 Arm {
                     name: "sparse",
-                    ids: sparse_ids,
+                    ids: &sparse_ids,
                     weight: w_sparse,
                 },
                 Arm {
                     name: "text",
-                    ids: text_ids,
+                    ids: &text_ids,
                     weight: w_text,
+                },
+                Arm {
+                    name: "region",
+                    ids: &region_ids,
+                    weight: self.cfg.region_weight,
                 },
             ],
             self.cfg.rrf_k,
@@ -891,9 +937,8 @@ impl Pipeline {
             self.leaves
         ));
 
-        let weights = self.arm_weights(applied.mode);
-        let (dense, sparse, text) = self
-            .arms(query, &qvec, &probed, weights, &mut progress)
+        let (dense, sparse, text, region) = self
+            .arms(query, &qvec, &probed, applied.mode, &mut progress)
             .await?;
 
         let exact_matches = self.exact_arm(query, &qvec, &mut progress).await?;
@@ -906,11 +951,7 @@ impl Pipeline {
             return Ok(refused);
         }
 
-        let dense_ids: Vec<String> = dense.iter().map(|s| s.id.clone()).collect();
-        let sparse_ids: Vec<String> = sparse.iter().map(|s| s.id.clone()).collect();
-        let text_ids: Vec<String> = text.iter().map(|s| s.id.clone()).collect();
-
-        let fused = self.fuse(applied.mode, &dense_ids, &sparse_ids, &text_ids);
+        let fused = self.fuse(applied.mode, [&dense, &sparse, &text, &region]);
         // ! The pool, ✗ the answer. Cutting to `top_k` here is what made the
         // metadata fetch below useless for ranking: a candidate at rank 15
         // carrying the governing law could never be promoted, because nothing
@@ -1043,15 +1084,18 @@ impl Pipeline {
         query: &str,
         qvec: &[f32],
         probed: &[(i32, f32)],
-        (w_dense, _w_sparse, w_text): (f32, f32, f32),
+        mode: contract::Mode,
         progress: &mut Vec<String>,
-    ) -> Result<(Vec<store::Scored>, Vec<store::Scored>, Vec<store::Scored>), PipelineError> {
+    ) -> Result<Arms, PipelineError> {
+        let (w_dense, _w_sparse, w_text) = self.arm_weights(mode);
+        let scope = self.region_scope(query, mode);
+        let scope = scope.as_ref();
         let sparse_lit = sparse_literal(&self.vectorizer.query(query), self.vectorizer.dim());
         // ! Pruned for the text arm only. The sparse arm's query vector is built
         // from the vocabulary, and `pg_search` does not get slower with fewer terms.
         let text_query = self.vectorizer.prune(query, self.cfg.text_min_idf);
         let sparse_k = self.cfg.per_arm_k;
-        let (dense, sparse, text) = tokio::try_join!(
+        let (dense, sparse, text, region) = tokio::try_join!(
             async {
                 if w_dense > 0.0 {
                     self.dense_arm(qvec, probed).await
@@ -1075,6 +1119,7 @@ impl Pipeline {
                     Ok(Vec::new())
                 }
             },
+            self.region_arm(scope),
         )?;
         let shown = |w: f32, n: usize| {
             if w > 0.0 {
@@ -1086,7 +1131,43 @@ impl Pipeline {
         progress.push(format!("dense: {}", shown(w_dense, dense.len())));
         progress.push(format!("sparse: {} candidates", sparse.len()));
         progress.push(format!("text: {}", shown(w_text, text.len())));
-        Ok((dense, sparse, text))
+        if let Some(s) = scope {
+            progress.push(format!(
+                "region: {} candidates within {}",
+                region.len(),
+                s.bodies.join(", ")
+            ));
+        }
+        Ok((dense, sparse, text, region))
+    }
+
+    /// The region the question names, when the region arm can run for it.
+    ///
+    /// ! Lexical, so not in `semantic` mode, and never when the arm is weighted 0
+    /// or the corpus has no regions: then no question is scoped and none changes.
+    fn region_scope(&self, query: &str, mode: contract::Mode) -> Option<crate::region::Scope> {
+        if self.cfg.region_weight <= 0.0 || matches!(mode, contract::Mode::Semantic) {
+            return None;
+        }
+        self.regions.detect(query)
+    }
+
+    /// BM25 within the named region (`store::SearchOps::sparse_in_regions`).
+    ///
+    /// ! Fused as a fourth arm, ✗ a filter on the others. A wrong scope (a national
+    /// law about a region, "pembentukan Kabupaten Pringsewu") then adds candidates
+    /// and removes none, so the global arms still answer it.
+    async fn region_arm(
+        &self,
+        scope: Option<&crate::region::Scope>,
+    ) -> Result<Vec<store::Scored>, PipelineError> {
+        let Some(s) = scope else {
+            return Ok(Vec::new());
+        };
+        self.ops
+            .sparse_in_regions(&s.text, &s.bodies, self.cfg.per_arm_k)
+            .await
+            .map_err(PipelineError::from)
     }
 
     /// Admit siblings into the pool, then rank the whole thing again.

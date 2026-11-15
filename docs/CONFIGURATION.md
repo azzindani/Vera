@@ -115,6 +115,7 @@ safe.
 | `SPARSE_WEIGHT` | `1.0` | |
 | `TEXT_WEIGHT` | `0.0` | the tsvector arm · an arm at weight 0 is **not run** · off since 2026-11-14: 2.1 s of a 3.2 s query at 1.7M rows for one case of 42 in Recall@5 (`HARDWARE.md` §9) · also empties `mode: keyword` down to BM25 alone |
 | `RRF_K` | `60` | the `k` of fusion, `weight / (k + rank)` · read from the environment since 2026-11-15, ✗ compiled in · on the regulation corpus `k` 2 and `k` 60 rank within a point of each other once the currency rule is mirrored (`ROADMAP.md` Stage 3), so 60 stands |
+| `REGION_WEIGHT` | `2.0` | fusion weight of the region arm: BM25 within the region a question names, region words stripped (`crates/mcp/src/region.rs`) · runs only when the question names a region in `corpus_regions` and `chunks_bm25` carries `enacting_body` (migration 0007), otherwise off whatever the weight · `0` turns it off · fitted on train over 0–6 (peak 2), holdout Recall@5 54.2 → 57.7% (`ROADMAP.md` Stage 3) |
 | `TEXT_MIN_IDF` | `0` (off) | corpus IDF below which a query term is withheld from the `text` arm only · `2.0` took that arm alone from 6.2 s to 1.4 s at 5.0M rows (`HARDWARE.md` §8.3), but through the whole engine it cost Recall@5 63.6% -> 59.1% at 355K and saved only 3-6% of latency at 5M (§8.5) · leave it off · never prunes a query to nothing |
 
 ! These are properties of the **corpus**, not of the engine, and a corpus is

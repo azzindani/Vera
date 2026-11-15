@@ -248,6 +248,62 @@ plausibly do: explanatory notes (the section above, +1.4 points), regional
 boilerplate twins (`underspecified` 16–25 of 54),
 and unreviewed labels (`review-001.csv`, 0 of 120). The first is a Ravel re-chunk.
 
+### The region a question names · 2026-11-15 · shipped
+
+"Regional twins" was the wrong diagnosis. Through the engine, 604 cases
+(`dev_tools/eval/twins_diag.py`, `scoped_oracle.py`):
+
+* **Twins cost little directly.** Of 247 top-5 misses, 9 have the answer's own twin (cosine
+  < 0.03, another region's copy) in the top 5. Duplicates fill 62 top-5 slots across 45
+  misses, but only 8 of those misses have the answer at rank 6–10.
+* **Questions naming a region are the gap.** 137 cases name the answer's region (its
+  `enacting_body` appears in the query): 54 hit (39%), against 62% for the rest. In 73 of
+  the 83 misses the named region IS in the top 10, and in 46 the nearest top-5 result is
+  ≥ 0.20 from the answer. The region's name matches all of that region's chunks, and the
+  wrong clause wins.
+* **Not the priors.** With every factor at 0 these cases fall to 42.
+* **Not by deleting the name.** Stripping the region from the query drops the 54 hits to 23.
+* **Searching within the region works.** Oracle, region from the label: a scoped dense+BM25
+  search puts the answer in the top 5 for 29 of 83 misses. Scoped dense costs 2.8 s p50,
+  36 s max (the region's rows are scattered); scoped BM25 with the region words stripped
+  costs 26 ms p50, 92 ms max, with the answer in its top 5 for 37 of 81 detected misses.
+
+**Built:** a fourth arm (`REGION_WEIGHT`, `crates/mcp/src/region.rs`,
+`SearchOps::sparse_in_regions`, `migrations/0007_region_scope.sql`).
+* The region is detected from the question against `corpus_regions`. A one-word name needs
+  a marker before it (*kabupaten*, *kota*, *di* ...), because `BATU` and `PATI` are words.
+  This finds 133 of the 137 cases, with 20 false scopes.
+* BM25 over the region's chunks, with the name removed from the text, is served from
+  `chunks_bm25`, now carrying `enacting_body` as a literal field.
+* The result is fused, ✗ filtered: a wrong scope adds candidates and removes none.
+* Rebuilding the index left recall identical with the arm off (MRR 0.468 → 0.466, ties).
+
+| `REGION_WEIGHT` (train, 436) | 0 | 0.5 | 1 | **2** | 3 | 4 | 6 |
+|---|---|---|---|---|---|---|---|
+| Recall@5 | 61.0% | 61.7% | 63.8% | **65.8%** | 65.6% | 65.1% | 64.0% |
+| MRR | 0.473 | 0.484 | 0.496 | **0.510** | 0.509 | 0.494 | 0.489 |
+
+Chosen on train, scored once on the holdout (`vera.sh e2e rw2`, `rw2_h`):
+
+| engine (604 [168]) | Recall@5 | Recall@10 | MRR | right regulation top 5 |
+|---|---|---|---|---|
+| region arm off | 59.1% [54.2%] | 68.2% [61.9%] | 0.466 [0.449] | 74.8% [71.4%] |
+| **`REGION_WEIGHT` 2** | **63.6%** [**57.7%**] | **72.5%** [**65.5%**] | **0.502** [**0.481**] | **78.6%** [75.0%] |
+
+* **No type moved down**, on train or on the holdout.
+* **Biggest gains (all cases):** sanction 23 → 27, exception 30 → 35, conceptual 26 → 30,
+  definitional 23 → 27.
+* **Unchanged:** off-topic refused 74 of 106, real questions refused 0, and `exact_ref`
+  63 of 63.
+* **Latency,** 60 region-naming questions: p50 556 → 585 ms. Other questions do not run
+  the arm.
+* **BEIR not re-measured.** It is untouched by construction: its corpora have no
+  `corpus_regions`, so the arm stays off.
+
+The holdout gain (+3.5) is inside its ±7.4 interval; it is the train sweep's shape and
+the per-type sign that carry it, and the holdout agrees in direction on every type.
+**This is the baseline from here** (`vera.sh e2e rw2`).
+
 ## Guardrails · every change, every stage
 
 * The holdout does not get worse beyond its confidence interval, overall or for any type.

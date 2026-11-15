@@ -60,6 +60,8 @@ LAYER 3  per-cluster scan → load CLUSTER_BATCH (default 1), flat halfvec scan,
                           ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM, off
                             by default: an arm at weight 0 is not run)
                           ⊕ global exact-identifier path (routing bypassed)
+                          ⊕ region arm: BM25 within the region a question names
+                            (migration 0007)  [built]
                           → RRF over RANKS → candidate pool
 SCORING  multi-factor     → relevance floor, then authority / structural / topical,
                             the prior bounded inside the pool's own spread  [built]

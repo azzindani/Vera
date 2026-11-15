@@ -13,6 +13,7 @@ mod http;
 mod identifier;
 mod pipeline;
 mod protocol;
+mod region;
 mod tools;
 mod vocabulary;
 
@@ -263,6 +264,7 @@ impl Settings {
                 sparse_weight: parsed("SPARSE_WEIGHT", "number", d.sparse_weight)?,
                 text_weight: parsed("TEXT_WEIGHT", "number", d.text_weight)?,
                 rrf_k: parsed("RRF_K", "number", d.rrf_k)?,
+                region_weight: parsed("REGION_WEIGHT", "number", d.region_weight)?,
                 text_min_idf: parsed("TEXT_MIN_IDF", "number", d.text_min_idf)?,
                 // ! Loosening the canary is a deliberate, visible act. There is
                 // no code path that quietly skips it.
@@ -370,6 +372,14 @@ impl Settings {
                 key: "RRF_K",
                 value: self.pipeline.rrf_k.to_string(),
                 kind: "positive number",
+            });
+        }
+        // ! Negative would push the named region's chunks DOWN; NaN fuses nothing.
+        if !(self.pipeline.region_weight.is_finite() && self.pipeline.region_weight >= 0.0) {
+            return Err(ConfigError::Invalid {
+                key: "REGION_WEIGHT",
+                value: self.pipeline.region_weight.to_string(),
+                kind: "non-negative number",
             });
         }
         // ! All three weights at zero fuses nothing and returns nothing, which
@@ -991,6 +1001,19 @@ mod tests {
             let e = s.validate().unwrap_err();
             assert!(e.to_string().contains("RRF_K"), "{e}");
         }
+    }
+
+    #[test]
+    fn a_region_weight_that_cannot_fuse_is_refused() {
+        for w in [-0.5, f32::NAN, f32::INFINITY] {
+            let mut s = settings();
+            s.pipeline.region_weight = w;
+            let e = s.validate().unwrap_err();
+            assert!(e.to_string().contains("REGION_WEIGHT"), "{e}");
+        }
+        let mut s = settings();
+        s.pipeline.region_weight = 0.0;
+        assert!(s.validate().is_ok());
     }
 
     #[test]

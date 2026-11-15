@@ -86,6 +86,12 @@ unusable: `PERATURAN BUPATI` with `enacting_body = 'MA'` (10,395 rows),
 (5,644). Those are extraction artefacts, not enacting bodies. A weighted term
 over them would be noise wearing a coefficient.
 
+! **Still no authority term, but since 2026-11-15 the column scopes retrieval.** The
+region arm (`REGION_WEIGHT`, migration 0007) searches within the region a question
+names. That uses the column as a filter on real place names (`corpus_regions` drops the
+two-letter artefacts and generic words like `KABUPATEN`), ✗ as a weight, and it is fused
+as an arm before scoring, so nothing in this formula changed (`ROADMAP.md` Stage 3).
+
 ### structural
 
 Vera returns `LAMPIRAN / LAMPIRAN` hits above `Pasal` hits today. An annex is
