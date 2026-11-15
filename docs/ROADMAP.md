@@ -392,6 +392,11 @@ the pool with the right law in 45, and the wrong law entirely in 24.
   law's chunks about as well as the question's vector does.
 * **Phrase evidence**, adjacent question words found adjacent in the text
   (`phrase_sim.py`): hurts above a weight of 0.25 and loses on the holdout at 0.25.
+* **Evidence for the whole regulation** (`doc_support_sim.py`): a chunk lifted by the
+  rest of its law's pool scores (sum), by how many chunks the law has in the pool
+  (count), or by its law's best chunk (max). Every form loses: sum and count lose more
+  than twice what they win on train, and max at best 23 wins against 26 losses. A law
+  with many matching chunks is usually a long law, ✗ the right one.
 * **The older version of the same rule.** Only 8 of 175 misses had the answer's text,
   verbatim, in an earlier regulation the engine ranked instead.
 
