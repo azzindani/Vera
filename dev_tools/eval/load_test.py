@@ -3,9 +3,12 @@
     python dev_tools/eval/load_test.py <label> <clients> <requests> [seed]
     python dev_tools/eval/load_test.py pinned-355K 4 48
 
-Spreads <requests> `search_knowledge` calls over <clients> workers (the eval set's 50 queries cycle, shuffled by
-`seed`) and prints served / refused / error counts, wall time, throughput, latency percentiles of the SERVED
+Spreads <requests> `search_knowledge` calls over <clients> workers (the eval set's FIRST <requests> questions,
+cycling past its end; `seed` only reorders them) and prints served / refused / error counts, wall time, throughput, latency percentiles of the SERVED
 requests, and peak CPU% and memory of every container sampled with `docker stats` while it ran.
+
+! Every run sends the same questions, so with the embedder's `QUERY_CACHE` on, every run after the first measures
+cache hits. Start the embedder with `QUERY_CACHE=0` to measure what a new question costs.
 
 ! The default URL is 127.0.0.1, ✗ localhost. On Windows, Python resolving `localhost` costs ~2 s per request
 (IPv6 attempt first, then fallback), which is more than the whole server-side query. The first 355K numbers taken

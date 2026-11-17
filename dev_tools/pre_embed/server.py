@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import copy
+import functools
 import os
 import sys
 import threading
@@ -166,11 +167,31 @@ def embed(texts: list[str]) -> list[list[float]]:
 
 
 def _embed(texts: list[str]) -> list[list[float]]:
-    if PREFIX_CACHE and len(texts) == 1:
+    if len(texts) == 1:
+        return [list(_single(texts[0]))]
+    return _embed_batch(texts)
+
+
+def _single_uncached(text: str) -> tuple[float, ...]:
+    if PREFIX_CACHE:
         # ! Unlocked by default. Each request copies the cache before extending it, so
         # the shared one is never written after it is built; two requests learning at
         # once only waste a pass.
-        return [_embed_one(texts[0])]
+        return tuple(_embed_one(text))
+    return tuple(_embed_batch([text])[0])
+
+
+# QUERY_CACHE: the last N single texts and their vectors, least recently used out. Exact
+# (the vector is a function of the text) and bounded (N x 1024 floats, ~8 MB at the
+# default as Python floats). An agent that retries or rephrases back to an earlier
+# question pays for the engine and the database, ✗ for the model. 0 turns it off.
+QUERY_CACHE = int(os.environ.get("QUERY_CACHE", "1024"))
+if QUERY_CACHE < 0:
+    sys.exit(f"QUERY_CACHE={QUERY_CACHE} · a cache cannot hold fewer than 0 entries")
+_single = functools.lru_cache(maxsize=QUERY_CACHE)(_single_uncached)
+
+
+def _embed_batch(texts: list[str]) -> list[list[float]]:
     if APPEND_TOKEN_ID is None:
         batch = tok(texts, padding=True, truncation=True, max_length=MAX_TOKENS,
                     return_tensors="pt")

@@ -412,12 +412,12 @@ target box. Measured on 1.7M, the whole stack pinned to two cores by
 `docker-compose.vps.yml`, through the deployed HTTP server with
 `dev_tools/eval/load_test.py` (warm; cold not re-measured).
 
-| target | v0.2.0 | now · 2026-11-17 | 2026-11-15 | v0.1.0 · `HARDWARE.md` §9.2 |
+| target | v0.2.0 | now · 2026-11-17, cache misses | 2026-11-15 | v0.1.0 · `HARDWARE.md` §9.2 |
 |---|---|---|---|---|
-| warm p50 / p95, 1 client | **≤ 350 / 500 ms** | 321–328 / 390–518 ms ✓ p50 | 480–552 / 603–864 ms | 430 / 569 ms |
-| cold p50 / p95 | **≤ 600 / 900 ms** | not re-measured | not re-measured | 556 / 833 ms |
-| throughput at 4 clients | **≥ 4 q/s, p50 ≤ 1 s** | 3.82–3.84 q/s, p50 1,007–1,019 ms | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
-| CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.5 core-s** | 0.52 core-s | 0.81 core-s | 0.73 core-s |
+| warm p50 / p95, 1 client | **≤ 350 / 500 ms** | 321–349 / 390–518 ms ✓ p50 | 480–552 / 603–864 ms | 430 / 569 ms |
+| cold p50 / p95 | **≤ 600 / 900 ms** | 492 / 875 ms ✓ | not re-measured | 556 / 833 ms |
+| throughput at 4 clients | **≥ 4 q/s, p50 ≤ 1 s** | 3.67–3.84 q/s, p50 1,007–1,068 ms | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
+| CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.5 core-s** | 0.52–0.54 core-s | 0.81 core-s | 0.73 core-s |
 | 8 clients | **≤ 5% refused, 0 errors** | 0 of 64 refused, 0 errors ✓ | 2 of 64 refused, 0 errors | 3 of 64 |
 | embedder resident | **≤ 1.5 GB** | 2.29–2.38 GB | 2.7 GB | 2.0 GB |
 | engine resident at 1.7M | **≤ 64 MB** | 22–24 MB ✓ | 24 MB ✓ | 30 MB |
@@ -470,6 +470,25 @@ the canary's 0.98: the MLP's gate and up projections alone give cosine 0.91 (med
 attention's q/k/v 0.98, everything 0.58. Qwen3's activations carry outlier channels that
 per-tensor activation scales cannot hold. Measured with `dev_tools/pre_embed/bench_quant.py` over 30 questions
 in an unconstrained container on two cores (the prefix: `bench_prefix.py`).
+
+**Later the same day.**
+
+* **Cold** (VM page cache dropped, Postgres restarted, then `load_test.py cold-1 1 50 5`,
+  the `HARDWARE.md` §9 procedure): p50 492 ms, p95 875 ms, inside the target.
+* **Threads.** `TORCH_THREADS` 1 / 2 / 3: 1 client p50 520 / 329 / 422 ms, 4 clients 3.77 /
+  3.79 / 3.59 q/s. Two, one per core, stays.
+* **Where a query's CPU goes** at 4 clients, the two cores saturated: the embedder about
+  0.45 core-s, Postgres about 0.06, the engine about 0.01. The CPU target is a 5% cut,
+  and only the embedder holds 5%.
+* **`QUERY_CACHE`, on (1,024 texts, least recently used out).** The vector is a function of
+  the text, so a repeated question skips the model. Measured on the same 40 questions run
+  twice: 1 client p50 **88 ms** on a hit; 4 clients 28.7 q/s. It moves none of the targets
+  above, which are measured on misses (`QUERY_CACHE=0`), and it lives in the embedder, so
+  the engine stays stateless. ! `load_test.py` always sends the eval set's first N
+  questions, the seed only reorders them: with the cache on, every run after the first is
+  all hits. Measure misses with `QUERY_CACHE=0`.
+* **The run-to-run spread is real.** The same configuration read 321–331 ms p50 and
+  3.82–3.86 q/s one hour, 341–349 ms and 3.67–3.68 q/s another. The table gives both ends.
 
 **What is left.** The embedder computes at about 40% of the two cores' fp32 peak (≈ 46
 GFLOP per 52-token question at 477 ms), so plain fp32 has little more to give. The
