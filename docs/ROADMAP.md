@@ -487,10 +487,17 @@ in an unconstrained container on two cores (the prefix: `bench_prefix.py`).
   the engine stays stateless. ! `load_test.py` always sends the eval set's first N
   questions, the seed only reorders them: with the cache on, every run after the first is
   all hits. Measure misses with `QUERY_CACHE=0`.
+* **Batching concurrent questions, dropped.** One pass over several questions, their
+  tokens right-padded after the shared prefix (exact: the model is causal, a real token
+  never attends to a pad after it; cosine 1.000000). Per question 309 / 280 / 282 / 253 ms
+  at a batch of 1 / 2 / 4 / 8 (`dev_tools/pre_embed/bench_batch.py`, two cores). The pass
+  is compute-bound, so sharing the weights' reads saves 7% at four, and a batcher needs
+  the single worker that `SERIAL` showed costs 14%.
 * **The run-to-run spread is real.** The same configuration read 321–331 ms p50 and
   3.82–3.86 q/s one hour, 341–349 ms and 3.67–3.68 q/s another. The table gives both ends.
 
-**What is left.** The embedder computes at about 40% of the two cores' fp32 peak (≈ 46
+**What is left.** Every exact lever found is now in: the prefix, the narrow table, the
+cache. The embedder computes at about 40% of the two cores' fp32 peak (≈ 46
 GFLOP per 52-token question at 477 ms), so plain fp32 has little more to give. The
 remaining targets, ≥ 4 q/s and ≤ 1.5 GB resident, need fewer FLOPs or fewer bytes per
 weight, and every way found so far to get them changes the vector space. That would be a
