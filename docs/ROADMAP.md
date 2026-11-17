@@ -419,7 +419,7 @@ target box. Measured on 1.7M, the whole stack pinned to two cores by
 | throughput at 4 clients | **≥ 4 q/s, p50 ≤ 1 s** | 3.67–3.84 q/s, p50 1,007–1,068 ms | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
 | CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.5 core-s** | 0.52–0.54 core-s | 0.81 core-s | 0.73 core-s |
 | 8 clients | **≤ 5% refused, 0 errors** | 0 of 64 refused, 0 errors ✓ | 2 of 64 refused, 0 errors | 3 of 64 |
-| embedder resident | **≤ 1.5 GB** | 2.29–2.38 GB | 2.7 GB | 2.0 GB |
+| embedder resident | ✗ not a target (below) | 2.29–2.38 GB | 2.7 GB | 2.0 GB |
 | engine resident at 1.7M | **≤ 64 MB** | 22–24 MB ✓ | 24 MB ✓ | 30 MB |
 | what an accuracy change may cost | **≤ +10% warm p50** | definitions rule: none measurable | region arm: none measurable | — |
 
@@ -499,9 +499,14 @@ in an unconstrained container on two cores (the prefix: `bench_prefix.py`).
 **What is left.** Every exact lever found is now in: the prefix, the narrow table, the
 cache. The embedder computes at about 40% of the two cores' fp32 peak (≈ 46
 GFLOP per 52-token question at 477 ms), so plain fp32 has little more to give. The
-remaining targets, ≥ 4 q/s and ≤ 1.5 GB resident, need fewer FLOPs or fewer bytes per
-weight, and every way found so far to get them changes the vector space. That would be a
-re-embedding of the corpus, ✗ a server change.
+remaining targets, ≥ 4 q/s and ≤ 0.5 core-s, need fewer FLOPs per question, and every
+way found so far to get them changes the vector space. That would be a re-embedding of the
+corpus, ✗ a server change.
+
+**Decided 2026-11-17: accuracy over size.** The embedder memory target (≤ 1.5 GB) is
+removed. Meeting it would take narrower weights (a quantised or smaller model, and a
+re-embedded corpus), and what that costs in recall is unmeasured; the model and its float32
+compute stay. The embedder's resident size is still reported, ✗ held to a number.
 
 ## Guardrails · every change, every stage
 
