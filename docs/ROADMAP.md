@@ -397,6 +397,12 @@ the pool with the right law in 45, and the wrong law entirely in 24.
   (count), or by its law's best chunk (max). Every form loses: sum and count lose more
   than twice what they win on train, and max at best 23 wins against 26 losses. A law
   with many matching chunks is usually a long law, ✗ the right one.
+* **Deeper arms, again** (2026-11-17, with the region arm and the in-regulation ordering
+  on; `vera.sh e2e k30`, `k40`, `k40p8`, all 604). Against 67.2% / 75.8% / 0.528 shipped:
+  `PER_ARM_K` 30, pool 90: 65.6% / 74.3% / 0.521; 40, pool 120: 65.2% / 73.5% / 0.523; 40,
+  pool 120, 8 probes: 66.2% / 74.5% / 0.524, and `exact_ref` 62/63. The ordering rules do
+  not change the Stage 2 finding: a deeper pool hands the prior more low-relevance
+  candidates to lift, and loses more than it finds.
 * **The older version of the same rule.** Only 8 of 175 misses had the answer's text,
   verbatim, in an earlier regulation the engine ranked instead.
 
