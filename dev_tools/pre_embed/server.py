@@ -17,13 +17,15 @@ experiment rather than a dangerous one.
 from __future__ import annotations
 
 import json
+import copy
 import os
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import torch
 import torch.nn.functional as F
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, DynamicCache
 
 MODEL_DIR = os.environ.get("MODEL_DIR", "/data/model")
 DTYPE = os.environ.get("DTYPE", "float32")
@@ -62,8 +64,113 @@ if QUANTIZE:
     )
     print("quantized · qint8 over nn.Linear", file=sys.stderr, flush=True)
 
+# ! Three changes that leave every vector as it was (`ROADMAP.md` Stage 4). Each has a
+# switch so it can be measured against its absence; none is a different space.
+#
+# NARROW_EMBEDDINGS: the token table (151,669 x 1024, a quarter of the weights) is only
+# ever looked up, never multiplied. Stored as bfloat16 and widened per looked-up row, it
+# is EXACT when the checkpoint itself is bfloat16: widening bf16 -> fp32 is lossless,
+# so the rows are bit-identical to the fp32 table from_pretrained built. ~310 MB.
+NARROW_EMBEDDINGS = os.environ.get("NARROW_EMBEDDINGS", "1") == "1"
+# PREFIX_CACHE: every query opens with the same instruction. The model is causal, so the
+# instruction's keys and values do not depend on the question; computed once, they are
+# reused, and only the question's tokens run. Measured cosine against the full pass:
+# 1.000000 over 40 eval questions, 17 of a median 52 tokens saved; the startup canary
+# reproduces at 1.00000.
+PREFIX_CACHE = os.environ.get("PREFIX_CACHE", "1") == "1"
+# SERIAL: one forward pass at a time. Off, because measured it loses: 4 clients on 2
+# cores serve 2.47 q/s serialised against 2.85 in parallel (ROADMAP.md Stage 4). The
+# passes overlap their tokenisation, Python and memory stalls with each other's math.
+SERIAL = os.environ.get("SERIAL", "0") == "1"
+# A shared opening shorter than this is not worth a cache.
+MIN_PREFIX = 8
+
+if NARROW_EMBEDDINGS and DTYPE == "float32" and not QUANTIZE:
+    # ! The checkpoint's own config, ✗ `model.config`: loading with a torch_dtype may
+    # rewrite the latter to the dtype it was loaded AS.
+    with open(os.path.join(MODEL_DIR, "config.json"), encoding="utf-8") as f:
+        stored = str(json.load(f).get("torch_dtype", ""))
+    if stored == "bfloat16":
+        table = model.get_input_embeddings()
+
+        class _Narrow(torch.nn.Module):
+            def __init__(self, weight: torch.Tensor) -> None:
+                super().__init__()
+                self.weight = torch.nn.Parameter(weight.to(torch.bfloat16), requires_grad=False)
+
+            def forward(self, ids: torch.Tensor) -> torch.Tensor:
+                return F.embedding(ids, self.weight).float()
+
+        model.set_input_embeddings(_Narrow(table.weight.detach()))
+        del table
+        print("token table kept as bfloat16, widened per row (lossless: checkpoint is bf16)",
+              file=sys.stderr, flush=True)
+    else:
+        print(f"token table left float32 · checkpoint is {stored or 'unknown'}, "
+              "narrowing would not be lossless", file=sys.stderr, flush=True)
+
+_lock = threading.Lock()
+_prefix: dict = {"ids": None, "cache": None, "misses": 0, "last": None}
+
+
+def _token_ids(text: str) -> list[int]:
+    if APPEND_TOKEN_ID is None:
+        return tok(text, truncation=True, max_length=MAX_TOKENS)["input_ids"]
+    ids = tok(text, truncation=True, max_length=MAX_TOKENS - 1)["input_ids"]
+    return [*ids, APPEND_TOKEN_ID]
+
+
+def _learn_prefix(ids: list[int]) -> None:
+    """Adopt the opening two consecutive requests share, when there is none or the current
+    one has stopped matching. The boundary token is left to the question's side: BPE may
+    merge it with the question's first word."""
+    last, _prefix["last"] = _prefix["last"], ids
+    if last is None or (_prefix["ids"] is not None and _prefix["misses"] < 3):
+        return
+    n = 0
+    while n < min(len(last), len(ids)) and last[n] == ids[n]:
+        n += 1
+    n -= 1
+    if n < MIN_PREFIX:
+        return
+    cache = DynamicCache()
+    with torch.inference_mode():
+        model(input_ids=torch.tensor([ids[:n]]), past_key_values=cache, use_cache=True)
+    _prefix.update(ids=ids[:n], cache=cache, misses=0)
+    print(f"prefix cache · {n} shared opening tokens", file=sys.stderr, flush=True)
+
+
+def _embed_one(text: str) -> list[float]:
+    ids = _token_ids(text)
+    pre = _prefix["ids"]
+    if pre is not None and len(ids) > len(pre) and ids[: len(pre)] == pre:
+        cache = copy.deepcopy(_prefix["cache"])
+        with torch.inference_mode():
+            out = model(input_ids=torch.tensor([ids[len(pre):]]), past_key_values=cache,
+                        use_cache=True).last_hidden_state
+        _prefix["misses"] = 0
+        return F.normalize(out[0, -1].float(), p=2, dim=0).tolist()
+    if pre is not None:
+        _prefix["misses"] += 1
+    with torch.inference_mode():
+        out = model(input_ids=torch.tensor([ids])).last_hidden_state
+    _learn_prefix(ids)
+    return F.normalize(out[0, -1].float(), p=2, dim=0).tolist()
+
 
 def embed(texts: list[str]) -> list[list[float]]:
+    if SERIAL:
+        with _lock:
+            return _embed(texts)
+    return _embed(texts)
+
+
+def _embed(texts: list[str]) -> list[list[float]]:
+    if PREFIX_CACHE and len(texts) == 1:
+        # ! Unlocked by default. Each request copies the cache before extending it, so
+        # the shared one is never written after it is built; two requests learning at
+        # once only waste a pass.
+        return [_embed_one(texts[0])]
     if APPEND_TOKEN_ID is None:
         batch = tok(texts, padding=True, truncation=True, max_length=MAX_TOKENS,
                     return_tensors="pt")

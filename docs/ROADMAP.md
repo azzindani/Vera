@@ -412,16 +412,16 @@ target box. Measured on 1.7M, the whole stack pinned to two cores by
 `docker-compose.vps.yml`, through the deployed HTTP server with
 `dev_tools/eval/load_test.py` (warm; cold not re-measured).
 
-| target | v0.2.0 | now · 2026-11-15 | v0.1.0 · `HARDWARE.md` §9.2 |
-|---|---|---|---|
-| warm p50 / p95, 1 client | **≤ 350 / 500 ms** | 480–552 / 603–864 ms | 430 / 569 ms |
-| cold p50 / p95 | **≤ 600 / 900 ms** | not re-measured | 556 / 833 ms |
-| throughput at 4 clients | **≥ 4 q/s, p50 ≤ 1 s** | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
-| CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.5 core-s** | 0.81 core-s | 0.73 core-s |
-| 8 clients | **≤ 5% refused, 0 errors** | 2 of 64 refused, 0 errors | 3 of 64 |
-| embedder resident | **≤ 1.5 GB** | 2.7 GB | 2.0 GB |
-| engine resident at 1.7M | **≤ 64 MB** | 24 MB ✓ | 30 MB |
-| what an accuracy change may cost | **≤ +10% warm p50** | region arm: none measurable | — |
+| target | v0.2.0 | now · 2026-11-17 | 2026-11-15 | v0.1.0 · `HARDWARE.md` §9.2 |
+|---|---|---|---|---|
+| warm p50 / p95, 1 client | **≤ 350 / 500 ms** | 321–328 / 390–518 ms ✓ p50 | 480–552 / 603–864 ms | 430 / 569 ms |
+| cold p50 / p95 | **≤ 600 / 900 ms** | not re-measured | not re-measured | 556 / 833 ms |
+| throughput at 4 clients | **≥ 4 q/s, p50 ≤ 1 s** | 3.82–3.84 q/s, p50 1,007–1,019 ms | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
+| CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.5 core-s** | 0.52 core-s | 0.81 core-s | 0.73 core-s |
+| 8 clients | **≤ 5% refused, 0 errors** | 0 of 64 refused, 0 errors ✓ | 2 of 64 refused, 0 errors | 3 of 64 |
+| embedder resident | **≤ 1.5 GB** | 2.29–2.38 GB | 2.7 GB | 2.0 GB |
+| engine resident at 1.7M | **≤ 64 MB** | 22–24 MB ✓ | 24 MB ✓ | 30 MB |
+| what an accuracy change may cost | **≤ +10% warm p50** | definitions rule: none measurable | region arm: none measurable | — |
 
 * **Comparing the columns.** "Now" runs the 712-case set, off-topic questions included;
   v0.1.0 ran the 50-case set. Two back-to-back runs here read 552 and 480 ms p50, so the
@@ -438,6 +438,44 @@ target box. Measured on 1.7M, the whole stack pinned to two cores by
     space (principle 2).
 
   Each is measured here before it is claimed.
+
+### The embedder, without moving the space · 2026-11-17 · shipped
+
+Three changes to the reference server (`dev_tools/pre_embed/server.py`), each behind a
+switch, each measured alone through the deployed stack (`load_test.py`, 1 client × 40 and
+4 × 48, seed 3, two cores):
+
+| switch | 1 client p50 | 4 clients | resident | vectors |
+|---|---|---|---|---|
+| none | 445 ms | 2.85 q/s, p50 1,360 ms | 2,583 MB | — |
+| `PREFIX_CACHE` | **331 ms** | **3.86 q/s**, p50 1,021 ms | 2,592 MB | cosine 1.000000 |
+| `SERIAL` | 431 ms | 2.47 q/s, p50 1,613 ms | 2,592 MB | unchanged |
+| `NARROW_EMBEDDINGS` (with the prefix) | 324 ms | — | **2,278 MB** | bit-identical |
+
+* **`PREFIX_CACHE`, on.** Every query opens with the corpus's instruction (17 of a median
+  52 tokens). The model is causal, so the instruction's keys and values do not depend on
+  the question: they are computed once and copied per request, and only the question's
+  tokens run. The server learns the opening from two consecutive requests, so nothing
+  about the instruction is configured twice. Measured cosine against the full pass
+  1.000000 over 40 questions; the engine's startup canary 1.00000.
+* **`NARROW_EMBEDDINGS`, on.** The token table is a quarter of the weights and is only
+  looked up. Stored as bfloat16 and widened per row, it is lossless because the checkpoint
+  itself is bfloat16; the server checks that and leaves the table alone otherwise.
+* **`SERIAL`, off.** One forward pass at a time loses 14% throughput: passes overlap their
+  tokenisation and memory stalls with each other's arithmetic.
+* **Accuracy unchanged** (`vera.sh e2e emb1`): 67.2% / 75.8% / 0.528, gate 74 of 106.
+
+**Dropped: int8.** Dynamic `qint8` over any set of `nn.Linear` layers moves the space below
+the canary's 0.98: the MLP's gate and up projections alone give cosine 0.91 (median),
+attention's q/k/v 0.98, everything 0.58. Qwen3's activations carry outlier channels that
+per-tensor activation scales cannot hold. Measured with `dev_tools/pre_embed/bench_quant.py` over 30 questions
+in an unconstrained container on two cores (the prefix: `bench_prefix.py`).
+
+**What is left.** The embedder computes at about 40% of the two cores' fp32 peak (≈ 46
+GFLOP per 52-token question at 477 ms), so plain fp32 has little more to give. The
+remaining targets, ≥ 4 q/s and ≤ 1.5 GB resident, need fewer FLOPs or fewer bytes per
+weight, and every way found so far to get them changes the vector space. That would be a
+re-embedding of the corpus, ✗ a server change.
 
 ## Guardrails · every change, every stage
 
