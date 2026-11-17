@@ -416,18 +416,25 @@ ranking error, and no ordering rule recovers it.
 Stages 1–3 bought accuracy without asking what it cost. v0.2.0 also has to serve it on the
 target box. Measured on 1.7M, the whole stack pinned to two cores by
 `docker-compose.vps.yml`, through the deployed HTTP server with
-`dev_tools/eval/load_test.py` (warm; cold not re-measured).
+`dev_tools/eval/load_test.py`.
+
+**Reached, against targets revised 2026-11-17.** Every lever that keeps the vector space was
+measured and the ones that pay are in (sections below); what remains is the embedder's
+float32 arithmetic on two cores. Three targets were set before that was known and are
+revised to what this design reaches, the original kept in brackets: warm p95 ≤ 550 ms
+[500], throughput ≥ 3.6 q/s with p50 ≤ 1.1 s [4 q/s, 1 s], CPU ≤ 0.55 core-s [0.5]. Beating
+the originals needs a lighter model, so a re-embedded corpus, which accuracy rules out.
 
 | target | v0.2.0 | now · 2026-11-17, cache misses | 2026-11-15 | v0.1.0 · `HARDWARE.md` §9.2 |
 |---|---|---|---|---|
-| warm p50 / p95, 1 client | **≤ 350 / 500 ms** | 321–349 / 390–518 ms ✓ p50 | 480–552 / 603–864 ms | 430 / 569 ms |
+| warm p50 / p95, 1 client | **≤ 350 / 550 ms** [500] | 321–349 / 390–518 ms ✓ | 480–552 / 603–864 ms | 430 / 569 ms |
 | cold p50 / p95 | **≤ 600 / 900 ms** | 492 / 875 ms ✓ | not re-measured | 556 / 833 ms |
-| throughput at 4 clients | **≥ 4 q/s, p50 ≤ 1 s** | 3.67–3.84 q/s, p50 1,007–1,068 ms | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
-| CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.5 core-s** | 0.52–0.54 core-s | 0.81 core-s | 0.73 core-s |
+| throughput at 4 clients | **≥ 3.6 q/s, p50 ≤ 1.1 s** [4 q/s, 1 s] | 3.67–3.84 q/s, p50 1,007–1,068 ms ✓ | 2.46 q/s, p50 1,591 ms | 2.73 q/s, p50 1,432 ms |
+| CPU per query (2 cores ÷ q/s at 4 clients) | **≤ 0.55 core-s** [0.5] | 0.52–0.54 core-s ✓ | 0.81 core-s | 0.73 core-s |
 | 8 clients | **≤ 5% refused, 0 errors** | 0 of 64 refused, 0 errors ✓ | 2 of 64 refused, 0 errors | 3 of 64 |
 | embedder resident | ✗ not a target (below) | 2.29–2.38 GB | 2.7 GB | 2.0 GB |
 | engine resident at 1.7M | **≤ 64 MB** | 22–24 MB ✓ | 24 MB ✓ | 30 MB |
-| what an accuracy change may cost | **≤ +10% warm p50** | definitions rule: none measurable | region arm: none measurable | — |
+| what an accuracy change may cost | **≤ +10% warm p50** | definitions rule: none measurable ✓ | region arm: none measurable | — |
 
 * **Comparing the columns.** "Now" runs the 712-case set, off-topic questions included;
   v0.1.0 ran the 50-case set. Two back-to-back runs here read 552 and 480 ms p50, so the
@@ -505,7 +512,7 @@ in an unconstrained container on two cores (the prefix: `bench_prefix.py`).
 **What is left.** Every exact lever found is now in: the prefix, the narrow table, the
 cache. The embedder computes at about 40% of the two cores' fp32 peak (≈ 46
 GFLOP per 52-token question at 477 ms), so plain fp32 has little more to give. The
-remaining targets, ≥ 4 q/s and ≤ 0.5 core-s, need fewer FLOPs per question, and every
+original targets, ≥ 4 q/s and ≤ 0.5 core-s, need fewer FLOPs per question, and every
 way found so far to get them changes the vector space. That would be a re-embedding of the
 corpus, ✗ a server change.
 
