@@ -23,3 +23,35 @@ Setelah selesai, simpan sebagai CSV (UTF-8) dan jalankan:
 ```
 python -I dev_tools/eval/draft/review.py import --sheet dev_tools/eval/review/review-001.csv --reviewer "<nama atau peran>"
 ```
+
+## `review-002.csv` · jawaban lain dari mesin
+
+Berisi 211 pertanyaan yang **tidak** dijawab Vera dengan pasal berlabel di lima hasil
+teratas. Setiap baris menampilkan pasal berlabel (`labelled_answer`, `labelled_text`) dan
+satu pasal yang dikembalikan mesin (`engine_answer`, `engine_text`, peringkat
+`engine_rank`). Peraturan Indonesia sering mengulang pasal yang sama di peraturan lain
+(PERDA kabupaten yang berbeda, atau peraturan lama dan penggantinya), sehingga hasil mesin
+bisa saja juga benar.
+
+Kolom `kind`: `MIRIP` berarti teks pasal mesin sangat mirip dengan pasal berlabel
+(`similarity` mendekati 1); `TERATAS` berarti hasil pertama mesin. Baris `MIRIP` ada di atas.
+
+Isi kolom `verdict`:
+
+| verdict | artinya |
+|---|---|
+| `JUGA_BENAR` | pasal dari mesin menjawab pertanyaan sama baiknya dengan pasal berlabel |
+| `SEBAGIAN` | hanya menjawab sebagian |
+| `TIDAK` | tidak menjawab pertanyaan (misalnya daerah atau peraturan yang ditanyakan berbeda) |
+
+Perhatikan bila pertanyaan menyebut daerah, instansi atau peraturan tertentu: pasal yang
+sama dari daerah lain **tidak** menjawabnya. Kolom `candidate_chunk` jangan diubah.
+
+Setelah selesai, simpan sebagai CSV (UTF-8) dan jalankan:
+
+```
+python -I dev_tools/eval/draft/alternatives.py import --dsn "<dsn>" --sheet dev_tools/eval/review/review-002.csv --reviewer "<nama atau peran>"
+```
+
+Label asli tidak diubah. Jawaban `JUGA_BENAR` disimpan terpisah dan hanya dihitung bila
+`EVAL_ALTERNATIVES=1`, sehingga nilai terhadap label asli tetap bisa dilaporkan.

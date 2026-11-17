@@ -193,6 +193,21 @@ def resolve_targets(cur, q):
         # Only a label whose article exists solely as explanation keeps those chunks.
         operative = {i for i, expl in rows if not expl}
         ids |= operative or {i for i, _ in rows}
+    # ! Reviewed alternative answers (`draft/alternatives.py`) count only when asked for.
+    # They come from the engine's own misses, so they can only raise the score: the number
+    # against the original labels is always the one reported first.
+    if os.environ.get("EVAL_ALTERNATIVES") == "1":
+        for alt in q.get("alternatives", []):
+            if "chunk" in alt:
+                ids.add(alt["chunk"])
+                continue
+            cur.execute(
+                "SELECT id FROM chunks WHERE regulation_type=%s AND regulation_number=%s"
+                " AND year=%s AND article=%s AND about=%s AND chapter NOT ILIKE 'PENJELASAN%%'",
+                (alt["regulation_type"], alt["regulation_number"], alt["year"],
+                 alt["article"], alt["about"]),
+            )
+            ids |= {r[0] for r in cur.fetchall()}
     reg = q.get("answer_regulation")
     if reg:
         cur.execute(
