@@ -1,5 +1,93 @@
 # Changelog
 
+## v0.1.1 · 2026-11-18 · ranking inside the regulation, a faster embedder
+
+A point release. The v0.2.0 accuracy targets (`docs/ROADMAP.md` Stage 3) are **not**
+reached, so this is not v0.2.0. The Stage 4 performance targets are reached against
+revised thresholds, with the originals kept in brackets in the roadmap. Same model
+(Qwen3-Embedding-0.6B), same corpus vectors, no re-embed.
+
+### Changed
+
+- **Exact references.** A named article and a named regulation land at rank 1 (the
+  identifier path's hits are now ordered by the corpus's structural ladder). A
+  foreign-jurisdiction gate refuses questions about another country's law
+  (`migrations/0006_gate_foreign.sql`).
+- **Region arm.** BM25 within the region a question names (`migrations/0007`); off for
+  questions that name none.
+- **Ordering inside a regulation,** grouped by `doc_id`:
+  - an explanation never ranks above its own article, and it pulls in that article's
+    operative text;
+  - operative text comes first;
+  - the definitions article goes after the law's other operative text, unless the
+    question asks what something means. The corpus declares this in
+    `scoring_vocabulary.definitions`.
+
+  These are ordering rules, ✗ priors.
+- **"One regulation" is `doc_id`,** ✗ `source_title`: 912 titles are shared by about
+  2,100 regulations.
+- **`RRF_K` is configuration** (default 60), validated at start.
+- **Embedder** (`dev_tools/pre_embed/server.py`), each change behind a switch:
+  - `PREFIX_CACHE` reuses the instruction's keys and values (cosine 1.000000 against the
+    full pass; canary 1.00000);
+  - `NARROW_EMBEDDINGS` keeps the token table bf16, bit-identical because the checkpoint
+    is bf16;
+  - `QUERY_CACHE` is a bounded LRU of query vectors (1024).
+- **Eval.** 604 answerable cases plus 106 off-topic, with a 168-case frozen holdout.
+  Only operative text counts as an answer. Review sheets for domain and alternative
+  answers are in `dev_tools/eval/review/`.
+
+### Measured
+
+Accuracy on the real 1.7M corpus (`vera.sh e2e defs1`, `defs1_h`; `docs/ROADMAP.md`
+Stage 3). The v0.1.0 column is the same engine on the 496-case Stage 0 set:
+
+| | v0.1.0 · all [holdout] | v0.1.1 · 604 [168] |
+|---|---|---|
+| Recall@5 | 57.1% [51.5%] | **67.2%** [**64.9%**] |
+| Recall@10 | 67.9% [61.9%] | **75.8%** [**72.0%**] |
+| MRR | 0.425 [0.388] | **0.528** [**0.519**] |
+| right regulation in top 5 | 72.4% [68.7%] | **78.3%** [**74.4%**] |
+| `exact_ref`: named article at rank 1 | 31.4% | **100%** (63/63) |
+| real questions refused | 0 | 0 |
+| off-topic refused | 62 / 106 | **74 / 106** |
+
+Performance on two pinned cores (`docker-compose.vps.yml`, `load_test.py`, cache misses;
+`docs/ROADMAP.md` Stage 4):
+
+| | v0.1.0 | v0.1.1 |
+|---|---|---|
+| warm p50 / p95, 1 client | 430 / 569 ms | **321–349 / 390–518 ms** |
+| cold p50 / p95 | 556 / 833 ms | **492 / 875 ms** |
+| 4 clients | 2.73 q/s, p50 1,432 ms | **3.67–3.84 q/s**, p50 1,007–1,068 ms |
+| CPU per query | 0.73 core-s | **0.52–0.54 core-s** |
+| 8 clients refused | 3 of 64 | **0 of 64** |
+| engine resident at 1.7M | 30 MB | **22–24 MB** |
+| embedder resident | 2.0 GB | 2.29–2.38 GB |
+
+### Measured and dropped
+
+Each of these is recorded in `docs/ROADMAP.md` with the run that dropped it:
+- refitting fusion and the priors;
+- twin collapse;
+- sibling expansion;
+- regulation-level evidence;
+- deeper arms (k 30 / 40, 8 probes);
+- int8 quantization of the embedder (cosine 0.58–0.98, below the canary);
+- serialized and batched forward passes;
+- a second, instruction-free query embedding.
+
+### Known limits · not proven by this release
+
+- **v0.2.0 accuracy is not reached.** The holdout is short of 70% / 80% / 0.55 and of 85%
+  right-regulation. `underspecified` sits at 44% Recall@5.
+- **The labels are not yet reviewed by a lawyer.** `review-001.csv` and `review-002.csv`
+  are open, and some misses may be equally valid answers.
+- **Scale rows (5.1M–20.6M) were not re-measured** for this release. The v0.1.0 table
+  stands for them.
+- **BEIR was not re-measured.** The new rules act only on article-labelled chunks, so
+  BEIR is untouched by construction.
+
 ## v0.1.0 · 2026-11-14 · the concept, proven
 
 The first tagged release. **Target:** show that a RAG database built by

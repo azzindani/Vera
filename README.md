@@ -25,7 +25,26 @@ returns nothing rather than guessing.
 - Not an assistant. It never calls an LLM, never summarizes, never reranks with a model.
 - Not a generative system. It surfaces what exists and returns the receipt.
 
-## Current state · v0.1.0
+## Current state · v0.1.1
+
+On the real 1.7M corpus, two pinned cores (`docker-compose.vps.yml`), measured
+2026-11-15 to 2026-11-17. Details are in [CHANGELOG.md](CHANGELOG.md) and
+`docs/ROADMAP.md`.
+
+| | 604 cases [168 holdout] |
+|---|---|
+| Recall@5 / @10 / MRR | **67.2% / 75.8% / 0.528** [64.9% / 72.0% / 0.519] |
+| right regulation in top 5 | **78.3%** [74.4%] |
+| named article at rank 1 | **63 / 63** |
+| real questions refused · off-topic refused | **0** · **74 / 106** |
+| warm p50 / p95, 1 client | **321–349 / 390–518 ms** |
+| 4 clients | **3.67–3.84 q/s** |
+| engine resident | **22–24 MB** |
+
+The v0.2.0 accuracy targets (70% / 80% / 0.55) are not reached. The scale table below is
+from v0.1.0 and was not re-measured.
+
+### Scale · v0.1.0
 
 Measured 2026-11-14 on a Ravel-prepared corpus of Indonesian regulations, the whole stack
 pinned to two cores and 8 GB (`docker-compose.vps.yml`). Rows above 1.7M are replicas of
@@ -38,7 +57,7 @@ the real corpus: their latency and memory are real, their recall is not measured
 | throughput, 4 clients | 2.7 q/s | 2.7 q/s | 2.7 q/s | 2.3 q/s |
 | engine memory | 30 MB | 56 MB | 105 MB | **15 MB** (two-level routing) |
 
-Quality on the real 1.7M corpus, 196 labelled questions (`docs/EVAL.md`):
+Quality at v0.1.0 on the real 1.7M corpus, 196 labelled questions (`docs/EVAL.md`):
 
 | | |
 |---|---|
