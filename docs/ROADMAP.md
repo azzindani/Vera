@@ -418,6 +418,58 @@ result answers the question as well as the label does: the same clause in a sist
 regulation, or the same text in an older one. That share is a property of the labels, ✗ a
 ranking error, and no ordering rule recovers it.
 
+### The cut-off an agent reads · 2026-11-18 · measured, no target changed
+
+The targets above count the top 5 and the top 10. A mid-size or frontier model can read
+more than that. This section measures how much more the same engine delivers at deeper
+cut-offs. Nothing was re-run: `dev_tools/eval/depth_recall.py` reads the v0.1.1 engine's
+own 60-deep pools (`article_sim.py`, `TOP_K` = `CANDIDATE_POOL`), which reproduce `e2e
+defs1` exactly at 5 and 10.
+
+| answer within the top… | 5 | 10 | 15 | 20 | 25 | 30 | 40 | 60, the whole pool |
+|---|---|---|---|---|---|---|---|---|
+| all 604 | 67.2% | 75.8% | 79.5% | 81.8% | **85.3%** | 86.6% | 87.9% | **88.6%** |
+| holdout 168 | 64.9% | 72.0% | 75.0% | 76.8% | **82.1%** | 84.5% | 86.3% | **86.9%** |
+
+MRR over the whole pool is 0.535 [0.527]. `e2e.py` reads 0.528 [0.519] because its reply
+stops at 10.
+
+* **The ceiling is retrieval, ✗ ranking.** 69 answers [22 on the holdout] are never in the
+  pool, so no cut-off and no ordering rule reaches them. By type:
+  * underspecified 14 · hard_negative 12 · procedural 10;
+  * definitional 6 · obligation 5 · sanction 5;
+  * numeric 4 · conceptual 4 · multi_tier 4;
+  * authority 3 · exception 2.
+* **Handing over 25 results** clears 80% at 25 on the holdout (82.1%). That is a different
+  contract: the agent reads 25 cited snippets and picks one. It is ✗ the Stage 3 target.
+  * The cost is about 2.5× the reply's tokens.
+  * Latency at `TOP_K` 25 is **not measured**. It is expected to stay flat, because the
+    engine already scores 60 candidates and `TOP_K` only cuts the list.
+  * Ranking measures do not move with the cut: MRR, and the right regulation in the top 5
+    (74.4% on the holdout).
+* **95% at 25 is out of reach of one search with this model.**
+  * The whole pool reaches 88.6%.
+  * 95% allows at most 30 misses in 604. There are 89 at 25 today.
+  * So about 39 of the 69 unretrieved answers would have to be found, and every retrieved
+    answer would also have to land in the top 25.
+  * Deeper arms and more probes were measured above, and they lose.
+* **What could move the ceiling,** none of it a search technique:
+  1. **The label review** (`dev_tools/eval/review/`). A quarter of a 30-miss sample was
+     equally valid answers.
+  2. **The agent searching 2–3 times with reworded questions.** This is the agent's job by
+     design; it cannot be measured without a model in the loop.
+  3. **Fine-tuning the same 0.6B model.** It needs a re-embed and is out of scope for now.
+
+  A 95% claim also needs labels clean to about 5%. That is not true until the review is
+  done.
+
+**Proposed, ✗ adopted:**
+* Recall@25 ≥ 85% on the holdout as the stretch target for search alone.
+* 95% at 25, considered only after the label review, with the agent allowed several
+  searches.
+
+The Stage 3 targets stay as written until this is decided.
+
 ## Stage 4 · performance and efficiency · v0.2.0
 
 Stages 1–3 bought accuracy without asking what it cost. v0.2.0 also has to serve it on the
