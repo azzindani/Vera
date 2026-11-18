@@ -403,6 +403,13 @@ the pool with the right law in 45, and the wrong law entirely in 24.
   pool 120, 8 probes: 66.2% / 74.5% / 0.524, and `exact_ref` 62/63. The ordering rules do
   not change the Stage 2 finding: a deeper pool hands the prior more low-relevance
   candidates to lift, and loses more than it finds.
+* **The same model, used twice on the query side** (2026-11-18). Offline
+  (`dense_variants_sim.py`), the question embedded WITHOUT the instruction found 18 answers
+  the engine's whole pool lacked; pseudo-relevance feedback (the query vector moved toward
+  its own top results, searched again) 4–10. The first was built as a fifth arm and fitted
+  on train: weight 1.0 gave 68.8% / 78.2% / 0.549 against 68.1% / 77.3% / 0.532. On the
+  holdout it lost, 63.7% / 71.4% / 0.503 against 64.9% / 72.0% / 0.519, and it cost one
+  more embedding: 1 client p50 352 → 965 ms, 4 clients 3.65 → 1.84 q/s. Reverted.
 * **The older version of the same rule.** Only 8 of 175 misses had the answer's text,
   verbatim, in an earlier regulation the engine ranked instead.
 
