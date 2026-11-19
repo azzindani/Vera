@@ -742,9 +742,19 @@ map otherwise, so every corpus loaded before Ravel wrote relations serves as it 
    so. `none_known` is never sent: it is the absence of a finding, and "no `currency`" must
    not read as "in force".
 2. **Ordered, between two members of the pool.** A fully `revoked` candidate never sits
-   above a candidate from a document that revokes it (`engine::rank_below_revokers`, a
-   stable topological order: everything else keeps the order relevance and the factors
-   gave it, and the revoked chunk lands as soon as its last revoker has).
+   above a candidate from a document that revokes it.
+   * **The revoker is lifted** to just above the first chunk it revoked
+     (`Pipeline::lift_revokers`, since 2026-11-19). Each chunk is lifted at most once,
+     so a cycle ends.
+   * **Then the hold:** `engine::rank_below_revokers`, a stable topological order, breaks
+     any cycle the lift left. Everything else keeps the order relevance and the factors
+     gave it.
+   * **Why lifting, ✗ holding down.** Holding the revoked chunk below its revoker
+     dropped it out of the reply whenever the revoker ranked low. That chunk is often
+     the answer, because the question uses its words. Measured on the 1.7M corpus
+     (`ROADMAP.md` Stage 3, "Later rounds"), all 604 [holdout 168]: Recall@5
+     67.2 → 68.5% [64.9 → 65.5%], Recall@10 75.8 → 78.5% [72.0 → 75.6%], 23 wins and 7
+     losses at 10.
 
 **Why it is an ordering rule and not a weight.** A multiplier on revoked documents would be
 a number nobody has measured, in a ranking whose weights are already waiting to be refitted
@@ -769,10 +779,9 @@ still the right answer to "what did the 2008 rule say".
 (synthetic: it tests the ordering and the label, not the law). With the rule off, relevance
 puts a UU 22/2009 chunk above PP 79/2013; with it on, none is
 (`a_revoked_regulation_is_labelled_and_never_outranks_its_revoker`, which asserts the rule
-fired so it cannot pass on a fixture that happened to rank them correctly). **Not measured:**
-any effect on Recall@k or on the 50-case set, because no corpus with `doc_status` has been
-built end to end yet; Ravel's own coverage of the revokes graph is a floor (71% of
-revocation targets are not among the files).
+fired so it cannot pass on a fixture that happened to rank them correctly). The effect on
+Recall@k is measured since 2026-11-19, on the 1.7M corpus (above). Ravel's coverage of
+the revokes graph is a floor: 71% of revocation targets are not among the files.
 
 `indexable` is a separate thing and needs nothing here: Ravel's load plan sets
 `chunks.indexable = FALSE` for documents its quality gate rejected, and every arm already

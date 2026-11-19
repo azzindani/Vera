@@ -1074,7 +1074,7 @@ impl Pipeline {
         // ordering rule that ignored the switch would be a second ranking layer nobody
         // could turn off. The labels stay either way.
         if apply_floor && ranking_on && !currency.is_empty() {
-            Self::rank_revoked_below_revokers(&mut ranked, &currency, &mut progress);
+            Self::order_by_currency(&mut ranked, &currency, &mut progress);
         }
 
         // ! Counted BEFORE the cut. `truncated` is the only signal a caller
@@ -1761,6 +1761,81 @@ impl Pipeline {
         if moved > 0 {
             progress.push(format!(
                 "structure: {moved} article(s) placed above their own explanation"
+            ));
+        }
+    }
+
+    /// A revoked regulation never above the one that revoked it.
+    ///
+    /// ! The revoker is LIFTED to just above what it revoked, ✗ the revoked chunk held
+    /// down. Both keep the rule; they differ in which one moves. Holding down dropped the
+    /// answer whenever the revoker ranked low: questions are often worded like the older
+    /// text, so the revoked chunk is what matched. Lifting instead, all 604 [holdout]:
+    /// Recall@5 67.2 -> 68.5% [64.9 -> 65.5%], Recall@10 75.8 -> 78.5% [72.0 -> 75.6%],
+    /// 23 wins and 7 losses at 10 (`ROADMAP.md` Stage 3, "Later rounds").
+    fn order_by_currency(
+        ranked: &mut Vec<Candidate<'_>>,
+        currency: &std::collections::HashMap<String, store::Currency>,
+        progress: &mut Vec<String>,
+    ) {
+        Self::lift_revokers(ranked, currency, progress);
+        Self::rank_revoked_below_revokers(ranked, currency, progress);
+    }
+
+    /// Move each revoker's chunks to just above the first chunk it revoked, when they
+    /// rank below it. Afterwards [`Self::rank_revoked_below_revokers`] has nothing to
+    /// hold, except in a cycle, which it breaks as before.
+    ///
+    /// ! Each chunk is lifted at most once, so a cycle of revocations cannot loop.
+    fn lift_revokers(
+        ranked: &mut Vec<Candidate<'_>>,
+        currency: &std::collections::HashMap<String, store::Currency>,
+        progress: &mut Vec<String>,
+    ) {
+        let doc = |c: &Candidate<'_>| currency.get(&c.row.id).map(|x| x.doc_id.clone());
+        let revoked_by = |c: &Candidate<'_>, other: &str| {
+            currency.get(&c.row.id).is_some_and(|x| {
+                x.status == "revoked" && x.revoked_by.iter().any(|r| r.doc_id == other)
+            })
+        };
+        let mut lifted: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut moved = 0usize;
+        let mut i = 0;
+        while i < ranked.len() {
+            let Some(me) = doc(&ranked[i]).filter(|d| !d.is_empty()) else {
+                i += 1;
+                continue;
+            };
+            let below: Vec<usize> = (i + 1..ranked.len())
+                .filter(|&j| {
+                    doc(&ranked[j]).is_some_and(|theirs| {
+                        !theirs.is_empty()
+                            && theirs != me
+                            && revoked_by(&ranked[i], &theirs)
+                            && !revoked_by(&ranked[j], &me)
+                    }) && !lifted.contains(&ranked[j].row.id)
+                })
+                .collect();
+            if below.is_empty() {
+                i += 1;
+                continue;
+            }
+            // Removed from the bottom up so the earlier positions stay valid, then put
+            // back in their own order directly above the revoked chunk.
+            let mut taken: Vec<Candidate<'_>> =
+                below.iter().rev().map(|&j| ranked.remove(j)).collect();
+            taken.reverse();
+            for (k, c) in taken.into_iter().enumerate() {
+                lifted.insert(c.row.id.clone());
+                ranked.insert(i + k, c);
+                moved += 1;
+            }
+            // ! Not advanced: the first lifted chunk is now at `i`, and it may itself have
+            // a revoker further down.
+        }
+        if moved > 0 {
+            progress.push(format!(
+                "currency: {moved} chunk(s) of a revoking regulation lifted above what it revoked"
             ));
         }
     }
@@ -2458,6 +2533,65 @@ mod tests {
         assert_eq!(ids, ["a", "b", "e", "c", "d", "f"]);
         // Nothing to order when the ranking is no longer than what is kept.
         Pipeline::order_tail(&mut ranked[..2], 2, &distance);
+    }
+
+    #[test]
+    fn a_revoker_is_lifted_above_what_it_revoked_and_a_cycle_ends() {
+        let mk = |id: &str| Candidate {
+            row: std::borrow::Cow::Owned(store::ChunkRow {
+                id: id.into(),
+                ..row(None, None)
+            }),
+            relevance: 0.0,
+            expanded_from: None,
+        };
+        let cur = |doc: &str, by: &[&str]| store::Currency {
+            doc_id: doc.into(),
+            status: if by.is_empty() {
+                "none_known"
+            } else {
+                "revoked"
+            }
+            .into(),
+            revoked_by: by
+                .iter()
+                .map(|d| store::Cited {
+                    doc_id: (*d).into(),
+                    title: String::new(),
+                })
+                .collect(),
+            amended_by: Vec::new(),
+        };
+        // old (revoked by mid, revoked by new) ranks first; both revokers sank.
+        let currency: std::collections::HashMap<String, store::Currency> = [
+            ("old".to_owned(), cur("D_old", &["D_mid"])),
+            ("x".to_owned(), cur("D_x", &[])),
+            ("mid".to_owned(), cur("D_mid", &["D_new"])),
+            ("new".to_owned(), cur("D_new", &[])),
+        ]
+        .into_iter()
+        .collect();
+        let mut ranked = vec![mk("old"), mk("x"), mk("mid"), mk("new")];
+        let mut progress = Vec::new();
+        Pipeline::lift_revokers(&mut ranked, &currency, &mut progress);
+        let ids: Vec<&str> = ranked.iter().map(|c| c.row.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            ["new", "mid", "old", "x"],
+            "the whole chain, nothing dropped"
+        );
+
+        // A cycle (a revokes b revokes a is excluded as mutual; a 3-cycle is not) ends.
+        let cycle: std::collections::HashMap<String, store::Currency> = [
+            ("a".to_owned(), cur("A", &["B"])),
+            ("b".to_owned(), cur("B", &["C"])),
+            ("c".to_owned(), cur("C", &["A"])),
+        ]
+        .into_iter()
+        .collect();
+        let mut ranked = vec![mk("a"), mk("b"), mk("c")];
+        Pipeline::lift_revokers(&mut ranked, &cycle, &mut progress);
+        assert_eq!(ranked.len(), 3);
     }
 
     fn row(chapter: Option<&str>, article: Option<&str>) -> store::ChunkRow {

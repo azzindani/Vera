@@ -153,17 +153,19 @@ depth only if Recall@10 holds. Region as a ranking signal over the pool, ✗ as 
 
 ## Stage 3 · ranking · the v0.2.0 headline
 
-| target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-15 |
-|---|---|---|---|---|
-| Recall@5 | 65% | **70%** | 57.1% | 64.9% [67.2%] · one holdout case short |
-| Recall@10 | 75% | **80%** | 68.4% | 72.0% [75.8%] |
-| MRR | 0.50 | **0.55** | 0.438 | **0.519** [0.528] · step a reached |
-| right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [78.3%] |
-| no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 44%; holdout: authority 3/7, hard_negative 6/13 |
+| target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-19 | opt-in: tail from 5, round 2 |
+|---|---|---|---|---|---|
+| Recall@5 | 65% | **70%** | 57.1% | **65.5%** [68.5%] · step a reached | 65.5% [68.5%] |
+| Recall@10 | 75% | **80%** | 68.4% | **75.6%** [78.5%] · step a reached | **80.4% [81.3%] · v0.2.0 reached** |
+| MRR | 0.50 | **0.55** | 0.438 | **0.526** [0.534] · step a reached | 0.536 [0.542], over 25 |
+| right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [80.0%] | 74.4% [79.6%] |
+| no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 46%; holdout: authority 3/7, hard_negative 6/13 | same |
 
-**Now** is the region arm, the in-document ordering and the definitions rule (sections
-below). Step a is reached on the holdout for MRR; Recall@5 is 109 of 168, one case short
-of 65%; Recall@10 is 3 points short.
+**Now** is the region arm, the in-document ordering, the definitions rule and the revoker
+lift (sections below), as shipped by default (`vera.sh e2e lift_default`, `TOP_K` 10).
+Step a is reached on the holdout for all three measures. The opt-in column is
+`DENSE_TAIL_FROM=5 ROUNDS=2` at `TOP_K` 25. It reaches the v0.2.0 Recall@10 on the holdout
+and on all cases, and nothing else of v0.2.0.
 
 **Status (604-case set, 2026-11-15).** ✗ Not reached, and nothing shipped changed.
 Reweighting is exhausted: every fusion and prior setting tried ranks within about a point
@@ -470,7 +472,7 @@ stops at 10.
 
 The Stage 3 targets stay as written until this is decided.
 
-### Later rounds · 2026-11-19 · built, off by default
+### Later rounds · 2026-11-19 · built, off by default; the revoker lift on
 
 Two switches, both off by default, so nothing published before this changes
 (`CONFIGURATION.md`):
@@ -528,11 +530,61 @@ MRR is over the 25-deep reply. Measured to 10, as in the tables above, it is 0.5
 * **A failed run, discarded.** The first run of the tail from 5 refused 6 real questions
   in a row (s152–s211) and lost 4 `exact_ref` cases. That is a transient failure window,
   ✗ the rule: the rerun reads 0 refused and 63/63.
-* **v0.2.0 is still not reached.** The best Recall@10 is 78.1% [76.8%] against 80%, and
-  Recall@5 is unchanged.
+* **These rows are before the defect below was fixed.** The table that counts is the
+  one after it.
 
-**Defaults stay off.** The switches are opt-in as requested. Turning one on by default
-is a separate decision, and it needs the cache-off latency above on the VPS profile too.
+**A defect the rounds exposed: the currency rule dropped answers.** `miss_diag.py` places
+each missed answer against the whole corpus. Several of the answers round 2 "lost" were
+among the 4 nearest chunks to the question, in a probed cluster, and ranked 9–24 without
+the rounds. Each was a chunk of a revoked regulation.
+* The rule "a revoked regulation never above its revoker" (`SCORING.md` §11) was kept by
+  holding the revoked chunk below every chunk of its revoker.
+* With the tail ordered by distance, a revoker can sink to the bottom of the list, and
+  the answer went down with it, out of the reply.
+* Today's order loses answers the same way whenever the revoker ranks low. Questions are
+  often worded like the older text, so the revoked chunk is the one that matched.
+
+**Fixed, on by default:** the revoker is lifted to just above what it revoked
+(`Pipeline::lift_revokers`). The rule holds exactly as before; only which of the two moves
+differs. Each chunk is lifted at most once, so a cycle of revocations ends.
+
+| engine, all 604 [holdout 168] | Recall@5 | Recall@10 | Recall@15 | Recall@20 | Recall@25 | MRR | @10 +/− | @25 +/− |
+|---|---|---|---|---|---|---|---|---|
+| before the lift, `TOP_K` 25 | 67.2 [64.9] | 75.8 [72.0] | 79.5 [75.0] | 81.6 [76.8] | 85.3 [82.1] | 0.534 [0.525] | | |
+| **lift, the new default** | **68.5 [65.5]** | **78.5 [75.6]** | 83.3 [79.8] | 84.8 [81.0] | 86.4 [83.9] | 0.539 [0.531] | +23 −7 | +8 −1 |
+| lift, tail from 10, round 2 | 68.5 [65.5] | 79.0 [77.4] | **85.8 [83.9]** | **86.8 [86.3]** | **88.4 [88.7]** | 0.541 [0.540] | +27 −8 | **+24 −5** |
+| **lift, tail from 5, round 2** | 68.5 [65.5] | **81.3 [80.4]** | 84.1 [83.3] | 85.3 [85.1] | 87.7 [88.7] | **0.542 [0.541]** | **+52 −19** | +24 −9 |
+
+* **The default, at `TOP_K` 10** (`vera.sh e2e lift_default`): Recall@5 68.5% [65.5%],
+  Recall@10 78.5% [75.6%], MRR 0.534 [0.526], right regulation in top 5 80.0% [74.4%].
+  * 0 of 604 real questions refused, 74 of 106 off-topic refused, `exact_ref` 63/63.
+  * By type, procedural gained 3 cases and exception 3; conceptual and obligation lost 1
+    each.
+* **Chosen on train, as before.** Tail from 10 with round 2 has the best train
+  Recall@25 (88.3%); tail from 5 with round 2 the best train Recall@10 (81.7%).
+  * Holdout: Recall@25 82.1 → **88.7%** for the first. Recall@10 72.0 → **80.4%** for the
+    second, which reaches the v0.2.0 Recall@10 target on the holdout and on all cases.
+  * Wins against losses on the holdout: 12 to 1 at 25, and 17 to 3 at 10.
+* **Latency was measured before the lift.** The lift is an in-memory reorder of at most
+  the pool, so the numbers above stand; ✗ re-measured.
+* **Another discarded run.** The first default run refused 13 real questions, because
+  `miss_diag.py`'s full-corpus scans ran on the same database at the same time.
+  Measurements run alone; the rerun is the one recorded.
+
+**What is left at 25, best configuration** (`miss_diag.py` over the tail from 10 with
+round 2, 70 of 604 [19 of 168]):
+
+| cause | all [holdout] | what the answer looks like |
+|---|---|---|
+| dense-deep | 35 [9] | among the corpus's 200 nearest by vector (median 88th), beaten by closer chunks |
+| vocabulary | 15 [4] | shares under half of the question's stemmed terms; vector rank median 1,749 |
+| bm25-deep | 8 [2] | within BM25's 200, far by vector |
+| far | 6 [1] | neither signal places it near |
+| routing | 6 [3] | in the corpus's 20 nearest by vector, its cluster not among the 5 probed |
+
+**Defaults.** The lift is on, because it corrects a rule. The tail and the rounds stay
+opt-in as requested. Turning them on by default is a separate decision, and it needs the
+cache-off latency on the VPS profile too.
 
 ## Stage 4 · performance and efficiency · v0.2.0
 
