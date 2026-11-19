@@ -257,6 +257,17 @@ impl Settings {
                 // bound how much a single `expand` walk may read.
                 expand_seeds: parsed("EXPAND_SEEDS", "positive integer", d.expand_seeds)?,
                 expand_per_seed: parsed("EXPAND_PER_SEED", "positive integer", d.expand_per_seed)?,
+                // ! 0 is valid and means off: the order every number before 2026-11-19
+                // was measured with.
+                dense_tail_from: parsed("DENSE_TAIL_FROM", "integer", d.dense_tail_from)?,
+                rounds: parsed("ROUNDS", "positive integer", d.rounds)?,
+                round_documents: parsed("ROUND_DOCUMENTS", "positive integer", d.round_documents)?,
+                round_per_document: parsed(
+                    "ROUND_PER_DOCUMENT",
+                    "positive integer",
+                    d.round_per_document,
+                )?,
+                round_scan: parsed("ROUND_SCAN", "positive integer", d.round_scan)?,
                 // ! Arm weights are properties of the CORPUS, not of the engine,
                 // and a corpus is re-chunked far more often than the engine is
                 // rebuilt. Refitting must not require a release.
@@ -333,6 +344,9 @@ impl Settings {
             ("CANDIDATE_POOL", self.pipeline.candidate_pool),
             ("SNIPPET_CHARS", self.pipeline.snippet_chars),
             ("GATE_SAMPLE", self.pipeline.gate_sample),
+            ("ROUNDS", self.pipeline.rounds),
+            ("ROUND_DOCUMENTS", self.pipeline.round_documents),
+            ("ROUND_PER_DOCUMENT", self.pipeline.round_per_document),
         ];
         for (key, value) in positive {
             if value == 0 {
@@ -342,6 +356,25 @@ impl Settings {
                     kind: "positive integer",
                 });
             }
+        }
+        // ! 0 rows ranked per regulation makes every later round find nothing and stop,
+        // which looks exactly like a round that had nothing to add.
+        if self.pipeline.round_scan <= 0 {
+            return Err(ConfigError::Invalid {
+                key: "ROUND_SCAN",
+                value: self.pipeline.round_scan.to_string(),
+                kind: "positive integer",
+            });
+        }
+        // ! A later round's chunks are placed by dense distance below DENSE_TAIL_FROM.
+        // With it off they would have nowhere principled to go, and appending them
+        // would be the merge the simulation measured as a loss (`rounds_sim.py`).
+        if self.pipeline.rounds > 1 && self.pipeline.dense_tail_from == 0 {
+            return Err(ConfigError::Invalid {
+                key: "ROUNDS",
+                value: self.pipeline.rounds.to_string(),
+                kind: "1 unless DENSE_TAIL_FROM is set",
+            });
         }
         // ! A pool smaller than the answer caps the reply below TOP_K without
         // saying so: the engine would return `candidate_pool` results and
@@ -1014,6 +1047,22 @@ mod tests {
         let mut s = settings();
         s.pipeline.region_weight = 0.0;
         assert!(s.validate().is_ok());
+    }
+
+    #[test]
+    fn later_rounds_need_the_dense_tail_and_a_scan() {
+        let mut s = settings();
+        s.pipeline.rounds = 2;
+        let e = s.validate().unwrap_err();
+        assert!(e.to_string().contains("ROUNDS"), "{e}");
+        s.pipeline.dense_tail_from = 10;
+        assert!(s.validate().is_ok());
+        s.pipeline.round_scan = 0;
+        let e = s.validate().unwrap_err();
+        assert!(e.to_string().contains("ROUND_SCAN"), "{e}");
+        let mut s = settings();
+        s.pipeline.rounds = 0;
+        assert!(s.validate().unwrap_err().to_string().contains("ROUNDS"));
     }
 
     #[test]

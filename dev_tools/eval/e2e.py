@@ -195,6 +195,7 @@ def main():
     )
 
     n = hit5 = hit10 = hitall = refused_real = reg5 = 0
+    deep = {15: 0, 20: 0, 25: 0}   # Recall@k past 10, read only when the reply is that deep
     depth = 0   # the deepest reply seen: TOP_K on the server, ✗ known here
     named = [0, 0, 0]   # exact_ref cases: n, article at rank 1, regulation at rank 1
     ood_n = ood_refused = 0
@@ -248,6 +249,8 @@ def main():
         h5 = any(x in targets for x in ids[:5])
         hit5 += 1 if h5 else 0
         hit10 += 1 if any(x in targets for x in ids[:10]) else 0
+        for k in deep:
+            deep[k] += 1 if any(x in targets for x in ids[:k]) else 0
         # ! Anywhere in the reply. With TOP_K = CANDIDATE_POOL on the server this is
         # pool recall, the Stage 2 ceiling: what ranking could reach at best.
         hall = any(x in targets for x in ids)
@@ -266,6 +269,7 @@ def main():
         t[1] += 1
         per_case.append({"id": q["id"], "type": q["type"], "hit5": h5, "reg5": r5,
                          "rr": rr[-1], "pool": hall, "holdout": held,
+                         "rank": next((i + 1 for i, x in enumerate(ids) if x in targets), None),
                          "near_duplicates": q.get("near_duplicates", 0)})
 
     srv.close()
@@ -294,6 +298,10 @@ def main():
     # the 95% half-width of a proportion near 60% is ~1.96 * sqrt(.24 / n).
     if depth > 10:
         print(f"  answer anywhere in the reply (depth {depth}) {100 * hitall / n:.1f}%")
+        # ! Only the cut-offs the reply reaches: past `depth` the count is the reply's.
+        cuts = [k for k in deep if k <= depth]
+        if cuts:
+            print("  " + "   ".join(f"Recall@{k} {100 * deep[k] / n:.1f}%" for k in cuts))
     print(f"  ±{196 * (0.24 / n) ** 0.5:.1f} points (95%, binomial) on Recall@5")
     print(f"  right regulation in top 5 {100 * reg5 / n:.1f}%   "
           f"(right law, wrong article {100 * (reg5 - hit5) / n:.1f}%)")

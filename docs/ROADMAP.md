@@ -470,6 +470,70 @@ stops at 10.
 
 The Stage 3 targets stay as written until this is decided.
 
+### Later rounds · 2026-11-19 · built, off by default
+
+Two switches, both off by default, so nothing published before this changes
+(`CONFIGURATION.md`):
+* **`DENSE_TAIL_FROM`.** Keep the top N in the engine's order and order everything below
+  by dense distance to the question.
+* **`ROUNDS` 2.** Additionally search inside the first 3 regulations of the ranking with
+  the same query vector, so no second embedding. Keep 2 chunks of operative text from
+  each, ranked inside their regulation by RRF over dense and text ranks. Each takes the
+  place its distance earns below the kept top, and is marked `expanded_from`.
+
+**Simulated first.** `rounds_sim.py` picked 3 regulations × 2 chunks on train. `loop_sim.py`
+ran up to 6 rounds: the retrieval ceiling kept rising (88.6 → 90.9%), but Recall@25 fell
+after round 2 (87.1 / 86.9 / 86.6 / 86.6 / 86.3%). Round 2 is the only one that pays.
+
+**Through the engine** (`vera.sh e2e` at `TOP_K` 25 with `EVAL_CASES_OUT`, all 604
+[holdout 168]; wins and losses are against today's order):
+
+| configuration | Recall@5 | Recall@10 | Recall@15 | Recall@20 | Recall@25 | MRR | @10 +/− | @25 +/− |
+|---|---|---|---|---|---|---|---|---|
+| today's order | 67.2 [64.9] | 75.8 [72.0] | 79.5 [75.0] | 81.6 [76.8] | 85.3 [82.1] | 0.534 [0.525] | | |
+| tail from 10 | 67.4 [64.9] | 76.7 [73.2] | 82.3 [79.8] | 84.3 [82.1] | 86.4 [84.5] | 0.536 [0.529] | +7 −2 | +14 −7 |
+| **tail from 10, round 2** | 67.4 [64.3] | 77.2 [74.4] | **82.5 [81.0]** | **84.4 [82.7]** | **87.3 [86.9]** | 0.537 [0.534] | +12 −4 | **+22 −10** |
+| tail from 5 | 68.2 [65.5] | 78.1 [76.8] | 81.0 [78.6] | 82.6 [80.4] | 85.8 [84.5] | 0.537 [0.531] | +34 −20 | +15 −12 |
+| **tail from 5, round 2** | **68.2 [64.9]** | **78.1 [76.8]** | 81.0 [79.2] | 83.1 [81.5] | 86.9 [**87.5**] | **0.538 [0.536]** | **+36 −22** | +23 −13 |
+
+MRR is over the 25-deep reply. Measured to 10, as in the tables above, it is 0.528 → 0.533
+[0.519 → 0.530] for tail from 5 with round 2.
+
+* **Chosen on train, one per target.**
+  * For Recall@25 (an agent that reads 25): tail from 10 with round 2 has the best train
+    Recall@25, 87.4% against 86.5%. Holdout 82.1 → **86.9%**, 10 wins against 2 losses.
+  * For Recall@10: tail from 5 with round 2 ties the best train Recall@10, 78.7% against
+    77.3%. Holdout 72.0 → **76.8%**, 13 wins against 5 losses.
+  * The holdout agrees in direction on both, and is better than train on both. Read
+    that as noise in the holdout's favour, ✗ as a gain to count on.
+* **Recall@5 moves by a case or two** although the top N is kept. The rules that hold
+  inside one regulation run again after the re-ordering. A kept slot can take a better
+  chunk of the same regulation, never another regulation's (the fixture test pins
+  this).
+* **The simulation over-predicted the tail alone at 10.** It predicted 79.6% [78.0%] for
+  the tail from 5, and the engine measures 78.1% [76.8%]. The re-applied rules account
+  for part of that, and the rest is unexplained.
+* **Latency** (`load_test.py`, embedder with `QUERY_CACHE=0`, `TOP_K` 25, a warm-up pass
+  first, today's order measured before and after):
+
+  | configuration | 1 client p50 / p95 | 4 clients |
+  |---|---|---|
+  | today's order | 337–351 / 459–472 ms | 3.60–3.67 q/s, p50 1,050–1,102 ms |
+  | tail from 10, round 2 | 366 / 447 ms | 3.58 q/s, p50 1,025 ms |
+  | tail from 5, round 2 | 363 / 456 ms | 3.49 q/s, p50 1,129 ms |
+
+  About +20 ms at one client (+6%), inside the +10% an accuracy change may cost. One
+  round is a scoped query plus a distance lookup over the pool. The embedder still sets
+  the pace.
+* **A failed run, discarded.** The first run of the tail from 5 refused 6 real questions
+  in a row (s152–s211) and lost 4 `exact_ref` cases. That is a transient failure window,
+  ✗ the rule: the rerun reads 0 refused and 63/63.
+* **v0.2.0 is still not reached.** The best Recall@10 is 78.1% [76.8%] against 80%, and
+  Recall@5 is unchanged.
+
+**Defaults stay off.** The switches are opt-in as requested. Turning one on by default
+is a separate decision, and it needs the cache-off latency above on the VPS profile too.
+
 ## Stage 4 · performance and efficiency · v0.2.0
 
 Stages 1–3 bought accuracy without asking what it cost. v0.2.0 also has to serve it on the

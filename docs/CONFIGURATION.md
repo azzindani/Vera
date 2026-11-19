@@ -102,6 +102,11 @@ safe.
 | `TOP_K` | `10` | results returned |
 | `EXPAND_SEEDS` | `5` | Top-ranked candidates sibling expansion walks from, de-duplicated by regulation. Only consulted when a caller passes `expand: ["siblings"]`. Seeds, ✗ the whole pool: expanding 60 candidates at up to 1,313 chunks each is a different query. |
 | `EXPAND_PER_SEED` | `40` | Sibling rows read per seed, before the relevance gate admits any. p50 is 22 chunks per regulation and p95 is 210, so this takes the common case whole and bounds the tail. Measured cost of the widest possible walk — 10 seeds from the 10 largest regulations — is 11,750 rows in 24 ms. |
+| `DENSE_TAIL_FROM` | `0` | Below this rank, results are ordered by dense distance to the question. `0` is off, the order every number before 2026-11-19 was measured with. The ranking above keeps its regulations slot by slot. Measured through the engine in `ROADMAP.md` Stage 3, "Later rounds". |
+| `ROUNDS` | `1` | Search rounds per question. Each round after the first searches inside the next `ROUND_DOCUMENTS` regulations of the ranking with the same query vector (no second embedding), and the loop stops when a round adds nothing. Needs `DENSE_TAIL_FROM`; startup refuses `ROUNDS` > 1 without it. Simulated to 6 rounds, only the second pays (`dev_tools/eval/loop_sim.py`). |
+| `ROUND_DOCUMENTS` | `3` | Regulations one later round searches inside. Chosen on train from 3 / 5 / 8 (`dev_tools/eval/rounds_sim.py`). |
+| `ROUND_PER_DOCUMENT` | `2` | Chunks of operative text a later round keeps per regulation, ranked by RRF over their dense and text ranks inside it. Chosen on train from 2 / 3 / 5. |
+| `ROUND_SCAN` | `30` | Rows per regulation, per signal, a later round ranks before fusing. A regulation is 21 chunks at the median and 8,028 at most. |
 | `CANDIDATE_POOL` | `60` | candidates carried into scoring. **Metadata is fetched for this many, not for `TOP_K`** — a candidate whose metadata was never loaded cannot be reordered. Must be ≥ `TOP_K`; a smaller pool would silently cap the reply. 60 is where the "regulation absent" bucket stops falling (`SCORING.md` §7). |
 | `SNIPPET_CHARS` | `280` | preview length per result |
 

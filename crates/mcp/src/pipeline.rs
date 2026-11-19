@@ -116,6 +116,29 @@ pub struct Config {
     pub expand_seeds: usize,
     /// Sibling rows read per seed, before admission.
     pub expand_per_seed: i64,
+    /// Below this rank, the ranking is ordered by dense distance to the question. `0`
+    /// is off: the order every number before 2026-11-19 was measured with.
+    ///
+    /// ! The ranking above it keeps its regulations slot by slot. The rules that hold
+    /// inside one regulation run again afterwards, so a kept slot can take a better chunk
+    /// of the same regulation, which moves Recall@5 by a case or two either way. Through
+    /// the engine: `ROADMAP.md` Stage 3, "Later rounds".
+    pub dense_tail_from: usize,
+    /// Search rounds per question. `1` is the single search every number was measured
+    /// with; each further round searches inside the next `round_documents`
+    /// regulations of the current ranking, with the SAME query vector (no second
+    /// embedding), and stops early when a round adds nothing.
+    ///
+    /// ! Needs `dense_tail_from`: a round's chunks are placed by dense distance, and
+    /// with the tail in the engine's order there is nowhere principled to put them.
+    /// ! Simulated over 6 rounds (`dev_tools/eval/loop_sim.py`): only the second pays.
+    pub rounds: usize,
+    /// Regulations one later round searches inside.
+    pub round_documents: usize,
+    /// Chunks a later round keeps per regulation, operative text only.
+    pub round_per_document: usize,
+    /// Rows per regulation, per signal, a later round ranks before fusing.
+    pub round_scan: i64,
     /// Relative influence of each metadata factor (`docs/SCORING.md` §2).
     ///
     /// ! `Weights::OFF` is exactly the identity on the fused order, so this
@@ -206,6 +229,13 @@ impl Default for Config {
             // largest regulations — is 11,750 rows in 24 ms (`SCORING.md` §7).
             expand_seeds: 5,
             expand_per_seed: 40,
+            dense_tail_from: 0,
+            rounds: 1,
+            // ! Chosen on train in `rounds_sim.py` (3 of 3/5/8, 2 of 2/3/5), holdout read
+            // once: Recall@25 82.1 -> 86.3%.
+            round_documents: 3,
+            round_per_document: 2,
+            round_scan: 30,
             // Fitted, ✗ chosen: dev_tools/eval/fit_factors.py, +7.5 points
             // leave-one-out over the text arm.
             factor_weights: engine::Weights::FITTED,
@@ -1024,6 +1054,14 @@ impl Pipeline {
         self.promote_named(&mut ranked, &exact_matches, &mut progress)
             .await?;
 
+        // ! After every ordering rule that reads the engine's own order, before currency,
+        // so a chunk a later round adds is labelled and held below its revoker like any
+        // other. Only when ranking is on: "factors off" is the fused order, exactly.
+        if ranking_on && self.cfg.dense_tail_from > 0 {
+            self.later_rounds(&mut ranked, query, &qvec, &mut progress)
+                .await?;
+        }
+
         // ! Currency is read for everything that ranked, expanded siblings included, and
         // only ORDERS when the query does not name a regulation: someone who typed
         // "PP 26 tahun 2009" asked for that instrument, revoked or not.
@@ -1455,6 +1493,19 @@ impl Pipeline {
         let vocab = &self.cfg.vocabulary;
         Self::rank_articles_above_explanations(ranked, vocab, progress);
         self.pull_in_explained_articles(ranked, progress).await?;
+        self.operative_first(ranked, query, progress);
+        Ok(())
+    }
+
+    /// Step 3 of [`Self::order_within_documents`]: within each regulation, operative
+    /// text takes its slots first, its definitions provision after it unless asked.
+    fn operative_first(
+        &self,
+        ranked: &mut [Candidate<'_>],
+        query: &str,
+        progress: &mut Vec<String>,
+    ) {
+        let vocab = &self.cfg.vocabulary;
         let top = vocab.operative_score();
         let asked = vocab.definitions.as_ref().is_some_and(|d| d.asked(query));
         let moved = engine::tiered_within(
@@ -1478,7 +1529,165 @@ impl Pipeline {
                 if asked { "first, as asked" } else { "after it" }
             ));
         }
+    }
+
+    /// Order the ranking below `dense_tail_from` by dense distance, and run the later
+    /// search rounds (`rounds`), each inside the next regulations that ranking points to.
+    ///
+    /// ! Admitted, ✗ merged. A round's chunk is ranked inside its own regulation by RRF
+    /// over its dense and text ranks, only the best `round_per_document` of operative
+    /// text are kept, and each then takes the place its dense distance earns below the
+    /// kept top, against round 1's candidates on the same measure. It is marked
+    /// `expanded_from` the best-ranked chunk of its regulation, as any expansion is.
+    /// ! The ordering rules that hold inside a regulation are applied again after, so
+    /// an explanation still never sits above its own article.
+    async fn later_rounds(
+        &self,
+        ranked: &mut Vec<Candidate<'_>>,
+        query: &str,
+        qvec: &[f32],
+        progress: &mut Vec<String>,
+    ) -> Result<(), PipelineError> {
+        let keep = self.cfg.dense_tail_from;
+        let vocab = &self.cfg.vocabulary;
+        let ids: Vec<String> = ranked.iter().map(|c| c.row.id.clone()).collect();
+        let mut distance: std::collections::HashMap<String, f32> =
+            self.ops.distances(&ids, qvec).await?.into_iter().collect();
+        let mut searched: Vec<String> = Vec::new();
+        let mut added_total = 0usize;
+        // ! Round 2 reads the regulations in the engine's own order, as simulated; each
+        // later round reads them in the order the previous round left.
+        for round in 2..=self.cfg.rounds {
+            let mut docs: Vec<String> = Vec::new();
+            for c in ranked.iter() {
+                let d = &c.row.doc_id;
+                if !d.is_empty() && !searched.contains(d) && !docs.contains(d) {
+                    docs.push(d.clone());
+                    if docs.len() == self.cfg.round_documents {
+                        break;
+                    }
+                }
+            }
+            if docs.is_empty() {
+                break;
+            }
+            searched.extend(docs.iter().cloned());
+            let hits = self
+                .ops
+                .within_documents(&docs, qvec, query, self.cfg.round_scan)
+                .await?;
+            let chosen = self.pick_in_documents(&docs, &hits, &distance);
+            if chosen.is_empty() {
+                progress.push(format!(
+                    "round {round}: searched {} regulation(s), nothing new · stopped",
+                    docs.len()
+                ));
+                break;
+            }
+            let rows = self
+                .ops
+                .chunks_by_id(&chosen.iter().map(|(i, _, _)| i.clone()).collect::<Vec<_>>())
+                .await?;
+            let mut added = 0usize;
+            for (id, doc, dist) in chosen {
+                let Some(row) = rows.iter().find(|r| r.id == id) else {
+                    continue;
+                };
+                let sponsor = ranked.iter().find(|c| c.row.doc_id == doc);
+                let (relevance, from) =
+                    sponsor.map_or((0.0, None), |s| (s.relevance, Some(s.row.id.clone())));
+                distance.insert(id, dist);
+                ranked.push(Candidate {
+                    row: std::borrow::Cow::Owned(row.clone()),
+                    relevance,
+                    expanded_from: from,
+                });
+                added += 1;
+            }
+            added_total += added;
+            progress.push(format!(
+                "round {round}: searched {} regulation(s), added {added} chunk(s)",
+                docs.len()
+            ));
+            Self::order_tail(ranked, keep, &distance);
+        }
+        Self::order_tail(ranked, keep, &distance);
+
+        Self::rank_articles_above_explanations(ranked, vocab, progress);
+        self.operative_first(ranked, query, progress);
+        progress.push(format!(
+            "tail: below rank {keep} ordered by dense distance{}",
+            if added_total > 0 {
+                format!(", {added_total} chunk(s) from later rounds")
+            } else {
+                String::new()
+            }
+        ));
         Ok(())
+    }
+
+    /// A later round's choice inside each regulation: RRF over its dense and text ranks,
+    /// operative text only, the best `round_per_document`, minus what is already ranked.
+    fn pick_in_documents(
+        &self,
+        docs: &[String],
+        hits: &[store::DocHit],
+        seen: &std::collections::HashMap<String, f32>,
+    ) -> Vec<(String, String, f32)> {
+        let vocab = &self.cfg.vocabulary;
+        let top = vocab.operative_score();
+        let rrf = self.cfg.rrf_k;
+        let mut chosen: Vec<(String, String, f32)> = Vec::new();
+        for doc in docs {
+            let mut mine: Vec<(f32, &store::DocHit)> = hits
+                .iter()
+                .filter(|h| &h.doc_id == doc)
+                .filter(|h| {
+                    let f = engine::Facets {
+                        regulation_type: None,
+                        article: h.article.as_deref(),
+                        chapter: h.chapter.as_deref(),
+                        year: None,
+                        about: None,
+                        body: None,
+                        body_len: 0,
+                        numbers: &[],
+                        strings: &[],
+                    };
+                    engine::factors::structural(&f, vocab) >= top
+                })
+                .map(|h| {
+                    #[allow(clippy::cast_precision_loss)]
+                    let fused =
+                        1.0 / (rrf + h.dense_rank as f32) + 1.0 / (rrf + h.text_rank as f32);
+                    (fused, h)
+                })
+                .collect();
+            mine.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+            for (_, h) in mine.into_iter().take(self.cfg.round_per_document) {
+                if !seen.contains_key(&h.id) {
+                    chosen.push((h.id.clone(), h.doc_id.clone(), h.distance));
+                }
+            }
+        }
+        chosen
+    }
+
+    /// Below `keep`, order by dense distance; a candidate without one goes last, in
+    /// the order it had.
+    fn order_tail(
+        ranked: &mut [Candidate<'_>],
+        keep: usize,
+        distance: &std::collections::HashMap<String, f32>,
+    ) {
+        if ranked.len() <= keep {
+            return;
+        }
+        ranked[keep..].sort_by(|a, b| {
+            let da = distance.get(&a.row.id).copied().unwrap_or(f32::INFINITY);
+            let db = distance.get(&b.row.id).copied().unwrap_or(f32::INFINITY);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     /// Step 2 of [`Self::order_within_documents`].
@@ -2224,6 +2433,33 @@ mod tests {
         }
     }
 
+    #[test]
+    fn the_tail_is_ordered_by_distance_and_the_top_is_kept() {
+        let mk = |id: &str| Candidate {
+            row: std::borrow::Cow::Owned(store::ChunkRow {
+                id: id.into(),
+                ..row(None, None)
+            }),
+            relevance: 0.0,
+            expanded_from: None,
+        };
+        let mut ranked = vec![mk("a"), mk("b"), mk("c"), mk("d"), mk("e"), mk("f")];
+        // `a` is far but kept; `d` and `f` have no distance and go last, in order.
+        let distance: std::collections::HashMap<String, f32> = [
+            ("a".to_owned(), 0.9),
+            ("b".to_owned(), 0.8),
+            ("c".to_owned(), 0.5),
+            ("e".to_owned(), 0.2),
+        ]
+        .into_iter()
+        .collect();
+        Pipeline::order_tail(&mut ranked, 2, &distance);
+        let ids: Vec<&str> = ranked.iter().map(|c| c.row.id.as_str()).collect();
+        assert_eq!(ids, ["a", "b", "e", "c", "d", "f"]);
+        // Nothing to order when the ranking is no longer than what is kept.
+        Pipeline::order_tail(&mut ranked[..2], 2, &distance);
+    }
+
     fn row(chapter: Option<&str>, article: Option<&str>) -> store::ChunkRow {
         store::ChunkRow {
             id: "c1".into(),
@@ -2825,6 +3061,59 @@ mod live {
         contract::SearchOptions {
             expand: None,
             ..siblings()
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn later_rounds_keep_the_top_and_mark_what_they_add() {
+        // ! The rounds are opt-in and may only change the ranking below what they keep;
+        // a chunk no arm retrieved must say where it came from.
+        let wide = Config {
+            top_k: 60,
+            ..open_cfg()
+        };
+        let opts = contract::SearchOptions {
+            top_k: Some(60),
+            ..contract::SearchOptions::default()
+        };
+        let one = pipeline(wide.clone())
+            .await
+            .search_with("bangunan gedung", &opts)
+            .await
+            .expect("search");
+        assert!(
+            !one.progress.iter().any(|l| l.starts_with("tail:")),
+            "off by default: {:?}",
+            one.progress
+        );
+        let two = pipeline(Config {
+            dense_tail_from: 3,
+            rounds: 2,
+            ..wide
+        })
+        .await
+        .search_with("bangunan gedung", &opts)
+        .await
+        .expect("search");
+        let ids = |r: &SearchResponse| r.results.iter().map(|x| x.id.clone()).collect::<Vec<_>>();
+        // ! The kept top keeps its regulations, slot by slot. The rules that hold inside
+        // one regulation run again after the rounds, so a kept slot may take a better
+        // chunk of the SAME regulation (operative text above its explanation), never
+        // another regulation's.
+        for (a, b) in one.results.iter().zip(&two.results).take(3) {
+            assert_eq!(a.source.title, b.source.title, "{} -> {}", a.id, b.id);
+        }
+        assert!(
+            two.progress.iter().any(|l| l.starts_with("round 2:")),
+            "{:?}",
+            two.progress
+        );
+        let retrieved = ids(&one);
+        for x in &two.results {
+            if !retrieved.contains(&x.id) {
+                assert!(x.expanded_from.is_some(), "{} was added unmarked", x.id);
+            }
         }
     }
 

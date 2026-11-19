@@ -42,6 +42,25 @@ pub struct Scored {
     pub score: f32,
 }
 
+/// One chunk of a document searched by a later round (`SearchOps::within_documents`).
+///
+/// ! Ranks, ✗ a fused score. The caller fuses them, as it fuses the arms: inside one
+/// document a dense distance and a text rank are no more comparable than across the
+/// corpus.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DocHit {
+    pub id: String,
+    pub doc_id: String,
+    pub chapter: Option<String>,
+    pub article: Option<String>,
+    /// Cosine distance to the question.
+    pub distance: f32,
+    /// 1-based, within its document.
+    pub dense_rank: i64,
+    /// 1-based, within its document; text that matches no term ranks after all that do.
+    pub text_rank: i64,
+}
+
 /// Which regulation a candidate belongs to · the key sibling expansion walks.
 ///
 /// ! All three parts, ✗ number and year. `chunks_identifier_idx` is
@@ -1095,6 +1114,95 @@ impl SearchOps {
             )
             .await?;
         Ok(rows.iter().map(ChunkRow::from_row).collect())
+    }
+
+    /// Cosine distance from the question to each id that has a vector.
+    ///
+    /// ! By primary key, at most the pool: the arms that did not compute a distance
+    /// (sparse, region, a named reference) leave candidates without one, and ordering by
+    /// distance needs it for all of them.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn distances(
+        &self,
+        ids: &[String],
+        query: &[f32],
+    ) -> Result<Vec<(String, f32)>, StoreError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "SELECT id, (dense <=> $1::text::halfvec)::float8
+                 FROM chunks WHERE id = ANY($2) AND dense IS NOT NULL",
+                &[&crate::dense_literal(query), &ids],
+            )
+            .await?;
+        #[allow(clippy::cast_possible_truncation)]
+        Ok(rows
+            .iter()
+            .map(|r| (r.get::<_, String>(0), r.get::<_, f64>(1) as f32))
+            .collect())
+    }
+
+    /// A later search round: the indexable chunks of `docs`, each document's best
+    /// `scan` by dense distance and its best `scan` by stemmed text match.
+    ///
+    /// ! Scoped by `doc_id` (`chunks_doc_seq_idx`), so it reads the named documents and
+    /// nothing else: a regulation is 21 chunks at the median and 8,028 at most. The text
+    /// match is OR'd, as the text arm's is, and needs no BM25 index.
+    ///
+    /// # Errors
+    /// Database failure.
+    pub async fn within_documents(
+        &self,
+        docs: &[String],
+        query: &[f32],
+        text: &str,
+        scan: i64,
+    ) -> Result<Vec<DocHit>, StoreError> {
+        if docs.is_empty() {
+            return Ok(Vec::new());
+        }
+        let c = self.client().await?;
+        let rows = c
+            .query(
+                "WITH q AS (
+                     SELECT NULLIF(array_to_string(
+                                tsvector_to_array(to_tsvector('indonesian', $2)), ' | '),
+                            '')::tsquery AS tq
+                 ), d AS (
+                     SELECT id, doc_id, chapter, article,
+                            dense <=> $1::text::halfvec AS dist,
+                            COALESCE(ts_rank_cd(tsv, q.tq), 0) AS t
+                       FROM chunks, q
+                      WHERE doc_id = ANY($3) AND indexable AND dense IS NOT NULL
+                 ), r AS (
+                     SELECT *, row_number() OVER (PARTITION BY doc_id ORDER BY dist, id) AS rd,
+                               row_number() OVER (PARTITION BY doc_id ORDER BY t DESC, dist, id)
+                                   AS rt
+                       FROM d
+                 )
+                 SELECT id, doc_id, chapter, article, dist::float8, rd, rt
+                   FROM r WHERE rd <= $4 OR rt <= $4",
+                &[&crate::dense_literal(query), &text, &docs, &scan],
+            )
+            .await?;
+        #[allow(clippy::cast_possible_truncation)]
+        Ok(rows
+            .iter()
+            .map(|r| DocHit {
+                id: r.get(0),
+                doc_id: r.get(1),
+                chapter: r.get(2),
+                article: r.get(3),
+                distance: r.get::<_, f64>(4) as f32,
+                dense_rank: r.get(5),
+                text_rank: r.get(6),
+            })
+            .collect())
     }
 }
 
