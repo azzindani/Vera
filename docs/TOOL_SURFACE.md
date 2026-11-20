@@ -121,9 +121,12 @@ still calls no model: the rewording is the agent's job.
   1,804 ms, one caller, cache off).
 * **The best single wording is a hypothetical answer** (HyDE): the article the agent
   expects to find, in statute style, with facts the question does not give left
-  generic. With it alone the default engine reads Recall@5 78.0%, Recall@10 85.1%, MRR
-  0.618 on the holdout, for one extra search. Three such passages from other angles
-  (another level of law, the definitions) did worse than one (`ROADMAP.md`).
+  generic. Three such passages from other angles (another level of law, the definitions)
+  did worse than one (`ROADMAP.md`).
+* ! **How much it helps depends on what the writer knows.** Written without knowing the
+  clauses (100 train questions): Recall@5 69 → 72%, Recall@25 88 → 91%. Written by
+  someone who had read the clauses (the holdout; the fresh set): +12 to +13 points, which
+  is a leak, ✗ a gain. Expect the first figure from an agent that does not know the answer.
 * Formal paraphrases and keyword lines help less. A rewording that guesses a fact the
   question does not state can only mislead.
 
