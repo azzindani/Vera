@@ -166,6 +166,46 @@ the PENJELASAN of `Pasal 6` under `article = 'Pasal 6'`, chapter `PENJELASAN - .
 (`dev_tools/eval/review/review-001.csv`, 120 cases); `import` records the verdicts, and
 `EVAL_REVIEWED=1 e2e.py` scores only labels a reviewer marked BENAR.
 
+### 2d. The fresh test set · s410-s737, o101-o130 · `queries_fresh.json`
+
+**358 cases**: 328 answerable, 30 out of domain (20 everyday, 10 foreign law). Drafted on
+2026-11-20, after the engine's levers (HyDE, the agent loop, wider pools) had been chosen
+on `queries.json`. The set is there to show whether those gains hold on questions
+nothing was tuned on.
+
+! **A separate file, so nothing can tune on it.** Every simulation, fit and sweep in
+`dev_tools/eval/` reads `queries.json`. `queries_fresh.json` is read only by
+`EVAL_SPLIT=fresh e2e.py`. `draft/check.py build --fresh <label>` numbers ids across both
+files, and `merge` writes the fresh cases to their own file.
+
+**How it was made:** the same as §2c.
+
+1. `sample.py --seed 20261121` drew 564 clauses: one per document, documents already
+   labelled excluded, strata 45/15/40.
+2. 399 of them were read (the rest are left for a top-up); 71 were skipped, mostly for boilerplate (definitions,
+   revocation, budget annexes), OCR damage, a title cut off before its subject, or a foil
+   identical to its clause.
+3. `check.py build` read the labels back from the corpus. 9 drafts copied 6–8 words and
+   were reworded; every label resolves to its own chunk; 29 cases carry `near_duplicates`.
+4. Second reading: 30 cases were read against their full clause, the 12 riskiest
+   (clauses cut mid-sentence, cross-references, foils) and 18 at random. All 30 answer.
+   The drafter read every clause while drafting; no second reader did.
+
+| type | n | type | n |
+|---|---:|---|---:|
+| exact_ref | 51 | definitional | 26 |
+| sanction | 33 | authority | 26 |
+| conceptual | 29 | numeric | 25 |
+| hard_negative | 28 | obligation | 21 |
+| procedural | 27 | underspecified | 21 |
+| exception | 27 | multi_tier | 14 |
+
+Use it **once per lever**, after the lever is fixed on `queries.json`, and record the
+number next to the train/holdout figure. A lever tuned against this set makes it a
+second train set.
+
+! **Not reviewed by a domain expert**, like §2b and §2c.
+
 ## 3. Metrics
 
 | Metric | Why |

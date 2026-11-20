@@ -874,8 +874,10 @@ whose labels had been read. Both passages were written the same way as for the h
   ±9 points, so neither number is exact.
 * **What survives is the top**: MRR and the right regulation in top 5 rise on both sets.
   The ceiling at 25 moves by about 3 points, ✗ the 7 the holdout suggested.
-* A larger test decides it. A fresh set (`EVAL_SPLIT=fresh`, `draft/check.py build
-  --fresh`, scored by nothing else) is being drafted now, before it is used.
+* A larger test decides it. **The fresh set is written** (2026-11-20, `EVAL.md` §2d): 328
+  answerable cases plus 30 out of domain in `queries_fresh.json`, which no sim or fit
+  reads. It is not yet scored. When it is, plain, + A and + A + L are each scored once,
+  with passages written the same way as for train.
 
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the

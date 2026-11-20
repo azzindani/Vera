@@ -42,8 +42,16 @@ def _rewrites() -> dict[str, list[str]]:
     if not os.environ.get("EVAL_REWRITES"):
         return {}
     by_id = json.loads(Path(os.environ["EVAL_REWRITES"]).read_text("utf-8"))
-    spec = json.loads((Path(__file__).parent / "queries.json").read_text("utf-8"))
+    spec = json.loads(_queries_file().read_text("utf-8"))
     return {q["query"]: by_id[q["id"]] for q in spec["queries"] if q["id"] in by_id}
+
+
+def _queries_file() -> Path:
+    # ! EVAL_SPLIT=fresh reads `queries_fresh.json`, a test set drafted after the engine's
+    # levers were chosen. It is a separate file so that no other script (sims, fits,
+    # sweeps, all of which read `queries.json`) can see it: never tuned on, by construction.
+    name = "queries_fresh.json" if os.environ.get("EVAL_SPLIT") == "fresh" else "queries.json"
+    return Path(__file__).parent / name
 
 
 REWRITES = _rewrites()
@@ -207,9 +215,7 @@ def main():
     http = os.environ.get("VERA_HTTP")
     srv = HttpServer(http) if http else Server()
     cur = psycopg.connect(PG).cursor()
-    spec = json.loads(
-        (Path(__file__).parent / "queries.json").read_text(encoding="utf-8")
-    )
+    spec = json.loads(_queries_file().read_text(encoding="utf-8"))
 
     n = hit5 = hit10 = hitall = refused_real = reg5 = 0
     deep = {15: 0, 20: 0, 25: 0}   # Recall@k past 10, read only when the reply is that deep
@@ -226,9 +232,8 @@ def main():
 
     for q in spec["queries"]:
         held = bool(q.get("holdout"))
-        # ! EVAL_SPLIT=fresh scores ONLY cases tagged `fresh` (`draft/check.py build
-        # --fresh`), a test set drafted after the engine's levers were chosen. Every other
-        # split leaves them out, so numbers recorded before they existed stay comparable.
+        # A `fresh` case found in `queries.json` (merged there by mistake) is still left
+        # out of every other split, so numbers recorded before it existed stay comparable.
         if (split == "fresh") != bool(q.get("fresh")):
             continue
         if (split == "train" and held) or (split == "holdout" and not held):

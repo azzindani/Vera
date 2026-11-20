@@ -40,6 +40,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from run import resolve_targets  # noqa: E402
 
 QUERIES = Path(__file__).resolve().parents[1] / "queries.json"
+# ! The fresh test set lives in its own file: every sim, fit and sweep reads
+# `queries.json`, so a set kept out of it cannot be tuned on by accident.
+FRESH = Path(__file__).resolve().parents[1] / "queries_fresh.json"
 WORD = re.compile(r"\w+")
 META = ("SELECT id, doc_id, regulation_type, regulation_number, year, about, article, body, "
         "enacting_body, cluster_id FROM chunks WHERE id = ANY(%s)")
@@ -75,10 +78,13 @@ def near_duplicates(conn, row, exclude_docs: set[str]) -> int:
 def build(a) -> None:
     conn = psycopg.connect(a.dsn)
     cur = conn.cursor()
-    spec = json.loads(QUERIES.read_text("utf-8"))
-    known = {q["query"].strip().lower() for q in spec["queries"]}
-    n_s = max(int(q["id"][1:]) for q in spec["queries"] if q["id"].startswith("s"))
-    n_o = max(int(q["id"][1:]) for q in spec["queries"] if q["id"].startswith("o"))
+    every = json.loads(QUERIES.read_text("utf-8"))["queries"]
+    if FRESH.exists():
+        every += json.loads(FRESH.read_text("utf-8"))["queries"]
+    # Ids and duplicates are checked across both files, so an id is never reused.
+    known = {q["query"].strip().lower() for q in every}
+    n_s = max(int(q["id"][1:]) for q in every if q["id"].startswith("s"))
+    n_o = max(int(q["id"][1:]) for q in every if q["id"].startswith("o"))
     staged, rejected, skips = [], [], []
     for path in sorted(Path(a.drafts).glob("*.json")):
         for d in json.loads(path.read_text("utf-8")):
@@ -197,7 +203,12 @@ def merge(a) -> None:
     verdicts = ({v["id"]: v for v in json.loads(Path(a.verdicts).read_text("utf-8"))}
                 if a.verdicts else None)
     drop = set(a.drop.split(",")) if a.drop else set()
-    spec = json.loads(QUERIES.read_text("utf-8"))
+    fresh = any(x.get("fresh") for x in staged)
+    out = FRESH if fresh else QUERIES
+    spec = (json.loads(out.read_text("utf-8")) if out.exists() else
+            {"_README": ["A fresh test set, drafted after the engine's levers were chosen "
+                         "(EVAL.md section 2d). Scored only by EVAL_SPLIT=fresh; nothing is "
+                         "tuned on it."], "queries": []})
     kept = dropped = 0
     for s in staged:
         s = {k: v for k, v in s.items() if k != "_check"}
@@ -216,8 +227,8 @@ def merge(a) -> None:
             s["provenance"] += f"; {a.note}"
         spec["queries"].append(s)
         kept += 1
-    QUERIES.write_text(json.dumps(spec, ensure_ascii=False, indent=2), "utf-8", newline="\n")
-    print(f"merged {kept} · dropped by the second reader {dropped} · queries.json now {len(spec['queries'])}")
+    out.write_text(json.dumps(spec, ensure_ascii=False, indent=2), "utf-8", newline="\n")
+    print(f"merged {kept} · dropped by the second reader {dropped} · {out.name} now {len(spec['queries'])}")
 
 
 def main() -> None:
