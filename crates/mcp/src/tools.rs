@@ -52,6 +52,11 @@ pub fn definitions(registry: &contract::Registry) -> Vec<Value> {
                         "type": "string",
                         "description": "Natural-language question or regulation reference."
                     },
+                    "rewordings": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Optional: up to 3 other wordings of the SAME question, written by you, e.g. a formal legal paraphrase and a line of statute-style keywords. Each is searched and the results fused; the original question still decides the domain. Raised holdout Recall@5 from 65.5% to 75.0%. Each costs one more search, about 4x the latency for 3."
+                    },
                     // ! Every option below NARROWS. A value above the server's
                     // ceiling is clamped and the clamp is reported in
                     // `applied.clamped` (`docs/TOOL_SURFACE.md` §2).

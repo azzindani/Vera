@@ -139,6 +139,10 @@ pub struct Config {
     pub round_per_document: usize,
     /// Rows per regulation, per signal, a later round ranks before fusing.
     pub round_scan: i64,
+    /// Rewordings of one question the caller may send (`search_reworded`); more are
+    /// ignored and reported. `0` turns the feature off. Each costs one more embedding
+    /// and one more search.
+    pub max_rewordings: usize,
     /// Relative influence of each metadata factor (`docs/SCORING.md` §2).
     ///
     /// ! `Weights::OFF` is exactly the identity on the fused order, so this
@@ -236,6 +240,7 @@ impl Default for Config {
             round_documents: 3,
             round_per_document: 2,
             round_scan: 30,
+            max_rewordings: 3,
             // Fitted, ✗ chosen: dev_tools/eval/fit_factors.py, +7.5 points
             // leave-one-out over the text arm.
             factor_weights: engine::Weights::FITTED,
@@ -959,6 +964,17 @@ impl Pipeline {
         query: &str,
         opts: &contract::SearchOptions,
     ) -> Result<SearchResponse, PipelineError> {
+        self.search_to(query, opts, None).await
+    }
+
+    /// [`Self::search_with`], cut at `depth` instead of `top_k` when given: the
+    /// whole scored pool, for fusing several wordings of one question.
+    async fn search_to(
+        &self,
+        query: &str,
+        opts: &contract::SearchOptions,
+        depth: Option<usize>,
+    ) -> Result<SearchResponse, PipelineError> {
         let applied = opts.resolve(self.ceilings(), &self.cfg.algorithms)?;
         let mut progress = Vec::new();
         for line in &applied.clamped {
@@ -1081,7 +1097,7 @@ impl Pipeline {
         // has that raising `top_k` would return something it has not seen, and
         // after `truncate` the number that would have said so is gone.
         let scored = ranked.len();
-        ranked.truncate(applied.top_k);
+        ranked.truncate(depth.unwrap_or(applied.top_k));
         progress.push(format!(
             "returning {} of {} candidates",
             ranked.len(),
@@ -1096,6 +1112,84 @@ impl Pipeline {
             results,
             scored,
             exact_matches,
+            progress,
+            applied,
+        }))
+    }
+
+    /// Search a question and the caller's own rewordings of it, and fuse the replies.
+    ///
+    /// ! The engine still calls no model. A rewording is the AGENT's work (`CLAUDE.md`
+    /// §2); what the engine adds is searching each to the whole pool and fusing the
+    /// lists by RRF, equal weights, `rrf_k`. Measured with rewordings written from the
+    /// question alone (`ROADMAP.md` Stage 3): holdout Recall@5 65.5 -> 75.6%, Recall@10
+    /// 77.4 -> 83.3%, MRR 0.539 -> 0.581.
+    /// ! The original decides. Its domain gate and its exact matches stand: a refused
+    /// question stays refused whatever a rewording would admit, and a rewording that is
+    /// refused contributes nothing.
+    /// ! One after another, ✗ concurrently: the embedder is the bottleneck on two cores,
+    /// so overlap would buy little, and each wording costs one more embedding.
+    ///
+    /// # Errors
+    /// Embedding or database failure on the original. A rewording that fails is
+    /// reported in `progress` and left out.
+    pub async fn search_reworded(
+        &self,
+        query: &str,
+        rewordings: &[String],
+        opts: &contract::SearchOptions,
+    ) -> Result<SearchResponse, PipelineError> {
+        let used: Vec<&String> = rewordings
+            .iter()
+            .filter(|w| !w.trim().is_empty() && w.as_str() != query)
+            .take(self.cfg.max_rewordings)
+            .collect();
+        if used.is_empty() {
+            let mut r = self.search_with(query, opts).await?;
+            if !rewordings.is_empty() {
+                r.progress.push(format!(
+                    "rewordings: {} given, none used (MAX_REWORDINGS {})",
+                    rewordings.len(),
+                    self.cfg.max_rewordings
+                ));
+            }
+            return Ok(r);
+        }
+        let applied = opts.resolve(self.ceilings(), &self.cfg.algorithms)?;
+        let depth = Some(applied.candidate_pool);
+        let base = self.search_to(query, opts, depth).await?;
+        if base.results.is_empty() {
+            return Ok(base);
+        }
+        let mut lists: Vec<Vec<SearchResult>> = vec![base.results.clone()];
+        let mut progress = base.progress.clone();
+        for (n, w) in used.iter().enumerate() {
+            match self.search_to(w, opts, depth).await {
+                Ok(r) => {
+                    progress.push(format!("rewording {}: {} results", n + 1, r.results.len()));
+                    lists.push(r.results);
+                }
+                Err(e) => progress.push(format!("rewording {}: failed · {e}", n + 1)),
+            }
+        }
+        let fused = fuse_results(&lists, self.cfg.rrf_k);
+        let scored = fused.len();
+        progress.push(format!(
+            "fused {} wordings by RRF (k {}) · {} given, {} used",
+            lists.len(),
+            self.cfg.rrf_k,
+            rewordings.len(),
+            used.len()
+        ));
+        let mut results = fused;
+        results.truncate(applied.top_k);
+        Ok(self.assemble(Assembly {
+            query,
+            probed: base.clusters_probed,
+            top_cluster: base.domain_confidence,
+            results,
+            scored,
+            exact_matches: base.exact_matches,
             progress,
             applied,
         }))
@@ -2388,6 +2482,37 @@ fn locator_of(row: &store::ChunkRow) -> Option<String> {
 }
 
 /// Bounded preview · whitespace collapsed, cut on a word break, multibyte-safe.
+/// Reciprocal rank fusion over whole replies: each list votes `1 / (k + rank)` for
+/// every result it holds, equal weights. A result keeps the object of the first list
+/// that returned it, so its snippet, scores and provenance are the original's when the
+/// original found it.
+///
+/// ! Ties keep first-seen order, so the fused order is deterministic.
+fn fuse_results(lists: &[Vec<SearchResult>], k: f32) -> Vec<SearchResult> {
+    let mut order: Vec<SearchResult> = Vec::new();
+    let mut score: Vec<f32> = Vec::new();
+    for list in lists {
+        for (rank, r) in list.iter().enumerate() {
+            #[allow(clippy::cast_precision_loss)]
+            let vote = 1.0 / (k + (rank + 1) as f32);
+            if let Some(at) = order.iter().position(|x| x.id == r.id) {
+                score[at] += vote;
+            } else {
+                order.push(r.clone());
+                score.push(vote);
+            }
+        }
+    }
+    let mut idx: Vec<usize> = (0..order.len()).collect();
+    idx.sort_by(|&a, &b| {
+        score[b]
+            .partial_cmp(&score[a])
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(a.cmp(&b))
+    });
+    idx.into_iter().map(|i| order[i].clone()).collect()
+}
+
 fn snippet(body: &str, max_chars: usize) -> String {
     let flat = body.split_whitespace().collect::<Vec<_>>().join(" ");
     if flat.chars().count() <= max_chars {
@@ -2533,6 +2658,39 @@ mod tests {
         assert_eq!(ids, ["a", "b", "e", "c", "d", "f"]);
         // Nothing to order when the ranking is no longer than what is kept.
         Pipeline::order_tail(&mut ranked[..2], 2, &distance);
+    }
+
+    #[test]
+    fn rewordings_fuse_by_rank_and_agreement_wins() {
+        let r = |id: &str, snippet: &str| SearchResult {
+            id: id.into(),
+            snippet: snippet.into(),
+            score: 0.0,
+            scores: ComponentScores {
+                dense: 0.0,
+                bm25: 0.0,
+            },
+            source: Source {
+                title: "t".into(),
+                url: None,
+                locator: Locator {
+                    page: None,
+                    section: None,
+                },
+            },
+            expanded_from: None,
+            currency: None,
+        };
+        // `b` is second in both lists and first nowhere; agreement puts it first.
+        let original = vec![r("a", "from the original"), r("b", "b"), r("c", "c")];
+        let reworded = vec![r("d", "d"), r("b", "b again"), r("e", "e")];
+        let fused = fuse_results(&[original, reworded], 60.0);
+        let ids: Vec<&str> = fused.iter().map(|x| x.id.as_str()).collect();
+        // `a` and `d` tie, as do `c` and `e`: first seen stays first.
+        assert_eq!(ids, ["b", "a", "d", "c", "e"]);
+        // The object kept is the first list's: the original's snippet survives.
+        assert_eq!(fused[1].snippet, "from the original");
+        assert!(fuse_results(&[], 60.0).is_empty());
     }
 
     #[test]
@@ -3196,6 +3354,43 @@ mod live {
             expand: None,
             ..siblings()
         }
+    }
+
+    #[tokio::test]
+    #[ignore = "needs the fixture corpus · VERA_FX_DSN"]
+    async fn rewordings_are_searched_and_fused_and_the_original_decides() {
+        let p = pipeline(open_cfg()).await;
+        let opts = contract::SearchOptions::default();
+        let words = vec![
+            "peraturan tentang bangunan gedung".to_owned(),
+            "bangunan gedung".to_owned(), // the question itself: ignored
+            String::new(),                // empty: ignored
+        ];
+        let r = p
+            .search_reworded("bangunan gedung", &words, &opts)
+            .await
+            .expect("search");
+        assert!(!r.results.is_empty());
+        assert!(r.results.len() <= Config::default().top_k);
+        assert!(
+            r.progress
+                .iter()
+                .any(|l| l.starts_with("fused 2 wordings") && l.ends_with("1 used")),
+            "{:?}",
+            r.progress
+        );
+        assert_eq!(r.query, "bangunan gedung", "the original stays the query");
+
+        // None usable: a plain search, and the reply says the rewordings were not used.
+        let plain = p
+            .search_reworded("bangunan gedung", &["bangunan gedung".to_owned()], &opts)
+            .await
+            .expect("search");
+        assert!(
+            plain.progress.iter().any(|l| l.contains("none used")),
+            "{:?}",
+            plain.progress
+        );
     }
 
     #[tokio::test]

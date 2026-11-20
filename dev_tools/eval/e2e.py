@@ -36,10 +36,27 @@ sys.path.insert(0, str(Path(__file__).parent))
 from run import resolve_targets  # noqa: E402
 
 
+def _rewrites() -> dict[str, list[str]]:
+    """EVAL_REWRITES: a file of {case id: [rewordings]} (`rewrites_holdout.json`), keyed
+    here by the question text so `search_args` can find them."""
+    if not os.environ.get("EVAL_REWRITES"):
+        return {}
+    by_id = json.loads(Path(os.environ["EVAL_REWRITES"]).read_text("utf-8"))
+    spec = json.loads((Path(__file__).parent / "queries.json").read_text("utf-8"))
+    return {q["query"]: by_id[q["id"]] for q in spec["queries"] if q["id"] in by_id}
+
+
+REWRITES = _rewrites()
+
+
 def search_args(query):
     """EVAL_ARGS='{"profile": "literal"}' adds per-request options (`TOOL_SURFACE.md`) to
-    every search, to score one algorithm or weight vector instead of the server's default."""
-    return {"query": query, **json.loads(os.environ.get("EVAL_ARGS", "{}"))}
+    every search, to score one algorithm or weight vector instead of the server's default.
+    EVAL_REWRITES sends `rewordings` with the questions it covers."""
+    args = {"query": query, **json.loads(os.environ.get("EVAL_ARGS", "{}"))}
+    if query in REWRITES:
+        args["rewordings"] = REWRITES[query]
+    return args
 
 
 def same_regulation(row, ref) -> bool:

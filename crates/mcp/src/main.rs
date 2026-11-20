@@ -268,6 +268,8 @@ impl Settings {
                     d.round_per_document,
                 )?,
                 round_scan: parsed("ROUND_SCAN", "positive integer", d.round_scan)?,
+                // ! 0 is valid and turns rewordings off.
+                max_rewordings: parsed("MAX_REWORDINGS", "integer", d.max_rewordings)?,
                 // ! Arm weights are properties of the CORPUS, not of the engine,
                 // and a corpus is re-chunked far more often than the engine is
                 // rebuilt. Refitting must not require a release.
@@ -744,7 +746,27 @@ fn list_algorithms(pipe: &Pipeline) -> Value {
 fn parse_options(args: &Value) -> Result<contract::SearchOptions, serde_json::Error> {
     let mut obj = args.as_object().cloned().unwrap_or_default();
     obj.remove("query");
+    obj.remove("rewordings");
     serde_json::from_value(Value::Object(obj))
+}
+
+/// The caller's rewordings of its question: an array of strings, or absent.
+///
+/// ! Anything else is an error, ✗ ignored: an agent that sends one string where a list
+/// belongs would otherwise be served a single search and believe it was fused.
+fn parse_rewordings(args: &Value) -> Result<Vec<String>, &'static str> {
+    match args.get("rewordings") {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(items)) => items
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .map(str::to_owned)
+                    .ok_or("every rewording must be a string")
+            })
+            .collect(),
+        Some(_) => Err("`rewordings` must be an array of strings"),
+    }
 }
 
 async fn search_knowledge(pipe: &Pipeline, args: &Value) -> Value {
@@ -776,7 +798,17 @@ async fn search_knowledge(pipe: &Pipeline, args: &Value) -> Value {
             );
         }
     };
-    match pipe.search_with(q, &opts).await {
+    let rewordings = match parse_rewordings(args) {
+        Ok(r) => r,
+        Err(e) => {
+            return tools::error(
+                "search_knowledge",
+                &format!("invalid rewordings · {e}"),
+                "pass {\"rewordings\": [\"...\", \"...\"]} · other wordings of the same question",
+            );
+        }
+    };
+    match pipe.search_reworded(q, &rewordings, &opts).await {
         Ok(r) => serde_json::to_value(r).unwrap_or_else(|e| {
             tools::error("search_knowledge", &e.to_string(), "retry the query")
         }),
@@ -1047,6 +1079,24 @@ mod tests {
         let mut s = settings();
         s.pipeline.region_weight = 0.0;
         assert!(s.validate().is_ok());
+    }
+
+    #[test]
+    fn rewordings_are_a_list_of_strings_or_absent() {
+        assert!(parse_rewordings(&json!({"query": "q"})).unwrap().is_empty());
+        assert!(
+            parse_rewordings(&json!({"query": "q", "rewordings": null}))
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            parse_rewordings(&json!({"rewordings": ["a", "b"]})).unwrap(),
+            ["a", "b"]
+        );
+        assert!(parse_rewordings(&json!({"rewordings": "a"})).is_err());
+        assert!(parse_rewordings(&json!({"rewordings": ["a", 1]})).is_err());
+        // Not an option: the options parser never sees it, so it is not "unknown".
+        assert!(parse_options(&json!({"query": "q", "rewordings": ["a"]})).is_ok());
     }
 
     #[test]

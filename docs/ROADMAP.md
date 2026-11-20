@@ -153,19 +153,22 @@ depth only if Recall@10 holds. Region as a ranking signal over the pool, ✗ as 
 
 ## Stage 3 · ranking · the v0.2.0 headline
 
-| target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-19 | opt-in: tail from 5, round 2 |
-|---|---|---|---|---|---|
-| Recall@5 | 65% | **70%** | 57.1% | **65.5%** [68.5%] · step a reached | 65.5% [68.5%] |
-| Recall@10 | 75% | **80%** | 68.4% | **75.6%** [78.5%] · step a reached | **80.4% [81.3%] · v0.2.0 reached** |
-| MRR | 0.50 | **0.55** | 0.438 | **0.526** [0.534] · step a reached | 0.536 [0.542], over 25 |
-| right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [80.0%] | 74.4% [79.6%] |
-| no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 46%; holdout: authority 3/7, hard_negative 6/13 | same |
+| target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-19 | opt-in: tail from 5, round 2 | same + 3 rewordings, holdout · 2026-11-20 |
+|---|---|---|---|---|---|---|
+| Recall@5 | 65% | **70%** | 57.1% | **65.5%** [68.5%] · step a reached | 65.5% [68.5%] | 75.0% · v0.2.0 |
+| Recall@10 | 75% | **80%** | 68.4% | **75.6%** [78.5%] · step a reached | **80.4% [81.3%] · v0.2.0 reached** | **83.3%** · v0.2.0 |
+| MRR | 0.50 | **0.55** | 0.438 | **0.526** [0.534] · step a reached | 0.536 [0.542], over 25 | 0.580 · v0.2.0 |
+| right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [80.0%] | 74.4% [79.6%] | 83.9% |
+| no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 46%; holdout: authority 3/7, hard_negative 6/13 | same | **all ≥ 50%** · v0.2.0 |
 
 **Now** is the region arm, the in-document ordering, the definitions rule and the revoker
 lift (sections below), as shipped by default (`vera.sh e2e lift_default`, `TOP_K` 10).
 Step a is reached on the holdout for all three measures. The opt-in column is
 `DENSE_TAIL_FROM=5 ROUNDS=2` at `TOP_K` 25. It reaches the v0.2.0 Recall@10 on the holdout
 and on all cases, and nothing else of v0.2.0.
+The last column adds the agent's three rewordings (`rewordings`, below), measured on the
+holdout only, the only set that has them. It reaches every v0.2.0 ranking target except
+the right regulation in top 5.
 
 **Status (604-case set, 2026-11-15).** ✗ Not reached, and nothing shipped changed.
 Reweighting is exhausted: every fusion and prior setting tried ranks within about a point
@@ -678,8 +681,35 @@ That is past all three v0.2.0 ranking targets (70% / 80% / 0.55).
 * **Cost.** Four searches instead of one, so four query embeddings: about 4 × 330 ms one
   after another, or less run concurrently, inside the 5 s a user tolerates. Throughput per
   question is a quarter at the same CPU.
-* **Not built.** The engine has no multi-wording request yet. Building it (`queries` on
-  `search_knowledge`, fused inside, one embedding per wording) is a separate step.
+* **Built, opt-in: `rewordings` on `search_knowledge` (2026-11-20).** Up to
+  `MAX_REWORDINGS` (default 3) extra wordings, each searched to `candidate_pool` depth and
+  fused with the original by the same RRF. The original decides the gate: a refused
+  question stays refused, whatever the rewordings say. Absent, the reply is what it was.
+  Through the engine, `EVAL_REWRITES=dev_tools/eval/rewrites_holdout.json vera.sh e2e
+  rw_<label>`, holdout 168:
+
+  | engine, holdout 168 | Recall@5 | Recall@10 | Recall@25 | MRR | right regulation @5 | weakest type @5 |
+  |---|---|---|---|---|---|---|
+  | default, no rewordings | 65.5% | 75.6% | | 0.526 | 74.4% | authority 3/7 |
+  | default + rewordings (`TOP_K` 10) | 75.0% | 81.5% | | **0.585** | 83.9% | hard_negative 6/13 |
+  | tail from 5, round 2 + rewordings | 75.0% | **83.3%** | 89.9% | 0.580 | 83.9% | underspecified 11/21 |
+  | tail from 10, round 2 + rewordings | **75.6%** | **83.3%** | 89.9% | 0.581 | **84.5%** | hard_negative 7/13 |
+
+  The engine reproduces the simulation (75.6 / 83.3 / 0.581 simulated). The right
+  regulation in top 5 stops one case short of 85%.
+
+  **Latency, cache off** (`QUERY_CACHE=0` on the embedder, `load_test.py`, holdout
+  questions, `REWORD=1` against a plain run before and after):
+
+  | | 1 client p50 / p95 | 4 clients p50 / p95 | throughput, 4 clients |
+  |---|---|---|---|
+  | plain | 470 / 591 ms | 1,425 / 2,298 ms | 2.7 q/s |
+  | with 3 rewordings | 1,804 / 3,085 ms | 4,882 / 6,048 ms | 0.8 q/s |
+
+  Inside the 5 s a user tolerates for one caller: about 4× the time, because the four
+  wordings are searched one after another. Under four callers at once the p95 passes 5 s,
+  and throughput is a third. That is why it stays opt-in: the agent spends it when a
+  question is worth it.
 
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%].

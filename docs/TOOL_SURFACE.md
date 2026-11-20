@@ -106,6 +106,23 @@ before the cut — the single most valuable dial in the engine, per `SCORING.md`
 Both clamp to the server's configured ceiling, and `candidate_pool` is additionally
 floored at `top_k` — a pool smaller than the answer silently caps the reply.
 
+### `rewordings`
+
+Optional: up to `MAX_REWORDINGS` (default 3) other wordings of the same question,
+written by the agent. Each is searched to `candidate_pool` depth and fused with the
+original by RRF over ranks, equal weights; then the reply is cut to `top_k`. The engine
+still calls no model: the rewording is the agent's job.
+
+* The original decides the gate. A question it refuses stays refused.
+* Empty strings and copies of the query are dropped; past the ceiling, the rest are
+  ignored, and `progress` says how many were given and used.
+* Measured on the holdout (`ROADMAP.md`, "A swarm of questions"): Recall@5 65.5 → 75.0%,
+  Recall@10 75.6 → 81.5%, MRR 0.526 → 0.585. Cost: about 4× the latency (p50 470 →
+  1,804 ms, one caller, cache off).
+* What helps is variety: one formal paraphrase plus short keyword lines in the corpus's
+  legal vocabulary. A rewording that guesses a fact the question does not state can only
+  mislead.
+
 ---
 
 ## 4. Effort  · designed, ✗ built
@@ -255,6 +272,7 @@ same. Sharing the pool is what keeps the vote meaningful *and* cheap.
 | `factor_weights` | ✔ experimental, echoed back |
 | `max_rounds`, `budget_ms` | ✗ blocked on the §4 concurrency conflict |
 | `expand` | ✔ `siblings` built, off by default, +1 case measured · `citations` not built |
+| `rewordings` | ✔ opt-in, up to `MAX_REWORDINGS`; measured through the engine on the holdout |
 | `viewpoints` | ✗ |
 
 ! **No argument here has been measured through the engine yet.** The factor layer

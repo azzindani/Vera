@@ -39,7 +39,15 @@ SEED = int(sys.argv[4]) if len(sys.argv) > 4 else 7
 URL = os.environ.get("VERA_HTTP", "http://127.0.0.1:8081").rstrip("/") + "/mcp"
 QUERIES = Path(__file__).parent / "queries.json"
 
-qs = [q["query"] for q in json.loads(QUERIES.read_text(encoding="utf-8"))["queries"]]
+spec = json.loads(QUERIES.read_text(encoding="utf-8"))["queries"]
+# ! REWRITES (a {case id: [rewordings]} file, e.g. rewrites_holdout.json) narrows the run to
+# the questions it covers. REWORD=1 also sends their rewordings, so the same questions can
+# be timed with and without them.
+REWRITES = json.loads(Path(os.environ["REWRITES"]).read_text("utf-8"))     if os.environ.get("REWRITES") else {}
+if REWRITES:
+    spec = [q for q in spec if q["id"] in REWRITES]
+WORDS = {q["query"]: REWRITES.get(q["id"], []) for q in spec}     if os.environ.get("REWORD") == "1" else {}
+qs = [q["query"] for q in spec]
 order = [qs[i % len(qs)] for i in range(TOTAL)]
 random.Random(SEED).shuffle(order)
 
@@ -70,7 +78,9 @@ def worker() -> None:
         t = time.perf_counter()
         try:
             r = post({"jsonrpc": "2.0", "id": n, "method": "tools/call",
-                      "params": {"name": "search_knowledge", "arguments": {"query": query}}})
+                      "params": {"name": "search_knowledge", "arguments": (
+                          {"query": query, "rewordings": WORDS[query]} if WORDS.get(query)
+                          else {"query": query})}})
             status = "served" if "result" in r and not r["result"].get("isError") else "error"
         except urllib.error.HTTPError as e:
             status = "refused" if e.code == 503 else f"http{e.code}"

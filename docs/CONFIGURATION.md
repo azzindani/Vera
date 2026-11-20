@@ -107,6 +107,7 @@ safe.
 | `ROUND_DOCUMENTS` | `3` | Regulations one later round searches inside. Chosen on train from 3 / 5 / 8 (`dev_tools/eval/rounds_sim.py`). |
 | `ROUND_PER_DOCUMENT` | `2` | Chunks of operative text a later round keeps per regulation, ranked by RRF over their dense and text ranks inside it. Chosen on train from 2 / 3 / 5. |
 | `ROUND_SCAN` | `30` | Rows per regulation, per signal, a later round ranks before fusing. A regulation is 21 chunks at the median and 8,028 at most. |
+| `MAX_REWORDINGS` | `3` | Rewordings of one question a caller may send with `search_knowledge` (`rewordings`); more are ignored and reported in `progress`. Each is searched to the whole pool and the replies are fused by RRF; the original question keeps its domain gate and exact matches. `0` turns it off. Each costs one more embedding and one more search. `ROADMAP.md` Stage 3. |
 | `CANDIDATE_POOL` | `60` | candidates carried into scoring. **Metadata is fetched for this many, not for `TOP_K`** — a candidate whose metadata was never loaded cannot be reordered. Must be ≥ `TOP_K`; a smaller pool would silently cap the reply. 60 is where the "regulation absent" bucket stops falling (`SCORING.md` §7). |
 | `SNIPPET_CHARS` | `280` | preview length per result |
 
