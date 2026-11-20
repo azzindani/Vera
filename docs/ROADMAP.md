@@ -888,6 +888,26 @@ whose labels had been read. Both passages were written the same way as for the h
 * ! **The passages for fresh must be written blind.** These questions were drafted with
   their clauses in view, so passages written in the same context would know the answer.
   A and L for fresh are to be written in a context that has seen only the questions.
+* **+ A on fresh, NOT blind** (2026-11-21, `hyde_fresh.json`, written by the drafter a day
+  after drafting, figures and names not in the question left out; `EVAL_SPLIT=fresh EVAL_REWRITES=...`, `TOP_K`
+  25, tail from 5, round 2):
+
+  | fresh, 328 | Recall@5 | Recall@10 | Recall@25 | MRR | right regulation top 5 |
+  |---|---:|---:|---:|---:|---:|
+  | plain | 70.1% | 78.0% | 86.0% | 0.563 | 82.0% |
+  | + A, by the drafter | 82.9% | 90.2% | **98.2%** | 0.682 | 90.2% |
+
+  +49 −7 at 5, +40 −0 at 25; outside `exact_ref` 83.4 → 97.8% at 25.
+  * **This is a leak, not a result.** On train, whose clauses the writer had not seen,
+    + A gave +3 at 5 and +3 at 25. On fresh the same step gives +13 and +12, about what
+    it gave on the holdout (+12.5 at 5), which the writer had also read many times. A
+    writer who knows the clause puts its words in the passage. The 98.2% is an upper
+    bound: what HyDE gives when the agent already knows the article.
+  * So **the honest HyDE gain is the train figure, about +3 at 25**, and the holdout gains
+    above are inflated the same way. Passage L was not written: it would carry the same
+    leak.
+  * A blind number needs a writer that has seen only the questions: a fresh session, or a
+    person. `hyde_fresh.json` stays as the upper bound.
 
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
