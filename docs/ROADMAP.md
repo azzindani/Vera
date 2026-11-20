@@ -770,6 +770,29 @@ fuses by the same RRF.
 * **Cost.** One more search: about 2× the latency of a plain query, half the cost of the
   three rewordings, for a better top.
 
+**The last 12 at 25, read one by one (2026-11-20).** With the original, the 3
+rewordings, the passage as a query and as a document (holdout 150, 92.0% at 25), 12
+questions miss. Fusion is not what holds them: a smaller `k` (2–30) or a guaranteed
+top-25 slot for each list's best 1–5 moves Recall@25 by one case at most.
+* **Found, then buried (6):** s332 (the passage ranks it 3rd, fused 32nd), s250, s252,
+  s288, s316, s320 sit at 11–34 in one list and lose to chunks every list agrees on.
+* **Not an answer the engine could find (4 or 5):**
+  * s147: the label is UU 32/2004 Pasal 210, on BPD members. The engine's first result
+    is PP 76/2001 Pasal 54, "Sumbangan dari Pihak Ketiga kepada Desa...".
+  * s164: the label is Pasal 5, on aquaculture governance. The engine returns the same
+    PERDA's articles, ✗ one defining "keadaan di luar kekuasaan".
+  * s281: the labels are articles on the tax period and the object number. The engine
+    returns the late-payment interest articles.
+  * s133: the label is PP 36/2006 Pasal 1. The engine returns UU 29/2014, the later law
+    defining the same unit.
+  * n105: the passage finds PERDA Kota Batu Pasal 26, the PP's Pasal 26 word for word.
+* **n102** has no region, so many regencies answer; the label names one.
+
+All 12 are rows of `review/review-002.csv`, still unreviewed. That review, ✗ another
+search technique, decides the last points: at 95% the holdout allows 8 misses of 168,
+and 4 of the 12 read as wrong labels. Both numbers will be reported (`EVAL_ALTERNATIVES`),
+and the bias stays named: only misses are reviewed, so review can only raise the score.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With the agent's wordings, 92.3% on the holdout
   (tail 5, round 2, 3 rewordings + one hypothetical answer).
