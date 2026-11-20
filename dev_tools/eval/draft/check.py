@@ -95,7 +95,8 @@ def build(a) -> None:
                 staged.append({"id": qid, "type": "out_of_domain", "subtype": d.get("subtype"),
                                "difficulty": d.get("difficulty"), "query": d["query"],
                                "answer_chunks": [], "source": d.get("source", "not answerable from this corpus"),
-                               "provenance": f"written {TODAY} (stage 0)", "holdout": held(qid, 30)})
+                               "provenance": f"written {TODAY} (stage 0)",
+                               **({"fresh": a.fresh} if a.fresh else {"holdout": held(qid, 30)})})
                 continue
             ids = [d["chunk_id"], *d.get("extra_chunk_ids", [])]
             rows = {r[0]: dict(zip(("id", "doc_id", "regulation_type", "regulation_number", "year",
@@ -159,7 +160,11 @@ def build(a) -> None:
                     case["near_duplicates"] = nd
             case["provenance"] = (f"drafted {TODAY} from chunk {d['chunk_id']} of id_reg_markdown (stage 0); "
                                   f"machine-checked; NOT reviewed by a domain expert")
-            case["holdout"] = held(qid, 36)
+            if a.fresh:
+                # ! A fresh test set: scored only by `EVAL_SPLIT=fresh`, never tuned on.
+                case["fresh"] = a.fresh
+            else:
+                case["holdout"] = held(qid, 36)
             staged.append({**case, "_check": {
                 "longest_copied_run": run,
                 "clauses": [{"id": i, "role": "answer", "regulation": f"{rows[i]['regulation_type']} "
@@ -222,6 +227,7 @@ def main() -> None:
     b.add_argument("--dsn", required=True)
     b.add_argument("--drafts", required=True)
     b.add_argument("--staged", required=True)
+    b.add_argument("--fresh", default="", help="tag cases as a fresh test set (EVAL_SPLIT=fresh)")
     m = sub.add_parser("merge")
     m.add_argument("--staged", required=True)
     m.add_argument("--verdicts")

@@ -226,6 +226,11 @@ def main():
 
     for q in spec["queries"]:
         held = bool(q.get("holdout"))
+        # ! EVAL_SPLIT=fresh scores ONLY cases tagged `fresh` (`draft/check.py build
+        # --fresh`), a test set drafted after the engine's levers were chosen. Every other
+        # split leaves them out, so numbers recorded before they existed stay comparable.
+        if (split == "fresh") != bool(q.get("fresh")):
+            continue
         if (split == "train" and held) or (split == "holdout" and not held):
             continue
         # EVAL_TYPES=exact_ref,out_of_domain scores only those types (for iterating).

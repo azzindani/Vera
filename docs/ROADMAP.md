@@ -855,6 +855,28 @@ candidate in full for the 12 misses above and changed `queries.json`:
 * Not a lawyer's review. `review-002.csv` stays open for one, and its verdicts would
   replace these.
 
+**The loop on 100 train questions: real, and smaller (2026-11-20).** A seeded random
+100 of the 391 train questions that are not exact references (seed 20261120), none of
+whose labels had been read. Both passages were written the same way as for the holdout
+(`hyde_train100.json`, `loop_train100.json`). Through the engine, tail 5, round 2,
+`TOP_K` 25, `EVAL_SPLIT=train`, scored on those 100 (`vera.sh e2e tr_plain`, `tr_A`,
+`tr_AL`):
+
+| train, 100 questions | Recall@5 | Recall@10 | Recall@25 | MRR | right regulation @5 |
+|---|---|---|---|---|---|
+| the question alone | 69.0% | 81.0% | 88.0% | 0.474 | 79.0% |
+| + passage A (round 1) | 72.0% | 80.0% | 91.0% | 0.526 | 81.0% |
+| + A + L (round 2, the loop) | 75.0% | 82.0% | 91.0% | 0.600 | 84.0% |
+
+* **The loop holds on train, but the gain is smaller.** Recall@5 +6, Recall@10 +1,
+  Recall@25 +3, MRR +0.126. On the holdout's 150 the same steps gave +19, +13 and +5 at
+  5, 10 and 25. Part of the holdout's gain was that set, read many times; n = 100 is
+  ±9 points, so neither number is exact.
+* **What survives is the top**: MRR and the right regulation in top 5 rise on both sets.
+  The ceiling at 25 moves by about 3 points, ✗ the 7 the holdout suggested.
+* A larger test decides it. A fresh set (`EVAL_SPLIT=fresh`, `draft/check.py build
+  --fresh`, scored by nothing else) is being drafted now, before it is used.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
   second written after reading the first round), 93.5% on the holdout.
