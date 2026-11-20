@@ -770,6 +770,38 @@ fuses by the same RRF.
 * **Cost.** One more search: about 2× the latency of a plain query, half the cost of the
   three rewordings, for a better top.
 
+**An agent loop: round 2 rewrites the passage after reading round 1 (2026-11-20).**
+Round 1 is the question plus one hypothetical answer (A). The agent reads its top 4,
+regulation, subject and article only, and writes a second passage (L,
+`dev_tools/eval/loop_holdout.json`, all 150): it names the law round 1 found and states
+the point asked, or redirects where round 1 looked wrong. Round 2 searches the question
+with both passages. `loop_sim.py`, holdout 150, tail from 10, round 2, `TOP_K` 60:
+
+| holdout, 150 questions | Recall@5 | Recall@10 | Recall@25 | MRR | wins / losses @10 |
+|---|---|---|---|---|---|
+| the original question | 61.3% | 74.7% | 87.3% | 0.484 | |
+| round 1: original + A | 76.7% | 85.3% | 90.0% | 0.586 | +17 −1 |
+| **round 2: original + A + L** | **80.7%** | **88.0%** | **92.0%** | **0.627** | **+21 −1** |
+| original + 3 rewordings + A + L + A as a document | 78.7% | 86.7% | 92.7% | 0.615 | +21 −3 |
+
+Through the engine (`EVAL_REWRITES` = [A, L]; `vera.sh e2e loop_default`, `loop_t5r2`),
+holdout 168:
+
+| engine, holdout 168 | Recall@5 | Recall@10 | Recall@25 | MRR | right regulation @5 |
+|---|---|---|---|---|---|
+| default + A + L | 81.0% | 88.7% | | 0.656 | 82.7% |
+| **tail 5, round 2 + A + L** | **83.3%** | **90.5%** | **93.5%** | **0.668** | 84.5% |
+
+* 93.5% at 25 is 157 of 168; 95% is 160. The reading shows the rest is labels (below).
+* Rewordings add nothing once the loop runs: two passages that look like the answer beat
+  four wordings that look like the question.
+* **Seen labels.** Six cases (s133, s147, s164, n105, s332, s281) were written after
+  their labels had been read in the diagnosis below. Without them (144), round 2 gains
+  the same over round 1: +3.4 points at 5, +2.8 at 10. They do not carry the result.
+* **Cost.** Round 1 is 2 searches and round 2 is 3, so 5 searches and one reading by the
+  agent: about 5× a plain query's engine time, inside the 5 s a user tolerates for one
+  caller.
+
 **The last 12 at 25, read one by one (2026-11-20).** With the original, the 3
 rewordings, the passage as a query and as a document (holdout 150, 92.0% at 25), 12
 questions miss. Fusion is not what holds them: a smaller `k` (2–30) or a guaranteed
@@ -794,8 +826,8 @@ and 4 of the 12 read as wrong labels. Both numbers will be reported (`EVAL_ALTER
 and the bias stays named: only misses are reviewed, so review can only raise the score.
 
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
-* The best configuration reads 88.4% [88.7%]. With the agent's wordings, 92.3% on the holdout
-  (tail 5, round 2, 3 rewordings + one hypothetical answer).
+* The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
+  second written after reading the first round), 93.5% on the holdout.
 * Rounds, routing, deeper arms, two-signal ordering and the corpus's own vocabulary have
   each been simulated against the engine's own lists. None moves it past noise.
 * What is left is the labels: `review-002.csv` is open, and a quarter of a 30-miss sample
