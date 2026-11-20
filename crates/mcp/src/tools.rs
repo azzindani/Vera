@@ -55,7 +55,7 @@ pub fn definitions(registry: &contract::Registry) -> Vec<Value> {
                     "rewordings": {
                         "type": "array",
                         "items": { "type": "string" },
-                        "description": "Optional: up to 3 other wordings of the SAME question, written by you, e.g. a formal legal paraphrase and a line of statute-style keywords. Each is searched and the results fused; the original question still decides the domain. Raised holdout Recall@5 from 65.5% to 75.0%. Each costs one more search, about 4x the latency for 3."
+                        "description": "Optional: up to 3 other wordings of the SAME question, written by you. Best first: a short hypothetical answer, the article you expect to find written in statute style, with facts the question does not give left generic. Each wording is searched and the results fused; the original question still decides the domain. One hypothetical answer raised holdout Recall@5 from 65.5% to 78.0%, for one more search."
                     },
                     // ! Every option below NARROWS. A value above the server's
                     // ceiling is clamped and the clamp is reported in

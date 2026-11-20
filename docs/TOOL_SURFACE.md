@@ -119,9 +119,13 @@ still calls no model: the rewording is the agent's job.
 * Measured on the holdout (`ROADMAP.md`, "A swarm of questions"): Recall@5 65.5 → 75.0%,
   Recall@10 75.6 → 81.5%, MRR 0.526 → 0.585. Cost: about 4× the latency (p50 470 →
   1,804 ms, one caller, cache off).
-* What helps is variety: one formal paraphrase plus short keyword lines in the corpus's
-  legal vocabulary. A rewording that guesses a fact the question does not state can only
-  mislead.
+* **The best single wording is a hypothetical answer** (HyDE): the article the agent
+  expects to find, in statute style, with facts the question does not give left
+  generic. With it alone the default engine reads Recall@5 78.0%, Recall@10 85.1%, MRR
+  0.618 on the holdout, for one extra search. Three such passages from other angles
+  (another level of law, the definitions) did worse than one (`ROADMAP.md`).
+* Formal paraphrases and keyword lines help less. A rewording that guesses a fact the
+  question does not state can only mislead.
 
 ---
 

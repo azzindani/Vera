@@ -153,13 +153,13 @@ depth only if Recall@10 holds. Region as a ranking signal over the pool, ✗ as 
 
 ## Stage 3 · ranking · the v0.2.0 headline
 
-| target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-19 | opt-in: tail from 5, round 2 | same + 3 rewordings, holdout · 2026-11-20 |
-|---|---|---|---|---|---|---|
-| Recall@5 | 65% | **70%** | 57.1% | **65.5%** [68.5%] · step a reached | 65.5% [68.5%] | 75.0% · v0.2.0 |
-| Recall@10 | 75% | **80%** | 68.4% | **75.6%** [78.5%] · step a reached | **80.4% [81.3%] · v0.2.0 reached** | **83.3%** · v0.2.0 |
-| MRR | 0.50 | **0.55** | 0.438 | **0.526** [0.534] · step a reached | 0.536 [0.542], over 25 | 0.580 · v0.2.0 |
-| right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [80.0%] | 74.4% [79.6%] | 83.9% |
-| no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 46%; holdout: authority 3/7, hard_negative 6/13 | same | **all ≥ 50%** · v0.2.0 |
+| target | step a | v0.2.0 | v0.1.0 | now, holdout [all] · 2026-11-19 | opt-in: tail from 5, round 2 | same + 3 rewordings, holdout · 2026-11-20 | default + 1 hypothetical answer, holdout · 2026-11-20 |
+|---|---|---|---|---|---|---|---|
+| Recall@5 | 65% | **70%** | 57.1% | **65.5%** [68.5%] · step a reached | 65.5% [68.5%] | 75.0% · v0.2.0 | **78.0%** · v0.2.0 |
+| Recall@10 | 75% | **80%** | 68.4% | **75.6%** [78.5%] · step a reached | **80.4% [81.3%] · v0.2.0 reached** | **83.3%** · v0.2.0 | **85.1%** · v0.2.0 |
+| MRR | 0.50 | **0.55** | 0.438 | **0.526** [0.534] · step a reached | 0.536 [0.542], over 25 | 0.580 · v0.2.0 | **0.618** · v0.2.0 |
+| right regulation in top 5 | | **≥ 85%** | not measured | 74.4% [80.0%] | 74.4% [79.6%] | 83.9% | 83.9% |
+| no query type below | | **50%** Recall@5 | exception 45% | all: `underspecified` 46%; holdout: authority 3/7, hard_negative 6/13 | same | **all ≥ 50%** · v0.2.0 | **all ≥ 50%** · v0.2.0 |
 
 **Now** is the region arm, the in-document ordering, the definitions rule and the revoker
 lift (sections below), as shipped by default (`vera.sh e2e lift_default`, `TOP_K` 10).
@@ -169,6 +169,8 @@ and on all cases, and nothing else of v0.2.0.
 The last column adds the agent's three rewordings (`rewordings`, below), measured on the
 holdout only, the only set that has them. It reaches every v0.2.0 ranking target except
 the right regulation in top 5.
+The newest column is the default engine with ONE extra wording: a hypothetical answer
+article the agent drafts (HyDE, below). Two searches, and the best top of any column.
 
 **Status (604-case set, 2026-11-15).** ✗ Not reached, and nothing shipped changed.
 Reweighting is exhausted: every fusion and prior setting tried ranks within about a point
@@ -711,8 +713,66 @@ That is past all three v0.2.0 ranking targets (70% / 80% / 0.55).
   and throughput is a third. That is why it stays opt-in: the agent spends it when a
   question is worth it.
 
+**A hypothetical answer (HyDE): one passage beats three rewordings (2026-11-20).**
+The agent drafts the article it expects to find, in the corpus's statute style, and sends
+it as a rewording. The engine is unchanged: it searches the passage like any wording and
+fuses by the same RRF.
+* `dev_tools/eval/hyde_holdout.json`: one passage per holdout question (150), written
+  from the question alone, never its label. Facts the question does not give stay
+  generic ("dalam jangka waktu tertentu").
+* `hyde_sim.py` fixed its variants before any reply was read. Holdout, 150 questions,
+  tail from 10, round 2, `TOP_K` 60:
+
+| holdout, 150 questions | Recall@5 | Recall@10 | Recall@25 | MRR | wins / losses @10 |
+|---|---|---|---|---|---|
+| the original question | 61.3% | 74.7% | 87.3% | 0.484 | |
+| the passage alone, searched as a query | 68.0% | 78.0% | 87.3% | 0.542 | +21 −16 |
+| the passage embedded as a document (no instruction), dense only | 59.3% | 64.0% | 73.3% | 0.441 | +16 −32 |
+| **original + passage** | **76.7%** | **85.3%** | 90.0% | **0.586** | **+17 −1** |
+| original + 3 rewordings | 72.7% | 81.3% | 88.7% | 0.531 | +18 −8 |
+| original + 3 rewordings + passage | 78.7% | 85.3% | 90.7% | 0.583 | +20 −4 |
+| same + the passage as a document too | 76.0% | 84.7% | **92.0%** | 0.569 | +20 −5 |
+
+* **Through the engine** (`EVAL_REWRITES` = the passage, or the 3 rewordings + the
+  passage with `MAX_REWORDINGS=4`; `vera.sh e2e hy1_*`, `hy4_*`), holdout 168:
+
+| engine, holdout 168 | Recall@5 | Recall@10 | Recall@25 | MRR | right regulation @5 |
+|---|---|---|---|---|---|
+| default, no wordings | 65.5% | 75.6% | | 0.526 | 74.4% |
+| **default + passage** (2 searches) | 78.0% | 85.1% | | 0.618 | 83.9% |
+| default + 3 rewordings + passage | 79.2% | 85.1% | | 0.614 | 84.5% |
+| tail 5, round 2 + passage | 78.0% | **87.5%** | 91.7% | **0.639** | 83.3% |
+| tail 5, round 2 + 3 rewordings + passage | **81.0%** | 86.9% | **92.3%** | 0.631 | 84.5% |
+
+  Every v0.2.0 ranking target is passed by the default engine with one passage, and every
+  query type stays at or above 50%. Right regulation in top 5 is still one or two cases
+  short of 85%.
+* **Wider is worse.** Two more passages per question (`hyde2_holdout.json`: B, the rule at
+  another legal level; C, the definitions style) were fused the same way:
+
+| holdout, 150 | Recall@5 | Recall@10 | Recall@25 | MRR |
+|---|---|---|---|---|
+| passage B alone / C alone | 43.3% / 24.7% | 54.7% / 34.0% | 68.0% / 43.3% | 0.352 / 0.167 |
+| original + A, B | 72.7% | 82.0% | 90.7% | 0.572 |
+| original + A, B, C | 70.0% | 80.0% | 91.3% | 0.544 |
+| original + 3 rewordings + A, B, C | 74.0% | 84.0% | 91.3% | 0.567 |
+
+  A guess at the wrong level of law, or at the definitions, finds other articles, and at
+  equal weight it pulls the top down; Recall@25 gains under a point. What helps is one
+  passage that looks like the answer, ✗ many angles.
+* **Caveats.**
+  * n = 150, one reading, and the holdout has now been read for several agent-side
+    variants: confirm on train before any default rests on it.
+  * The passage carries the writer's legal knowledge. Most share 2–8 words in a row with
+    their answer; a few on well-known national laws share 12–18 (s375, s152, s366 among
+    the 21 wins at 10 of the passage alone). A calling agent has that knowledge; the
+    0.6B embedder does not.
+* **Cost.** One more search: about 2× the latency of a plain query, half the cost of the
+  three rewordings, for a better top.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
-* The best configuration reads 88.4% [88.7%].
+* The best configuration reads 88.4% [88.7%]. With the agent's wordings, 92.3% on the holdout
+  (tail 5, round 2, 3 rewordings + one hypothetical answer).
 * Rounds, routing, deeper arms, two-signal ordering and the corpus's own vocabulary have
   each been simulated against the engine's own lists. None moves it past noise.
 * What is left is the labels: `review-002.csv` is open, and a quarter of a 30-miss sample
