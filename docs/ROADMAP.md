@@ -640,6 +640,47 @@ say it.
   interleaving one swarm chunk with one of the engine's tail, reads 86.9% [86.3%] against
   88.4% [88.7%], 2 wins against 11 losses.
 
+**A swarm of questions: the first lever since the lift that moves the top (2026-11-20).**
+The agent rewords the question and the engine fuses the replies. The engine still calls no
+model; the rewording is the agent's job (§2 of `CLAUDE.md`).
+* `dev_tools/eval/rewrites_holdout.json` holds 3 rewordings for each of the 150 holdout
+  questions that are not exact references: a formal legal paraphrase, a statute-style
+  keyword line, and another framing.
+  * They were written by the assistant from the question alone, never from its label.
+  * One that guessed a specific fact (n141) was neutralised before any search ran.
+* `query_swarm_sim.py` searches each through the deployed engine (tail from 10, round 2,
+  `TOP_K` 60) and fuses the 4 replies by RRF, equal weights, `k` 60. That method was fixed
+  before any reply was read, so the holdout is read once and nothing was fitted.
+
+| holdout, 150 questions | Recall@5 | Recall@10 | Recall@25 | MRR | wins / losses @10 |
+|---|---|---|---|---|---|
+| the original question | 61.3% | 74.7% | 87.3% | 0.484 | |
+| rewording 1 alone (legal paraphrase) | 60.7% | 74.0% | 86.0% | 0.488 | +14 −15 |
+| rewording 2 or 3 alone (keyword lines) | 35–39% | 47–49% | 60–61% | 0.25–0.29 | |
+| **original + 3 rewordings, fused** | **72.7%** | **81.3%** | **88.7%** | **0.531** | **+18 −8** |
+
+With the 18 exact references back in, the whole holdout of 168 reads Recall@5
+65.5 → **75.6%**, Recall@10 77.4 → **83.3%**, Recall@25 88.7 → 89.9%, MRR 0.539 → **0.581**.
+That is past all three v0.2.0 ranking targets (70% / 80% / 0.55).
+
+* **Why it works where a second embedding did not.** Different words are a third signal.
+  No rewording alone beats the original, and the keyword lines are much worse alone. What
+  each brings is agreement: a chunk several wordings rank well rises above one that only
+  the original's exact phrasing found.
+* **It moves the top, not the ceiling.** Recall@25 gains 1.3 points. The answers no
+  wording retrieves stay missing, so 95% at 25 is still out of reach this way.
+* **Caveats.**
+  * n = 150, a ±7-point interval, and one reading.
+  * The rewordings carry the writer's legal knowledge: s007 names "pajak hotel dan
+    pajak restoran", and s039 names "deponering". A calling agent has that knowledge
+    too, but part of the gain is the agent's, ✗ the engine's.
+  * Train has no rewordings yet, so nothing confirms this on the other 436 questions.
+* **Cost.** Four searches instead of one, so four query embeddings: about 4 × 330 ms one
+  after another, or less run concurrently, inside the 5 s a user tolerates. Throughput per
+  question is a quarter at the same CPU.
+* **Not built.** The engine has no multi-wording request yet. Building it (`queries` on
+  `search_knowledge`, fused inside, one embedding per wording) is a separate step.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%].
 * Rounds, routing, deeper arms, two-signal ordering and the corpus's own vocabulary have
