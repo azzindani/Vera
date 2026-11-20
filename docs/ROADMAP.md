@@ -825,6 +825,36 @@ search technique, decides the last points: at 95% the holdout allows 8 misses of
 and 4 of the 12 read as wrong labels. Both numbers will be reported (`EVAL_ALTERNATIVES`),
 and the bias stays named: only misses are reviewed, so review can only raise the score.
 
+**Labels corrected after reading the last misses (2026-11-20).** On the owner's
+instruction, the assistant (✗ a lawyer) read every labelled article and the engine's
+candidate in full for the 12 misses above and changed `queries.json`:
+* **Replaced, the label did not answer** (old labels kept in `label_replaced`): s147
+  (UU 32/2004 Pasal 210, on BPD members → PP 76/2001 Pasal 54), s164 (Pasal 5 → Pasal 17
+  of the same PERDA, whose ayat 4 defines the term), s281 (two of seven labels, on the tax
+  period and the object number → Kotabaru Pasal 17, the 2% interest; the other five were
+  read and kept).
+* **Reviewed alternatives** (`alternatives`, counted only with `EVAL_ALTERNATIVES=1`):
+  s133, s250, s281, s288 (two), s320.
+* **Unchanged:** n102, n105, s252, s316, s332. They stay as misses.
+
+| engine, holdout 168 | Recall@5 | Recall@10 | Recall@25 | MRR | right regulation @5 |
+|---|---|---|---|---|---|
+| default, original labels | 65.5% | 75.6% | | 0.526 | 74.4% |
+| default, corrected labels | 66.1% | 76.2% | | 0.532 | 75.0% |
+| loop (tail 5, round 2 + A + L), original labels | 83.3% | 90.5% | 93.5% | 0.668 | 84.5% |
+| **loop, corrected labels** | **84.5%** | **91.7%** | **94.6%** | **0.676** | **85.1%** |
+| loop, corrected labels + reviewed alternatives | 87.5% | 94.0% | 96.4% | 0.705 | 85.1% |
+
+(`vera.sh e2e relab_default`, `relab_loop`, `relab_loop_alt`.)
+* Against the corrected labels the loop is **one case short of 95% at 25** (159 of 168),
+  and the right regulation in top 5 reaches 85.1%, the v0.2.0 target.
+* With the alternatives it reads 96.4%. That line is biased upward by construction:
+  only misses were reviewed, so review can only add. Report it beside the other, never
+  alone.
+* The label fix alone moves the default by one case. Nearly all of the gain is the loop.
+* Not a lawyer's review. `review-002.csv` stays open for one, and its verdicts would
+  replace these.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
   second written after reading the first round), 93.5% on the holdout.

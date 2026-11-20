@@ -6622,7 +6622,19 @@
       ],
       "note": "Angka 8 mendefinisikan unsur SAR sebagai potensi SAR yang sudah terbina dan/atau siap dipakai dalam operasi SAR.",
       "provenance": "drafted 2026-11-14 from chunk f2fcdc753ad879eca8e1f8675741a588 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; second reader: sampled, 36 of 301 read against the full clause, 0 wrong",
-      "holdout": true
+      "holdout": true,
+      "alternatives": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "29",
+          "year": 2014,
+          "about": "PENCARIAN DAN PERTOLONGAN",
+          "article": "Pasal 33",
+          "reviewer": "Claude (assistant) on the owner's instruction; not a lawyer",
+          "date": "2026-11-20",
+          "note": "UU 29/2014 replaced PP 36/2006's subject; Pasal 33 says what the SAR unit consists of."
+        }
+      ]
     },
     {
       "id": "s134",
@@ -6879,16 +6891,39 @@
       "source": "UNDANG-UNDANG 32/2004 Pasal 210 — sumbangan pihak ketiga sebagai pendapatan desa",
       "answer_articles": [
         {
-          "regulation_type": "UNDANG-UNDANG",
-          "regulation_number": "32",
-          "year": 2004,
-          "about": "PEMERINTAHAN DAERAH",
-          "article": "Pasal 210"
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "76",
+          "year": 2001,
+          "about": "PEDOMAN UMUM PENGATURAN MENGENAI DESA",
+          "article": "Pasal 54"
         }
       ],
       "note": "Penjelasan huruf e menyebut sumbangan pihak ketiga dapat berupa hadiah, donasi, wakaf, atau sumbangan lain tanpa mengurangi kewajiban penyumbang.",
       "provenance": "drafted 2026-11-14 from chunk 8ee4d153ff4fa65370d07156b74418d3 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; second reader: sampled, 36 of 301 read against the full clause, 0 wrong",
-      "holdout": true
+      "holdout": true,
+      "label_replaced": {
+        "removed_answer_articles": [
+          {
+            "regulation_type": "UNDANG-UNDANG",
+            "regulation_number": "32",
+            "year": 2004,
+            "about": "PEMERINTAHAN DAERAH",
+            "article": "Pasal 210"
+          }
+        ],
+        "added": [
+          {
+            "regulation_type": "PERATURAN PEMERINTAH",
+            "regulation_number": "76",
+            "year": 2001,
+            "about": "PEDOMAN UMUM PENGATURAN MENGENAI DESA",
+            "article": "Pasal 54"
+          }
+        ],
+        "reason": "The labelled Pasal 210 is on BPD members. PP 76/2001 Pasal 54(1): sumbangan pihak ketiga dapat berbentuk hadiah, donasi, wakaf, hibah dan lain-lain sumbangan.",
+        "by": "Claude (assistant) on the owner's instruction; not a lawyer",
+        "date": "2026-11-20"
+      }
     },
     {
       "id": "s148",
@@ -7207,12 +7242,35 @@
           "regulation_number": "31",
           "year": 2011,
           "about": "RETRIBUSI PENJUALAN PRODUKSI USAHA DAERAH BIDANG PERIKANAN",
-          "article": "Pasal 5"
+          "article": "Pasal 17"
         }
       ],
       "note": "Penjelasan Pasal 17 ayat (3) mengartikannya sebagai keadaan di luar kehendak wajib retribusi, misalnya sakit atau bencana alam.",
       "provenance": "drafted 2026-11-14 from chunk 27573c25b978761ae9098df63aa6f415 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; second reader: sampled, 36 of 301 read against the full clause, 0 wrong",
-      "holdout": true
+      "holdout": true,
+      "label_replaced": {
+        "removed_answer_articles": [
+          {
+            "regulation_type": "PERATURAN DAERAH KOTA",
+            "regulation_number": "31",
+            "year": 2011,
+            "about": "RETRIBUSI PENJUALAN PRODUKSI USAHA DAERAH BIDANG PERIKANAN",
+            "article": "Pasal 5"
+          }
+        ],
+        "added": [
+          {
+            "regulation_type": "PERATURAN DAERAH KOTA",
+            "regulation_number": "31",
+            "year": 2011,
+            "about": "RETRIBUSI PENJUALAN PRODUKSI USAHA DAERAH BIDANG PERIKANAN",
+            "article": "Pasal 17"
+          }
+        ],
+        "reason": "The labelled Pasal 5 is on aquaculture governance. Pasal 17(4) of the same PERDA defines keadaan di luar kekuasaan wajib retribusi.",
+        "by": "Claude (assistant) on the owner's instruction; not a lawyer",
+        "date": "2026-11-20"
+      }
     },
     {
       "id": "s165",
@@ -9084,7 +9142,19 @@
       ],
       "note": "Ayat (5) huruf b: laporan akhir tahun disampaikan paling lambat bulan Desember tahun berjalan.",
       "provenance": "drafted 2026-11-14 from chunk 019a256a62b923a262f5fb2356358995 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; second reader: sampled, 36 of 301 read against the full clause, 0 wrong",
-      "holdout": true
+      "holdout": true,
+      "alternatives": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2006,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 24",
+          "reviewer": "Claude (assistant) on the owner's instruction; not a lawyer",
+          "date": "2026-11-20",
+          "note": "Underspecified question; Muaro Jambi Pasal 24 sets the annual report deadline for IUJK holders."
+        }
+      ]
     },
     {
       "id": "s251",
@@ -10988,13 +11058,6 @@
       "answer_articles": [
         {
           "regulation_type": "PERATURAN DAERAH KABUPATEN",
-          "regulation_number": "10",
-          "year": 2012,
-          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
-          "article": "Pasal 13"
-        },
-        {
-          "regulation_type": "PERATURAN DAERAH KABUPATEN",
           "regulation_number": "5",
           "year": 2012,
           "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
@@ -11030,15 +11093,57 @@
         },
         {
           "regulation_type": "PERATURAN DAERAH KABUPATEN",
-          "regulation_number": "2",
-          "year": 2013,
+          "regulation_number": "10",
+          "year": 2012,
           "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
-          "article": "Pasal 12"
+          "article": "Pasal 17"
         }
       ],
       "note": "Contoh penjelasan: sanksi 2% per bulan x 2 bulan = Rp4.000, total Rp104.000.",
       "provenance": "drafted 2026-11-14 from chunk 1f4fc407a34be976a9914ab63e8ff73d of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; second reader: sampled, 36 of 301 read against the full clause, 0 wrong",
-      "holdout": true
+      "holdout": true,
+      "label_replaced": {
+        "removed_answer_articles": [
+          {
+            "regulation_type": "PERATURAN DAERAH KABUPATEN",
+            "regulation_number": "10",
+            "year": 2012,
+            "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+            "article": "Pasal 13"
+          },
+          {
+            "regulation_type": "PERATURAN DAERAH KABUPATEN",
+            "regulation_number": "2",
+            "year": 2013,
+            "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+            "article": "Pasal 12"
+          }
+        ],
+        "added": [
+          {
+            "regulation_type": "PERATURAN DAERAH KABUPATEN",
+            "regulation_number": "10",
+            "year": 2012,
+            "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+            "article": "Pasal 17"
+          }
+        ],
+        "reason": "Kotabaru Pasal 13 (masa pajak) and Kulon Progo Pasal 12 (NOP) do not set the late-payment interest; Kotabaru Pasal 17(2)-(3) does (bunga 2% sebulan). The other five labels were read and kept.",
+        "by": "Claude (assistant) on the owner's instruction; not a lawyer",
+        "date": "2026-11-20"
+      },
+      "alternatives": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "14",
+          "year": 2013,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 17",
+          "reviewer": "Claude (assistant) on the owner's instruction; not a lawyer",
+          "date": "2026-11-20",
+          "note": "Underspecified question; Kayong Utara Pasal 17: bunga 2% sebulan from jatuh tempo."
+        }
+      ]
     },
     {
       "id": "s282",
@@ -11423,7 +11528,25 @@
       ],
       "note": "Ayat (4) huruf b: luas teras, balkon dan selasar luar dihitung setengah dari luas yang dibatasi sumbu-sumbunya.",
       "provenance": "drafted 2026-11-14 from chunk 1a1c0141d1f967fb8a01a830c50412ff of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; second reader: sampled, 36 of 301 read against the full clause, 0 wrong",
-      "holdout": true
+      "holdout": true,
+      "alternatives": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "6",
+          "year": 2017,
+          "about": "IZIN MENDIRIKAN BANGUNAN",
+          "article": "Pasal 57",
+          "reviewer": "Claude (assistant) on the owner's instruction; not a lawyer",
+          "date": "2026-11-20",
+          "note": "Underspecified question; Gresik Pasal 57(2)b: teras, balkon dan selasar luar dihitung setengah."
+        },
+        {
+          "chunk": "8a19d3479bd9691dbfa43ce20de5d1ff",
+          "reviewer": "Claude (assistant) on the owner's instruction; not a lawyer",
+          "date": "2026-11-20",
+          "note": "Same IMB rule, a PERDA whose metadata was not read; kept by chunk id."
+        }
+      ]
     },
     {
       "id": "s289",
@@ -13332,7 +13455,19 @@
         "e42397825271dd72a9659ea523f061cd"
       ],
       "provenance": "drafted 2026-11-15 from chunk 8d9b2750b3d6e08755b94bca9a860173 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; top-up 2026-11-15, second read by the drafter only",
-      "holdout": true
+      "holdout": true,
+      "alternatives": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "24",
+          "year": 2010,
+          "about": "PENGELOLAAN PANAS BUMI",
+          "article": "Pasal 19",
+          "reviewer": "Claude (assistant) on the owner's instruction; not a lawyer",
+          "date": "2026-11-20",
+          "note": "The same Sumatera Selatan text (Gubernur membentuk panitia, gasal, paling sedikit 5 orang) is filed under this Pergub's Pasal 19 chunk."
+        }
+      ]
     },
     {
       "id": "s321",
