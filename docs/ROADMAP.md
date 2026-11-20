@@ -582,6 +582,33 @@ round 2, 70 of 604 [19 of 168]):
 | far | 6 [1] | neither signal places it near |
 | routing | 6 [3] | in the corpus's 20 nearest by vector, its cluster not among the 5 probed |
 
+**Tried against those misses, and dropped (2026-11-20).** `tail_sim.py` over the best
+configuration's own 60-deep lists, which reproduce the engine exactly (@10 79.0% [77.4%],
+@25 88.4% [88.7%]).
+
+The control is the engine's list with everything below the top 10 re-sorted by distance
+again. It reads 87.4% [87.5%] at 25, a point under the engine, because a re-sort undoes
+what the ordering rules did after the engine's own sort. Every variant re-sorts, so each
+is read against that control:
+
+| below the top 10 (Recall@25, all [holdout]) | result |
+|---|---|
+| control: by dense distance | 87.4 [87.5] |
+| + the dense top 20 of 10 probes (routing) | 87.9 [88.1]: +3 cases, inside noise |
+| by RRF of dense and BM25 rank, `k` 60 or 10 | 86.8–86.9 [85.1]: loses |
+| same, + dense and BM25 top 50 or 100 | 86.4–86.9 [85.1]: loses more |
+| all of it, + 10 probes | 87.4 [85.7]: loses |
+
+* **BM25 agreement does not order the tail better than distance alone.** Among chunks
+  this close to the question, BM25 rewards the wrong ones as often as the right one.
+* **Deeper arms bring in more competitors than answers,** as they did at Stage 2.
+* **More probes find the routing misses,** about 3 cases of the 6. That is too small to
+  carry a change to the probe count. The probe count is a latency knob measured at
+  Stage 2.
+
+So the 35 "dense-deep" answers cannot be lifted by the two signals the engine has. They
+need a third signal, ✗ another arrangement of these two.
+
 **Defaults.** The lift is on, because it corrects a rule. The tail and the rounds stay
 opt-in as requested. Turning them on by default is a separate decision, and it needs the
 cache-off latency on the VPS profile too.
