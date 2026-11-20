@@ -887,6 +887,12 @@ whose labels had been read. Both passages were written the same way as for the h
   83.9 at 5 / 10 / 25: **the holdout was representative and nothing was overfit to it.**
   The gate refused 1 of 328 real questions and 20 of 30 out of domain; the 10 it answered
   are everyday and foreign-law questions that share vocabulary with legal text.
+* **The shipped engine on all 523** (2026-11-21, same config, `vera.sh e2e fr523_plain25`):
+  Recall@5 **65.2%**, @10 73.7%, @15 78.8%, @20 81.6%, @25 **82.9%**, MRR 0.523, right
+  regulation in top 5 80.8% (n = 468, ±4.4 on Recall@5). `exact_ref` 68/68 at rank 1.
+  Weakest at 5: `definitional` 25/56 and `underspecified` 26/53. The gate refused 1 of 468
+  real questions and 41 of 55 out of domain. **This is the baseline every later lever on
+  fresh is compared with.**
 * ! **The passages for fresh must be written blind.** These questions were drafted with
   their clauses in view, so passages written in the same context would know the answer.
   A and L for fresh are to be written in a context that has seen only the questions.
