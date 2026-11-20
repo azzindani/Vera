@@ -631,6 +631,15 @@ say it.
 * **The ceiling it could lift is small.** Even with every pair, 5 of the 48 touched
   misses enter BM25's top 20.
 
+**A swarm, dropped (2026-11-20).** One small search per cluster, each with its own quota
+(the best M chunks of each of the P nearest clusters), merged below the engine's top 10
+(`swarm_sim.py`, against the same lists).
+* **The misses are mid-pack in their own cluster too.** A swarm of 20 clusters × 5 would
+  hold 10 of the 70 missed answers, and 5 × 2 holds 1.
+* **What it adds displaces answers already found.** Every variant loses at 25. The mildest,
+  interleaving one swarm chunk with one of the engine's tail, reads 86.9% [86.3%] against
+  88.4% [88.7%], 2 wins against 11 losses.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%].
 * Rounds, routing, deeper arms, two-signal ordering and the corpus's own vocabulary have
