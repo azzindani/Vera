@@ -876,8 +876,18 @@ whose labels had been read. Both passages were written the same way as for the h
   The ceiling at 25 moves by about 3 points, ✗ the 7 the holdout suggested.
 * A larger test decides it. **The fresh set is written** (2026-11-20, `EVAL.md` §2d): 328
   answerable cases plus 30 out of domain in `queries_fresh.json`, which no sim or fit
-  reads. It is not yet scored. When it is, plain, + A and + A + L are each scored once,
+  reads. When it is scored with the loop, plain, + A and + A + L are each scored once,
   with passages written the same way as for train.
+* **The shipped engine on fresh, scored once** (2026-11-21, `TOP_K` 25, no rewordings,
+  `EVAL_SPLIT=fresh vera.sh e2e fresh_plain25`): Recall@5 **68.6%**, @10 75.0%, @15 79.3%,
+  @20 82.3%, @25 **83.2%**, MRR 0.548, right regulation in top 5 82.0%, `exact_ref` 51/51
+  at rank 1 (n = 328, ±5.3 points on Recall@5). The 168-case holdout read 65.5 / 75.6 /
+  83.9 at 5 / 10 / 25: **the holdout was representative and nothing was overfit to it.**
+  The gate refused 1 of 328 real questions and 20 of 30 out of domain; the 10 it answered
+  are everyday and foreign-law questions that share vocabulary with legal text.
+* ! **The passages for fresh must be written blind.** These questions were drafted with
+  their clauses in view, so passages written in the same context would know the answer.
+  A and L for fresh are to be written in a context that has seen only the questions.
 
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
