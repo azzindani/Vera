@@ -166,12 +166,12 @@ the PENJELASAN of `Pasal 6` under `article = 'Pasal 6'`, chapter `PENJELASAN - .
 (`dev_tools/eval/review/review-001.csv`, 120 cases); `import` records the verdicts, and
 `EVAL_REVIEWED=1 e2e.py` scores only labels a reviewer marked BENAR.
 
-### 2d. The fresh test set · s410-s737, o101-o130 · `queries_fresh.json`
+### 2d. The fresh test set · s410-s877, o101-o155 · `queries_fresh.json`
 
-**358 cases**: 328 answerable, 30 out of domain (20 everyday, 10 foreign law). Drafted on
-2026-11-20, after the engine's levers (HyDE, the agent loop, wider pools) had been chosen
-on `queries.json`. The set is there to show whether those gains hold on questions
-nothing was tuned on.
+**523 cases**: 468 answerable, 55 out of domain (33 everyday, 22 foreign law). Drafted on
+2026-11-20 (358) and topped up on 2026-11-21 (165), after the engine's levers (HyDE, the
+agent loop, wider pools) had been chosen on `queries.json`. The set is there to show
+whether those gains hold on questions nothing was tuned on.
 
 ! **A separate file, so nothing can tune on it.** Every simulation, fit and sweep in
 `dev_tools/eval/` reads `queries.json`. `queries_fresh.json` is read only by
@@ -190,15 +190,25 @@ files, and `merge` writes the fresh cases to their own file.
 4. Second reading: 30 cases were read against their full clause, the 12 riskiest
    (clauses cut mid-sentence, cross-references, foils) and 18 at random. All 30 answer.
    The drafter read every clause while drafting; no second reader did.
+5. **Top-up, 2026-11-21.** The 165 sampled clauses left unread were read: 140 drafted, 25
+   skipped (circular or template definitions, OCR damage, amendment preambles, annex
+   lists, twins carrying different figures). 3 drafts copied 6 words and were reworded.
+   Second reading: 20 of the 140 at random, all 20 answer; for the 7 numeric
+   `underspecified` cases the figure was checked in every twin. 25 more out-of-domain
+   questions (o131-o155). 57 cases now carry `near_duplicates`.
 
 | type | n | type | n |
 |---|---:|---|---:|
-| exact_ref | 51 | definitional | 26 |
-| sanction | 33 | authority | 26 |
-| conceptual | 29 | numeric | 25 |
-| hard_negative | 28 | obligation | 21 |
-| procedural | 27 | underspecified | 21 |
-| exception | 27 | multi_tier | 14 |
+| exact_ref | 68 | authority | 32 |
+| definitional | 56 | obligation | 31 |
+| underspecified | 53 | conceptual | 30 |
+| hard_negative | 48 | numeric | 25 |
+| sanction | 46 | multi_tier | 14 |
+| procedural | 33 | out_of_domain | 55 |
+| exception | 32 | | |
+
+! Scores recorded before the top-up (`ROADMAP.md`, 68.6 / 75.0 / 83.2) are on the first
+358 cases. Compare a new number with a score of the same 523.
 
 Use it **once per lever**, after the lever is fixed on `queries.json`, and record the
 number next to the train/holdout figure. A lever tuned against this set makes it a

@@ -7322,6 +7322,4286 @@
       "source": "not answerable from this corpus",
       "provenance": "written 2026-11-20 (stage 0)",
       "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s738",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Salatiga, apa sanksi bagi perusahaan yang tidak punya izin prinsip atau izin lokasi?",
+      "source": "PERATURAN DAERAH KOTA 5/2016 Pasal 30 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "5",
+          "year": 2016,
+          "about": "PENYELENGGARAAN IZIN PRINSIP DAN IZIN LOKASI",
+          "article": "Pasal 30"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 68967f12f305ddba61861ae65e95faad of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s739",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Sidoarjo, berapa persen paling banyak sanksi administratif retribusi bisa dikurangi, dan bagaimana mengajukannya?",
+      "source": "PERATURAN BUPATI 60/2014 Pasal 8 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "60",
+          "year": 2014,
+          "about": "PETUNJUK PELAKSANAAN PERATURAN DAERAH KABUPATEN SIDOARJO NOMOR 11 TAHUN 2014 TENTANG RETRIBUSI PERPANJANGAN IZIN MEMPEKERJAKAN TENAGA KERJA ASING",
+          "article": "Pasal 8"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk e3cd24d2e9fe857732145e883c521ffa of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s740",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Ternate, dalam hal apa walikota menerbitkan SKPDKB pajak restoran, dan dalam jangka berapa tahun?",
+      "source": "PERATURAN DAERAH KOTA 2/2011 Pasal 12 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "2",
+          "year": 2011,
+          "about": "PAJAK RESTORAN",
+          "article": "Pasal 12"
+        }
+      ],
+      "near_duplicates": 7,
+      "provenance": "drafted 2026-11-21 from chunk d30004feda002cbd52b65cae7d059b51 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s741",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Hulu Sungai Utara, berapa bunga bagi pengunjung yang telat membayar retribusi tempat rekreasi Candi Agung?",
+      "source": "PERATURAN DAERAH KABUPATEN 44/2011 Pasal 18 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "44",
+          "year": 2011,
+          "about": "RETRIBUSI TEMPAT REKREASI CANDI AGUNG",
+          "article": "Pasal 18"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk aa0d040c69a9053b8c561ac8d2e49a64 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s742",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Rejang Lebong, apa ancaman pidana bagi wajib retribusi izin trayek yang merugikan keuangan daerah?",
+      "source": "PERATURAN DAERAH KABUPATEN 9/2011 Pasal 30 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2011,
+          "about": "RETRIBUSI IZIN TRAYEK",
+          "article": "Pasal 30"
+        }
+      ],
+      "near_duplicates": 10,
+      "provenance": "drafted 2026-11-21 from chunk 8d07d9238e8372294c14bb6b7fba7b8d of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s743",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Hulu Sungai Utara, apa ancaman pidana bagi wajib pajak restoran yang lalai atau sengaja tidak menyampaikan SPTPD?",
+      "source": "PERATURAN DAERAH KABUPATEN 15/2011 Pasal 25 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "15",
+          "year": 2011,
+          "about": "PAJAK RESTORAN",
+          "article": "Pasal 25"
+        }
+      ],
+      "near_duplicates": 40,
+      "provenance": "drafted 2026-11-21 from chunk ebd5c00399e9d35fadb5ada49ca1b662 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s744",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Kabupaten Serang, berapa batas ancaman pidana yang boleh dimuat dalam peraturan daerah?",
+      "source": "PERATURAN DAERAH KABUPATEN 9/2013 Pasal 7 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2013,
+          "about": "PEMBENTUKAN PRODUK HUKUM DAERAH KABUPATEN SERANG",
+          "article": "Pasal 7"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 295889e3a3130b10166bd63360a2db1b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s745",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Kulon Progo, apakah perangkat desa yang ditahan sebagai tersangka langsung diberhentikan sementara, dan bagaimana kalau ia terbukti tidak bersalah?",
+      "source": "PERATURAN BUPATI 24/2015 Pasal 19 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "24",
+          "year": 2015,
+          "about": "PERATURAN PELAKSANAAN PERATURAN DAERAH KABUPATEN KULON PROGO NOMOR 3 TAHUN 2015 TENTANG PERANGKAT DESA",
+          "article": "Pasal 19"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk d3c6b16a187f93479babce335ddb3b14 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s746",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Kotabaru, sanksi administratif apa saja yang dapat dikenakan terkait izin tempat usaha?",
+      "source": "PERATURAN DAERAH KABUPATEN 28/2013 Pasal 17 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "28",
+          "year": 2013,
+          "about": "IZIN TEMPAT USAHA",
+          "article": "Pasal 17"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 83edb5dda2948c2b6ead8397ab7e055c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s747",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Ternate, berapa bunga yang ditambahkan dalam STRD bila retribusi sampah telat atau kurang dibayar?",
+      "source": "PERATURAN DAERAH KOTA 11/2011 Pasal 16 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "11",
+          "year": 2011,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 16"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 20c7a1e6e16f75e3e947b09421c75ede of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s748",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di RSUD Sidoarjo, karena alasan apa saja pejabat pengelola BLUD diberhentikan?",
+      "source": "PERATURAN BUPATI 19/2014 Pasal 23 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "19",
+          "year": 2014,
+          "about": "POLA TATA KELOLA BADAN LAYANAN UMUM DAERAH PADA RUMAH SAKIT UMUM DAERAH KABUPATEN SIDOARJO",
+          "article": "Pasal 23"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 95c92e9462cb1a32fe1d3191993b39e2 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s749",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Musi Banyuasin, apakah pemungutan retribusi pemeriksaan alat pemadam kebakaran boleh diborongkan, dan apa sanksi bila telat membayar?",
+      "source": "PERATURAN DAERAH KABUPATEN 13/2011 Pasal 12 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "13",
+          "year": 2011,
+          "about": "RETRIBUSI PEMERIKSAAN ALAT PEMADAM KEBAKARAN",
+          "article": "Pasal 12"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 746d4b569693644a68604e5f3edaa337 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s750",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Di Minahasa Utara, terhadap pelanggaran pemanfaatan ruang apa saja sanksi administratif dikenakan?",
+      "source": "PERATURAN DAERAH KABUPATEN 01/2013 Pasal 78 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "01",
+          "year": 2013,
+          "about": "RENCANA TATA RUANG WILAYAH KABUPATEN MINAHASA UTARA TAHUN 2013-2033",
+          "article": "Pasal 78"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 377cfaed7efd8491824d6a073ab40254 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s751",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Apa saja alasan anggota dewan pengawas PDAM berhenti atau diberhentikan?",
+      "source": "PERATURAN DAERAH KABUPATEN 4/2015 Pasal 38 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2015,
+          "about": "ORGAN DAN KEPEGAWAIAN PERUSAHAAN DAERAH AIR MINUM",
+          "article": "Pasal 38"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "14",
+          "year": 2013,
+          "about": "ORGAN DAN KEPEGAWAIAN PERUSAHAAN DAERAH AIR MINUM",
+          "article": null
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "16",
+          "year": 2015,
+          "about": "PERUSAHAAN DAERAH AIR MINUM",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2012,
+          "about": "ORGANISASI DAN TATA KERJA PERUSAHAAN DAERAH AIR MINUM",
+          "article": "Pasal 31"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "3",
+          "year": 2014,
+          "about": "SUSUNAN ORGANISASI DAN KEPEGAWAIAN PERUSAHAAN DAERAH AIR MINUM",
+          "article": "Pasal 31"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "2",
+          "year": 2015,
+          "about": "PERUSAHAAN DAERAH AIR MINUM TIRTA DHAHA",
+          "article": "Pasal 34"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "10",
+          "year": 2011,
+          "about": "PERUSAHAAN DAERAH AIR MINUM",
+          "article": null
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2017,
+          "about": "PERUSAHAAN DAERAH AIR MINUM TIRTA MAHOTTAMA",
+          "article": null
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 13b6fac755e80fdb51dc48a59ee363a9 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s752",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Kalau kepala desa sakit sampai enam bulan berturut-turut, siapa yang menjalankan tugasnya?",
+      "source": "PERATURAN DAERAH KABUPATEN 1/2015 Pasal 60 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2015,
+          "about": "PEDOMAN PENCALONAN, PEMILIHAN, PENGANGKATAN, PELANTIKAN DAN PEMBERHENTIAN KEPALA DESA | 1-42 | <!-- image --> <!-- image -->",
+          "article": "Pasal 60"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2016,
+          "about": "PEDOMAN PENCALONAN, PEMILIHAN, PENGANGKATAN, PELANTIKAN DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 68"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "08",
+          "year": 2014,
+          "about": "PED0MAN PENCALONAN, PEMILIHAN, PENGANGKATAN, PELANTIKAN DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 38"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "11",
+          "year": 2015,
+          "about": "PEDOMAN PENCALONAN, PEMILIHAN, PENGANGKATAN, PELANTIKAN DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 63"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2015,
+          "about": "KEPALA DESA",
+          "article": "Pasal 98"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 113b766cb5ae80960e4c2879568e1411 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s753",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Dalam pajak penerangan jalan, apa yang bisa dilakukan bupati terhadap ketetapan pajak yang keliru, baik karena jabatan maupun atas permohonan?",
+      "source": "PERATURAN DAERAH KABUPATEN 01/2008 Pasal 23 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "01",
+          "year": 2008,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "7",
+          "year": 2005,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": null
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2007,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 24"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "13",
+          "year": 2007,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": null
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 00fc53e2604d7a50a5c4c1175da1c4bb of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s754",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Setelah berapa tahun hak menagih retribusi perizinan tertentu kedaluwarsa, dan kapan tertangguh?",
+      "source": "PERATURAN DAERAH KABUPATEN 08/2011 Pasal 30 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "08",
+          "year": 2011,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 30"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "04",
+          "year": 2011,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 51"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "11",
+          "year": 2012,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 38"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "6",
+          "year": 2012,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 42"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "14",
+          "year": 2015,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 38"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2012,
+          "about": "PENYELENGGARAAN DAN RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 60"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2012,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 33"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "15",
+          "year": 2013,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "6",
+          "year": 2012,
+          "about": "RETRIBUSI PERIZINAN TERTENTU",
+          "article": "Pasal 46"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 10591d4ed7b335df9015f31213459047 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s755",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Di Wakatobi, apakah pemungutan retribusi daerah boleh diborongkan dan dokumen apa yang dipakai?",
+      "source": "PERATURAN DAERAH KABUPATEN 9/2012 Pasal 13 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN KEPELABUHANAN BAGIAN HUKUM DAN PERUNDANG-UNDANGAN SETDA KABUPATEN WAKATOBI TAHUN 2012 DAFTAR ISI <!-- image -->",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "8",
+          "year": 2012,
+          "about": "RETRIBUSI TERMINAL BAGIAN HUKUM DAN PERUNDANG-UNDANGAN SETDA KABUPATEN WAKATOBI TAHUN 2012 DAFTAR ISI <!-- image -->",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN PASAR BAGIAN HUKUM DAN PERUNDANG-UNDANGAN SETDA KABUPATEN WAKATOBI TAHUN 2012 DAFTAR ISI <!-- image --> <!-- image --> LEMBARAN DAERAH KABUPATEN WAKATOBI TAHUN 2012 NOMOR 4 SERI C PERATURAN DAERAH KABUPATEN WAKATOBI NOMOR 4 TAHUN 2012",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2012,
+          "about": "RETRIBUSI PEMAKAIAN KEKAYAAN DAERAH BAGIAN HUKUM DAN PERUNDANG-UNDANGAN SETDA KABUPATEN WAKATOBI TAHUN 2012 DAFTAR ISI <!-- image --> <!-- image --> LEMBARAN DAERAH KABUPATEN WAKATOBI TAHUN 2012 NOMOR 5 SERI C PERATURAN DAERAH KABUPATEN WAKATOBI NOMOR 5 TAHUN 2012",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN BAGIAN HUKUM DAN PERUNDANG-UNDANGAN SETDA KABUPATEN WAKATOBI TAHUN 2012 DAFTAR ISI <!-- image --> <!-- image --> LEMBARAN DAERAH KABUPATEN WAKATOBI TAHUN 2012 NOMOR 3 SERI C PERATURAN DAERAH KABUPATEN WAKATOBI NOMOR 3 TAHUN 2012",
+          "article": "Pasal 13"
+        }
+      ],
+      "note": "The same county re-enacted this clause; any version answers.",
+      "provenance": "drafted 2026-11-21 from chunk 122045f9d9ed448d2223eaef60b70896 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s756",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Dalam penyelenggaraan izin gangguan, akses informasi apa yang berhak didapat masyarakat?",
+      "source": "PERATURAN DAERAH KOTA 4/2012 Pasal 20 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "4",
+          "year": 2012,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "4",
+          "year": 2010,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "7",
+          "year": 2011,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 35"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "15",
+          "year": 2011,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "6",
+          "year": 2015,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "2",
+          "year": 2015,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "5",
+          "year": 2016,
+          "about": "PENYELENGGARAAN IZIN GANGGUAN",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "09",
+          "year": 2012,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2012,
+          "about": "IZIN GANGGUAN",
+          "article": "Pasal 21"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 186ce45a5eadaafb04bed5bf810bac07 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s757",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Apa yang termasuk dan tidak termasuk objek pajak parkir?",
+      "source": "PERATURAN DAERAH KABUPATEN 1/2013 Pasal 3 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2013,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2012,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "13",
+          "year": 2013,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "11",
+          "year": 2010,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "7",
+          "year": 2011,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "20",
+          "year": 2011,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2014,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "13",
+          "year": 2011,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "4",
+          "year": 2011,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 3"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 193b9c99e4ff79593aea898c786e8c07 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s758",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Berapa tahun sampai hak menagih retribusi pengujian kendaraan bermotor kedaluwarsa?",
+      "source": "PERATURAN DAERAH KOTA 24/2012 Pasal 22 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "24",
+          "year": 2012,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR DENGAN RAHMAT TUHAN YANG MAHA ESA WALIKOTA BAUBAU",
+          "article": "Pasal 22"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "6",
+          "year": 2013,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR DENGAN RAHMAT TUHAN YANG MAHA ESA",
+          "article": "Pasal 22"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "07",
+          "year": 2011,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "19",
+          "year": 2011,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR",
+          "article": "Pasal 21"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "6",
+          "year": 2017,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR",
+          "article": "Pasal 32"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2013,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "18",
+          "year": 2012,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR",
+          "article": "Pasal 21"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "16",
+          "year": 2013,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "25",
+          "year": 2011,
+          "about": "RETRIBUSI PENGUJIAN KENDARAAN BERMOTOR",
+          "article": "Pasal 23"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 038ac4d76bd25d22f2eaee3a7b2f91e1 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s759",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Pelayanan apa saja yang menjadi objek retribusi persampahan?",
+      "source": "PERATURAN DAERAH KOTA 4/2012 Pasal 3 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "4",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "15",
+          "year": 2011,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2011,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2013,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH",
+          "regulation_number": "04",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "39",
+          "year": 2011,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2011,
+          "about": "RETRIBUSI PELAYANAN PERSAMPAHAN/KEBERSIHAN",
+          "article": "Pasal 3"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 02d4b90591b0a514271f1cc26a4f346b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s760",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Bagaimana mitra bangun serah guna barang milik daerah dipilih dan apa kewajibannya selama pengoperasian?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2010 Pasal 43 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2010,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 43"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2010,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 43"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "7",
+          "year": 2013,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 52"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2010,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 41"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2012,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 39"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2011,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 46"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "12",
+          "year": 2009,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 44"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2010,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 51"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 01305776263a69b40dbe616994390d1f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s761",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Apakah pemegang IUP wajib membuat program pemberdayaan masyarakat sekitar tambang, dan dengan siapa harus dikonsultasikan?",
+      "source": "PERATURAN DAERAH KABUPATEN 5/2012 Pasal 78 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2012,
+          "about": "PELAKSANAAN KEGIATAN USAHA PERTAMBANGAN MINERAL DAN BATUBARA",
+          "article": "Pasal 78"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2014,
+          "about": "PERTAMBANGAN MINERAL DAN BATUBARA",
+          "article": "Pasal 157"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2011,
+          "about": "PENYELENGGARAAN USAHA PERTAMBANGAN MINERAL DAN BATUBARA",
+          "article": "Pasal 99"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "14",
+          "year": 2012,
+          "about": "PERTAMBANGAN MINERAL DAN BATUBARA",
+          "article": "Pasal 236"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "04",
+          "year": 2011,
+          "about": "USAHA PERTAMBANGAN MINERAL DAN BATUBARA DENGAN RAHMAT TUHAN YANG MAHA ESA",
+          "article": "Pasal 87"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2014,
+          "about": "PENGELOLAAN USAHA PERTAMBANGAN MINERAL DAN BATUBARA",
+          "article": "Pasal 148"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 0b83c1f7bbf97e2eaf4d42a48ad3c5da of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s762",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Kalau bayi WNI lahir di kapal atau di pesawat terbang, ke mana dan atas dasar apa kelahirannya dilaporkan?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2010 Pasal 35 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2010,
+          "about": "PENYELENGGARAAN ADMINISTRASI KEPENDUDUKAN",
+          "article": "Pasal 35"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "15",
+          "year": 2009,
+          "about": "PENYELENGGARAAN ADMINISTRASI KEPENDUDUKAN",
+          "article": "Pasal 37"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2015,
+          "about": "ADMINISTRASI KEPENDUDUKAN",
+          "article": "Pasal 26"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "6",
+          "year": 2015,
+          "about": "PENYELENGGARAAN ADMINISTRASI KEPENDUDUKAN",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "4",
+          "year": 2016,
+          "about": "PENYELENGGARAAN ADMINISTRASI KEPENDUDUKAN",
+          "article": null
+        },
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "23",
+          "year": 2006,
+          "about": "ADMINISTRASI KEPENDUDUKAN",
+          "article": "Pasal 30"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "12",
+          "year": 2013,
+          "about": "PENYELENGGARAAN ADMINISTRASI KEPENDUDUKAN DENGAN RAHMAT TUHAN YANG MAHA ESA",
+          "article": null
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 133c79b5201aac5f2a9f440374c008b5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s763",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Kapan bupati dapat menerbitkan STPD pajak hotel?",
+      "source": "PERATURAN DAERAH KABUPATEN 24/2011 Pasal 12 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "24",
+          "year": 2011,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 12"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "01",
+          "year": 2012,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2011,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "02",
+          "year": 2011,
+          "about": "PAJAK HOTEL",
+          "article": null
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2012,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "06",
+          "year": 2011,
+          "about": "PAJAK HOTEL",
+          "article": null
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 0922e0e3b7a843de747c25d86de7ddc8 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s764",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Apa kewajiban wajib PBB perdesaan dan perkotaan yang sedang diperiksa?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2013 Pasal 22 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2013,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 22"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "01",
+          "year": 2013,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2012,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2012,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2013,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 21"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2013,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 21"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2012,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 21"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "14",
+          "year": 2012,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "5",
+          "year": 2013,
+          "about": "PAJAK BUMI DAN BANGUNAN PERDESAAN DAN PERKOTAAN",
+          "article": "Pasal 23"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 1b286e98bc2c41683cd559e918bbf519 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s765",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Siapa subjek pajak reklame dan siapa wajib pajaknya?",
+      "source": "PERATURAN DAERAH KOTA 2/2011 Pasal 23 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "2",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "10",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "4",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "02",
+          "year": 2011,
+          "about": "PAJAK-PAJAK DAERAH",
+          "article": "Pasal 19"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "5",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "23",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 31"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 04f869272075dfbe5bc05c31da57fdc2 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s766",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Setelah musyawarah perencanaan desa, apa yang dilakukan kepala desa terhadap rancangan RPJM Desa?",
+      "source": "PERATURAN BUPATI 19/2016 Pasal 27 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "19",
+          "year": 2016,
+          "about": "PETUNJUK TEKNIS PENYUSUNAN RENCANA PEMBANGUNAN JANGKA MENENGAH DESA (RPJM DESA) DAN RENCANA KERJA PEMERINTAH DESA (RKP DESA)",
+          "article": "Pasal 27"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "53",
+          "year": 2015,
+          "about": "PETUNJUK TEKNIS PENYUSUNAN RENCANA PEMBANGUNAN JANGKA MENENGAH DESA (RPJM DESA) DAN RENCANA KERJA PEMERINTAH DESA (RKP DESA)",
+          "article": null
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "8",
+          "year": 2016,
+          "about": "PETUNJUK TEKNIS PENYUSUNAN RENCANA PEMBANGUNAN JANGKA MENENGAH DESA DAN RENCANA KERJA PEMERINTAH DESA",
+          "article": "Pasal 27"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "8",
+          "year": 2016,
+          "about": "PETUNJUK TEKNIS PENYUSUNAN RENCANA PEMBANGUNAN JANGKA MENENGAH DESA DAN RENCANA KERJA PEMERINTAH DESA DENGAN RAHMAT TUHAN YANG MAHA ESA",
+          "article": "Pasal 29"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 09b8f459145d27783fe1a3173242ea10 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s767",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Perencanaan kebutuhan barang milik daerah meliputi perencanaan apa saja?",
+      "source": "PERATURAN DAERAH KABUPATEN 10/2016 Pasal 6 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2016,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 6"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "1",
+          "year": 2016,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 9"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "11",
+          "year": 2016,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 15"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2015,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 8"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2017,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 17"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2017,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 13"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "13",
+          "year": 2015,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 6"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 111d9663d74f961811d59dfe81418ba9 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s768",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Jenis hiburan apa saja yang menjadi objek pajak hiburan?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2011 Pasal 16 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 16"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "01",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 16"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 16"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "10",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 16"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "21",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 16"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "08",
+          "year": 2012,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 22"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 190a9c2ab6d44ad4d32fe9a14754c9eb of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s769",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Kalau kepala desa yang diberhentikan sementara terbukti tidak bersalah di pengadilan, dalam berapa hari ia harus dikembalikan ke jabatannya?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2016 Pasal 68 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2016,
+          "about": "KEPALA DESA",
+          "article": "Pasal 68"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2015,
+          "about": "KEPALA DESA",
+          "article": "Pasal 91"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2016,
+          "about": "PEMILIHAN DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 63"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2015,
+          "about": "PEMILIHAN KEPALA DESA",
+          "article": "Pasal 60"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "05",
+          "year": 2015,
+          "about": "PEMILIHAN KEPALA DESA",
+          "article": "Pasal 71"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2016,
+          "about": "PEMILIHAN, PELANTIKAN, DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 88"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2016,
+          "about": "TATA CARA PEMILIHAN DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 61"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2015,
+          "about": "PEMILIHAN, PENGESAHAN DAN PENGANGKATAN, PELANTIKAN DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 63"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2016,
+          "about": "KEPALA DESA",
+          "article": "Pasal 75"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 095c809a2e2cfb4c08a0aed1823e7daf of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s770",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Di Jawa Timur, apa tugas sekretariat pada sebuah dinas provinsi?",
+      "source": "PERATURAN GUBERNUR 77/2016 Pasal 5 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "77",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISASI, URAIAN TUGAS DAN FUNGSI SERTA TATA KERJA DINAS PERHUBUNGAN PROVINSI JAWA TIMUR",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "78",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISASI, URAIAN TUGAS DAN FUNGSI SERTA TATA KERJA DINAS PEMBERDAYAAN MASYARAKAT DAN DESA PROVINSI JAWA TIMUR",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "64",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISASI, URAIAN TUGAS DAN FUNGSI SERTA TATA KERJA DINAS PERPUSTAKAAN DAN KEARSIPAN PROVINSI JAWA TIMUR",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "76",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISASI, URAIAN TUGAS DAN FUNGSI SERTA TATA KERJA DINAS LINGKUNGAN HIDUP PROVINSI JAWA TIMUR",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "75",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISASI, URAIAN TUGAS DAN FUNGSI SERTA TATA KERJA DINAS PEKERJAAN UMUM BINA MARGA PROVINSI JAWA TIMUR",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "63",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISASI, URAIAN TUGAS DAN FUNGSI SERTA TATA KERJA DINAS PETERNAKAN PROVINSI JAWA TIMUR",
+          "article": "Pasal 5"
+        }
+      ],
+      "note": "The same province re-enacted this clause; any version answers.",
+      "provenance": "drafted 2026-11-21 from chunk 6ebf82570b95aa41565be305fc269919 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s771",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Berapa tahun sampai hak menagih retribusi pengendalian menara telekomunikasi kedaluwarsa?",
+      "source": "PERATURAN DAERAH KABUPATEN 14/2013 Pasal 38 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "14",
+          "year": 2013,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 38"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2012,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 38"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2014,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 24"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2012,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2016,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 22"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2013,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 24"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "6",
+          "year": 2013,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 57"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "33",
+          "year": 2011,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI DENGAN RAHMAT TUHAN YANG MAHA ESA BUPATI LUWU TIMUR",
+          "article": "Pasal 38"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2011,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 18"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 043e47610029413b5d9f58f958bc9d66 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s772",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Di DIY, belanja tidak langsung dalam pengelompokan anggaran belanja daerah meliputi apa saja?",
+      "source": "PERATURAN GUBERNUR 90/2016 Pasal 35 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "90",
+          "year": 2016,
+          "about": "SISTEM DAN PROSEDUR PENGELOLAAN KEUANGAN DAERAH",
+          "article": "Pasal 35"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "30",
+          "year": 2015,
+          "about": "SISTEM DAN PROSEDUR PENGELOLAAN KEUANGAN DAERAH",
+          "article": "Pasal 34"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "49",
+          "year": 2012,
+          "about": "SISTEM DAN PROSEDUR PENGELOLAAN KEUANGAN DAERAH",
+          "article": "Pasal 34"
+        },
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "42",
+          "year": 2010,
+          "about": "SISTEM DAN PROSEDUR PENGELOLAAN KEUANGAN DAERAH",
+          "article": "Pasal 31"
+        }
+      ],
+      "note": "The same province re-enacted this clause; any version answers.",
+      "provenance": "drafted 2026-11-21 from chunk 46f0966a40d58a406fbccb8cc654f74a of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s773",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Kapan barang milik daerah dihapus dari daftar barang pengguna?",
+      "source": "PERATURAN DAERAH KABUPATEN 13/2015 Pasal 69 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "13",
+          "year": 2015,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 69"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "12",
+          "year": 2015,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 84"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2015,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 74"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2017,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 81"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 0d1152602e5bdac4d86249fac67eae1c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s774",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Paling lambat berapa hari kepala desa yang bekerja sama antardesa harus menandatangani rancangan peraturan bersamanya?",
+      "source": "PERATURAN WALIKOTA 2/2016 Pasal 25 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "2",
+          "year": 2016,
+          "about": "TATA CARA PENYUSUNAN PERATURAN DI DESA",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "24",
+          "year": 2017,
+          "about": "TATA CARA PENYUSUNAN PERATURAN DI DESA DENGAN RAHMAT TUHAN YANG MAHA ESA",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2016,
+          "about": "PEMBENTUKAN PERATURAN DI DESA",
+          "article": "Pasal 27"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "40",
+          "year": 2016,
+          "about": "TATA CARA PENYUSUNAN PERATURAN DI DESA",
+          "article": "Pasal 24"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2017,
+          "about": "PEMBENTUKAN PERATURAN DI DESA",
+          "article": "Pasal 28"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2015,
+          "about": "PENYELENGGARAAN PEMERINTAHAN DESA",
+          "article": "Pasal 102"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "49",
+          "year": 2015,
+          "about": "TATA CARA PENYUSUNAN PERATURAN DI DESA DENGAN RAHMAT TUHAN YANG MAHA ESA BUPATI KOTABARU",
+          "article": "Pasal 27"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 067071e1d4244fe897824aea1ca8ed75 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s775",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Setelah berapa tahun hak menagih pajak penerangan jalan kedaluwarsa?",
+      "source": "PERATURAN DAERAH KABUPATEN 24/2010 Pasal 16 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "24",
+          "year": 2010,
+          "about": "PAJAK PENERANGAN JALAN DENGAN RAHMAT TUHAN YANG MAHA ESA BUPATI SIDENRENG RAPPANG",
+          "article": "Pasal 16"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "26",
+          "year": 2015,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 24"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "07",
+          "year": 2012,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 32"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2013,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 26"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2010,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 21"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "24",
+          "year": 2011,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 24"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "12",
+          "year": 2010,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 26"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2013,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 26"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "15",
+          "year": 2011,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 24"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 0dd96fe2fb6074caca667f65bb9dd0d4 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s776",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Kapan izin usaha jasa konstruksi sebuah badan usaha dibekukan?",
+      "source": "PERATURAN DAERAH KABUPATEN 8/2014 Pasal 40 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "8",
+          "year": 2014,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 40"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "03",
+          "year": 2014,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 43"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "04",
+          "year": 2013,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 43"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2014,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 34"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2016,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 35"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "8",
+          "year": 2015,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 30"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2012,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 29"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2014,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 37"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "20",
+          "year": 2013,
+          "about": "IZIN USAHA JASA KONSTRUKSI",
+          "article": "Pasal 35"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 0144548f49a51da8ba5983b116e01b65 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s777",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Di Jembrana, apa saja bukti pertanggungjawaban perjalanan dinas luar negeri?",
+      "source": "PERATURAN BUPATI 40/2015 Pasal 34 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "40",
+          "year": 2015,
+          "about": "PERJALANAN DINAS",
+          "article": "Pasal 34"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "40",
+          "year": 2014,
+          "about": "PERJALANAN DINAS",
+          "article": "Pasal 32"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "10",
+          "year": 2014,
+          "about": "PERJALANAN DINAS",
+          "article": "Pasal 28"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "03",
+          "year": 2011,
+          "about": "PERJALANAN DINAS",
+          "article": "Pasal 29"
+        },
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "13",
+          "year": 2011,
+          "about": "PERJALANAN DINAS",
+          "article": "Pasal 29"
+        }
+      ],
+      "note": "The same county re-enacted this clause; any version answers.",
+      "provenance": "drafted 2026-11-21 from chunk 1db3138b94cde27ed1de5f1e11fd539a of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s778",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Bagaimana ketentuan ketinggian bangunan gedung diatur, dan bolehkah mengganggu penerbangan?",
+      "source": "PERATURAN DAERAH KOTA 7/2013 Pasal 25 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "7",
+          "year": 2013,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "3",
+          "year": 2012,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 23"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2013,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2013,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "6",
+          "year": 2012,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "8",
+          "year": 2012,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2016,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 25"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "5",
+          "year": 2013,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 22"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 1d9d2b6d973807d41dcf73a43f3a012f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s779",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Faktor apa saja yang dipertimbangkan dalam menghitung nilai perolehan air tanah?",
+      "source": "PERATURAN DAERAH KABUPATEN 02/2011 Pasal 40 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "02",
+          "year": 2011,
+          "about": "PAJAK-PAJAK DAERAH",
+          "article": "Pasal 40"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "12",
+          "year": 2010,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 10"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 51"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2011,
+          "about": "PAJAK-PAJAK DAERAH",
+          "article": "Pasal 40"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2010,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 40"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 62"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 40"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 56"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "03",
+          "year": 2011,
+          "about": "PAJAK DAERAH",
+          "article": "Pasal 41"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 228e66b9ae6df6736641180e1722117c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s780",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Barang milik daerah apa saja yang dapat dijadikan objek tukar menukar?",
+      "source": "PERATURAN DAERAH KABUPATEN 1/2014 Pasal 73 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2014,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 73"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "04",
+          "year": 2013,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 75"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "06",
+          "year": 2010,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 74"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2009,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 77"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "12",
+          "year": 2009,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 74"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2011,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 78"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "22",
+          "year": 2008,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 74"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2012,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 68"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2010,
+          "about": "PENGELOLAAN BARANG MILIK DAERAH",
+          "article": "Pasal 80"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 13f5462dc97f167645d26387ab9d524b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s781",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Jika tunggakan pajak hotel tidak dilunasi setelah surat teguran, bagaimana penagihannya?",
+      "source": "PERATURAN DAERAH KABUPATEN 11/2011 Pasal 20 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "11",
+          "year": 2011,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 20"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2003,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 17"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "04",
+          "year": 2009,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 18"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "12",
+          "year": 2005,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 17"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "13",
+          "year": 2008,
+          "about": "PAJAK HOTEL",
+          "article": "Pasal 19"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 1b070cff7811b49faec26ae7b02b4494 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s782",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Untuk apa saluran tepi jalan diperuntukkan dan bagaimana ukurannya ditetapkan?",
+      "source": "PERATURAN DAERAH KOTA 14/2013 Pasal 5 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "14",
+          "year": 2013,
+          "about": "PEMANFAATAN BAGIAN JALAN",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "7",
+          "year": 2013,
+          "about": "PEMANFAATAN BAGIAN JALAN",
+          "article": "Pasal 6"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "37",
+          "year": 2011,
+          "about": "PEMANFAATAN BAGIAN JALAN",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "21",
+          "year": 2013,
+          "about": "PEDOMAN PEMANFAATAN DAN PENGGUNAAN BAGIAN-BAGIAN JALAN",
+          "article": "Pasal 5"
+        },
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "2",
+          "year": 2015,
+          "about": "JALAN",
+          "article": "Pasal 18"
+        }
+      ],
+      "note": "Template clause enacted by many regions; any twin answers.",
+      "provenance": "drafted 2026-11-21 from chunk 1d92b6645ffc84a59b7ee46978fa25a5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o131",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Bagaimana cara membuat tempe sendiri di rumah dari kedelai?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o132",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Kenapa layar laptop berkedip setelah dipasang monitor kedua?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o133",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Berapa kalori dalam sepiring nasi goreng telur?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o134",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Bagaimana cara melatih kucing agar buang air di pasir?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o135",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Apa bedanya lensa kamera prime dan zoom untuk foto potret?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o136",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Bagaimana teknik pernapasan yang benar saat lari jarak jauh?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o137",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Siapa penulis novel Bumi Manusia dan apa ceritanya?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o138",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Bagaimana cara menghilangkan jamur di dinding kamar mandi?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o139",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Kenapa langit berwarna jingga saat matahari terbenam?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o140",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Bagaimana cara memilih durian yang matang dan manis?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o141",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "What is the difference between RAM and storage on a phone?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o142",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I make sourdough starter from scratch?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o143",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Bagaimana cara mengganti oli mesin mobil sendiri?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o144",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Berapa lama masa percobaan kerja yang diizinkan menurut hukum ketenagakerjaan Prancis?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o145",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "How does jury selection work in criminal trials in England and Wales?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o146",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Bagaimana syarat naturalisasi menjadi warga negara Kanada?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o147",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Apa sanksi bagi pengemudi yang melanggar batas kecepatan di jalan tol Jerman?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o148",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "What are the rules for at-will employment termination in Texas?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o149",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Bagaimana hukum Belanda mengatur euthanasia dan syaratnya?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o150",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Berapa batas kepemilikan asing untuk perusahaan di Filipina?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o151",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "How are inheritance taxes calculated in the United Kingdom?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o152",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Bagaimana prosedur perceraian menurut hukum perdata Korea Selatan?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o153",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "What does the Sarbanes-Oxley Act require from public company auditors?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o154",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Apa aturan Thailand tentang hukuman bagi penghinaan terhadap raja?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "o155",
+      "type": "out_of_domain",
+      "subtype": "foreign_law",
+      "difficulty": "hard",
+      "query": "Bagaimana sistem jaminan sosial pensiun diatur di Swedia?",
+      "answer_chunks": [],
+      "source": "not answerable from this corpus",
+      "provenance": "written 2026-11-21 (stage 0)",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s783",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Di Kota Manado, untuk pelanggaran pemanfaatan ruang apa saja sanksi rencana tata ruang dikenakan?",
+      "source": "PERATURAN DAERAH KOTA 1/2014 Pasal 91 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "1",
+          "year": 2014,
+          "about": "RENCANA TATA RUANG WILAYAH KOTA MANADO TAHUN 2014 - 2034",
+          "article": "Pasal 91"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 178fb206b7b56103d28fc924d359ccd2 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s784",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Di Kota Malang, dengan produk hukum apa pemerintah daerah membentuk dana cadangan dan apa isinya?",
+      "source": "PERATURAN WALIKOTA 43/2014 Pasal 74 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "43",
+          "year": 2014,
+          "about": "SISTEM DAN PROSEDUR PENGELOLAAN KEUANGAN DAERAH",
+          "article": "Pasal 74"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 174d8eef4404a01c0986d16cca73eafa of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s785",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Di RSUD Sampang, jika tarif layanan baru dianggap terlalu mahal oleh badan pengawas, apa yang boleh dilakukan direktur?",
+      "source": "PERATURAN BUPATI 51/2015 Pasal 3 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "51",
+          "year": 2015,
+          "about": "PEDOMAN TARIF PELAYANAN KESEHATAN PADA RUMAH SAKIT UMUM DAERAH KABUPATEN SAMPANG",
+          "article": "Pasal 3"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0064d85a2f03233f9450f909a15581a5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s786",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Di Konawe Selatan, siapa yang menetapkan susunan panitia pemilihan kepala desa dan apa tugas panitia itu?",
+      "source": "PERATURAN BUPATI 9/2016 Pasal 14 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "9",
+          "year": 2016,
+          "about": "TATA CARA PELAKSANAAN PEMILIHAN KEPALA DESA SERENTAK DI KABUPATEN KONAWE SELATAN",
+          "article": "Pasal 14"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 05751636d3ce448761bce1852ac7b59b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s787",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Di Kabupaten Buru, apa kewajiban wajib retribusi IMB ketika diperiksa kepatuhannya oleh bupati?",
+      "source": "PERATURAN DAERAH KABUPATEN 09/2011 Pasal 22 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "09",
+          "year": 2011,
+          "about": "RETRIBUSI IZIN MENDIRIKAN BANGUNAN",
+          "article": "Pasal 22"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 10c9dbc8bd634ffe873a297c1aa49b0f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s788",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Di Boalemo, apa saja fungsi kepala badan perencanaan, penelitian dan pengembangan daerah?",
+      "source": "PERATURAN BUPATI 51/2016 Pasal 6 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "51",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISAST, TUGAS, ]F'UNGSI, DAN TATA KERJA PERANGIdAT DAERAH BADAN PER,ENCANAAN, PENELITIAN DAN PENGEMBANGAN DAERAII",
+          "article": "Pasal 6"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 04fb67b9725944d8c97b2f237cb01144 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s789",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Di Kabupaten Banjar, apa saja yang termasuk persyaratan arsitektur rumah panggung?",
+      "source": "PERATURAN DAERAH KABUPATEN 1/2014 Pasal 11 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2014,
+          "about": "BANGUNAN PANGGUNG",
+          "article": "Pasal 11"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0192a6214779a8c6e099c6de5977b46c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s790",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Di Kapuas Hulu, apakah bantuan sosial boleh diberikan terus-menerus setiap tahun?",
+      "source": "PERATURAN BUPATI 51/2014 Pasal 27 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "51",
+          "year": 2014,
+          "about": "TATA CARA PENGANGGARAN, PELAKSANAAN DAN PENATAUSAHAAN, PERTANGGUNGJAWABAN DAN PELAPORAN SERTA MONITORING DAN EVALUASI HIBAH DAN BANTUAN SOSIAL",
+          "article": "Pasal 27"
+        }
+      ],
+      "near_duplicates": 16,
+      "provenance": "drafted 2026-11-21 from chunk 519704cf9b76651cf4d3002a50e9316c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s791",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Di Tabanan, kapan hak menagih pajak restoran kedaluwarsa, dan apa yang membuatnya tertangguh?",
+      "source": "PERATURAN DAERAH KABUPATEN 23/2011 Pasal 20 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "23",
+          "year": 2011,
+          "about": "PAJAK RESTORAN",
+          "article": "Pasal 20"
+        }
+      ],
+      "near_duplicates": 14,
+      "provenance": "drafted 2026-11-21 from chunk 201cf68ff0fa843a18ba4f6398cc740f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s792",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Di Rejang Lebong, apakah keberatan atas SKRD retribusi menara telekomunikasi boleh diajukan lewat dari tiga bulan?",
+      "source": "PERATURAN DAERAH KABUPATEN 11/2011 Pasal 15 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "11",
+          "year": 2011,
+          "about": "RETRIBUSI PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 15"
+        }
+      ],
+      "near_duplicates": 14,
+      "provenance": "drafted 2026-11-21 from chunk 39cc88bf284483c65474f2b9a7ea9d6e of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s793",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Di Balangan, apakah penyedia barang/jasa desa harus punya tempat usaha, dan siapa yang dikecualikan?",
+      "source": "PERATURAN BUPATI 25/2015 Pasal 6 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "25",
+          "year": 2015,
+          "about": "PEDOMAN DAN TATA CARA PENGADAAN BARANG/JASA DI DESA",
+          "article": "Pasal 6"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 429f63c3a7aa64db523827f3fc52b1e5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s794",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Di Pangkajene dan Kepulauan, siapa yang memberi izin usaha jasa pemeriksaan dan pengujian instalasi listrik tegangan rendah?",
+      "source": "PERATURAN DAERAH KABUPATEN 4/2013 Pasal 37 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2013,
+          "about": "USAHA KETENAGALISTRIKAN",
+          "article": "Pasal 37"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 115ac1100e7029b0fca5e0aef0116889 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s795",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Di Lebak, sebelum pemerintah daerah mencairkan anggaran desa, permohonan desa dievaluasi oleh siapa?",
+      "source": "PERATURAN BUPATI 9/2016 Pasal 44 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "9",
+          "year": 2016,
+          "about": "PEDOMAN PENGELOLAAN KEUANGAN DESA",
+          "article": "Pasal 44"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 089d62ee9b0b6ee3dc5f5d7aadda2544 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s796",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Di Kota Malang, apa syarat menjadi anggota pokja atau pejabat pengadaan barang/jasa?",
+      "source": "PERATURAN WALIKOTA 40/2011 Pasal 187 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "40",
+          "year": 2011,
+          "about": "PEDOMAN KERJA DAN PENEKANAN TUGAS DI LINGKUNGAN PEMERINTAH KOTA MALANG TAHUN 2012",
+          "article": "Pasal 187"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 08b3d016c7fdf814b058559b5db98674 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s797",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Di Buton, apa tugas panitia pemilihan kepala desa tingkat kabupaten?",
+      "source": "PERATURAN DAERAH KABUPATEN 8/2015 Pasal 3 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "8",
+          "year": 2015,
+          "about": "TATA CARA PEMILIHAN, PENGANGKATAN DAN PEMBERHENTIAN KEPALA DESA",
+          "article": "Pasal 3"
+        }
+      ],
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-21 from chunk 014d8d7067467cb0013a3674497e9947 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s798",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Di Musi Rawas, prosedur akuntansi pengeluaran kas di SKPD terdiri dari sub prosedur apa saja?",
+      "source": "PERATURAN DAERAH KABUPATEN 7/2008 Pasal 239 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "7",
+          "year": 2008,
+          "about": "POKOK-POKOK PENGELOLAAN KEUANGAN DAERAH KABUPATEN MUSI RAWAS",
+          "article": "Pasal 239"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 077eca36a2351d8531dba3d6e7055b58 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s799",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Di Bungo, apakah instansi pemungut retribusi tera ulang bisa mendapat insentif, dan lewat apa ditetapkan?",
+      "source": "PERATURAN DAERAH KABUPATEN 14/2012 Pasal 20 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "14",
+          "year": 2012,
+          "about": "RETRIBUSI PELAYANAN TERA/TERA ULANG",
+          "article": "Pasal 20"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 171aca7fb2db1935a6f597ef9ef07898 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s800",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Di Labuhanbatu, fungsi apa saja yang harus disiapkan SKPKD untuk memungut BPHTB?",
+      "source": "PERATURAN BUPATI 11/2014 Pasal 5 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "11",
+          "year": 2014,
+          "about": "TATA CARA PEMUNGUTAN BEA PEROLEHAN HAK ATAS TANAH DAN BANGUNAN DI KABUPATEN LABUHANBATU PEMERINTAH KABUPATEN LABUHANBATU 2014 BERITA DAERAH KABUPATEN LABUHANBATU NOMOR 11 TAHUN 2014 PERATURAN BUPATI LABUHANBATU NOMOR 11 TAHUN 2014 TENTANG TATA CARA PEMUNGUTAN BEA PEROLEHAN HAK ATAS TANAH DAN BANGUNAN DI KABUPATEN LABUHANBATU",
+          "article": "Pasal 5"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 15df2a62d0854c9fc1af810c14095aa5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s801",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Dalam aturan pencabutan izin dan likuidasi bank, siapa yang dihitung sebagai kreditur bank, dan apakah nasabah penyimpan termasuk?",
+      "source": "PERATURAN PEMERINTAH 25/1999 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PEMERINTAH",
+          "regulation_number": "25",
+          "year": 1999,
+          "about": "PENCABUTAN IZIN USAHA, PEMBUBARAN DAN LIKUIDASI BANK",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk e075e7a9607f28f7f29804081e0f78bc of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s802",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kalimantan Utara, apa arti unit pelaksana teknis dinas dalam susunan perangkat daerah provinsi?",
+      "source": "PERATURAN DAERAH PROVINSI 5/2016 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "5",
+          "year": 2016,
+          "about": "PEMBENTUKAN DAN SUSUNAN PERANGKAT DAERAH PROVINSI KALIMANTAN UTARA",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 183a5d2b141586fd75a4639e98d21117 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s803",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kalimantan Selatan, apa yang dimaksud dengan forum pelaksana tanggung jawab sosial perusahaan?",
+      "source": "PERATURAN GUBERNUR 03/2015 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "03",
+          "year": 2015,
+          "about": "PETUNJUK PELAKSANAAN PERATURAN DAERAH PROVINSI KALIMANTAN SELATAN NOMOR 1 TAHUN 2014 TENTANG TANGGUNG JAWAB SOSIAL DAN LINGKUNGAN PERUSAHAAN",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 05a20f746749fbd6e07b8abf61e453fb of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s804",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Maluku Utara, apa arti tambahan penghasilan PNS yang didasarkan pada prestasi kerja?",
+      "source": "PERATURAN GUBERNUR 7/2014 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "7",
+          "year": 2014,
+          "about": "TAMBAHAN PENGHASILAN BAGI PEGAWAI NEGERI SIPIL (PNS) DI LINGKUNGAN PEMERINTAH PROVINSI MALUKU UTARA BERDASARKAN PRESTASI KERJA TAHUN ANGGARAN 2014",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk b030e07f8dd0e3c8dd009cf92eca5730 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s805",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di DIY, apa yang dimaksud pinjam pakai barang milik daerah?",
+      "source": "PERATURAN GUBERNUR 80/2012 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "80",
+          "year": 2012,
+          "about": "TATA CARA PINJAM PAKAI BARANG MILIK DAERAH DENGAN RAHMAT TUHAN YANG MAHA ESA GUBERNUR DAERAH ISTIMEWA YOGYAKARTA",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk b26610fd9002183bd090f153b85eacbb of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s806",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di DIY, dalam pemindahan jenazah warga negara asing, siapa yang disebut pelapor dan apa yang dimaksud kepolisian setempat?",
+      "source": "PERATURAN GUBERNUR 23/2012 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "23",
+          "year": 2012,
+          "about": "PEDOMAN PENGANGKUTAN ATAU PEMINDAHAN JENAZAH/ABU/KERANGKA ORANG ASING",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk d65197ae1dab64a4b7efac20ea8afb65 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s807",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Bangka Belitung, apa yang dimaksud lembaga teknis daerah provinsi?",
+      "source": "PERATURAN DAERAH PROVINSI 1/2013 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "1",
+          "year": 2013,
+          "about": "ORGANISASI DAN TATA KERJA INSPEKTORAT, BADAN PERENCANAAN PEMBANGUNAN DAERAH DAN LEMBAGA TEKNIS DAERAH PROVINSI KEPULAUAN BANGKA BELITUNG",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk a884d6aac6fa021fdedc34c3bb5e6d08 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s808",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Jakarta, apa itu Badan Koordinasi Penataan Ruang Daerah dan apakah sifatnya tetap atau ad hoc?",
+      "source": "PERATURAN GUBERNUR 28/2017 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "28",
+          "year": 2017,
+          "about": "ORGANISASI DAN TATA KERJA BADAN KOORDINASI PENATAAN RUANG DAERAH",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 8cd502d3360602eaab47d1d7e9ab3b3c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s809",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Jakarta, apa yang dimaksud izin prinsip pemanfaatan ruang dan surat izin penunjukan penggunaan tanah bagi pengembang?",
+      "source": "PERATURAN GUBERNUR 27/2017 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "27",
+          "year": 2017,
+          "about": "PENDELEGASIAN WEWENANG PENANDATANGANAN BERITA ACARA SERAH TERIMA BARANG YANG BERASAL DARI PEROLEHAN LAINNYA YANG SAH KEPADA PEMERINTAH PROVINSI DAERAH KHUSUS IBUKOTA JAKARTA",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 6ce6eac464d7b64beee87d11dd608ef6 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s810",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kota Yogyakarta, apa beda praktik perorangan dan praktik berkelompok tenaga kesehatan?",
+      "source": "PERATURAN DAERAH KOTA 2/2008 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "2",
+          "year": 2008,
+          "about": "IZIN PENYELENGGARAAN SARANA KESEHATAN DAN IZIN TENAGA KESEHATAN",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 7ff76d98fcc19b1e623a922393ecef2b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s811",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Sidenreng Rappang, apa yang disebut menara bersama telekomunikasi dan siapa yang bisa menjadi penyedia menara?",
+      "source": "PERATURAN DAERAH KABUPATEN 08/2010 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "08",
+          "year": 2010,
+          "about": "PENGENDALIAN MENARA TELEKOMUNIKASI",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 8d786fb3b1415d2f94c6d398faa70653 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s812",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Bangkalan, apa arti retribusi pelayanan pendidikan dan pelatihan teknis di balai latihan kerja?",
+      "source": "PERATURAN BUPATI 8/2011 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "8",
+          "year": 2011,
+          "about": "TEKNIS PEMUNGUTAN RETRIBUSI PELAYANAN PENDIDIKAN",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 56a153df9f84f56dfeb38054cc324425 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s813",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Jeneponto, apa pengertian kelurahan dalam perda pembentukan kelurahan baru?",
+      "source": "PERATURAN DAERAH KABUPATEN 10/2006 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "10",
+          "year": 2006,
+          "about": "PEMBENTUKAN KELURAHAN BONTOA KECAMATAN BINAMU, KELURAHAN BONTORANNU KECAMATAN BANGKALA DAN KELURAHAN BULUJAYA KECAMATAN BANGKALA BARAT KABUPATEN JENEPONTO",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 4677bfbb4c38221f9b83ecf277dc6d94 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s814",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kabupaten Banjar, berapa lama periode RPJMD, RKPD, renstra SKPD dan renja SKPD?",
+      "source": "PERATURAN BUPATI 33/2016 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "33",
+          "year": 2016,
+          "about": "PERUBAHAN RENCANA KERJA PEMBANGUNAN DAERAH KABUPATEN BANJAR TAHUN ANGGARAN 2016",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-21 from chunk e87b042543a7aeed3b736f1a777e3636 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s815",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Klungkung, apa yang dimaksud rumah kos dan kamar kos?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2017 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2017,
+          "about": "PENGELOLAAN RUMAH KOS",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 3b1d4a36023664ee5c7b401ea3e037ea of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s816",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kota Bekasi, PDAM mana yang dimiliki sendiri oleh kota dan mana yang dimiliki bersama dengan kabupaten?",
+      "source": "PERATURAN DAERAH KOTA 17/2015 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "17",
+          "year": 2015,
+          "about": "PENYERTAAN MODAL PEMERINTAH KOTA BEKASI KEPADA BADAN USAHA MILIK DAERAH",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk e7483288d1864ef18a1b21236e0c1e40 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s817",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Bangka Tengah, apa beda alokasi dana desa minimum dan proporsional?",
+      "source": "PERATURAN DAERAH KABUPATEN 9/2008 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2008,
+          "about": "ALOKASI DANA DESA",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 59d5311516529ec14aab310c85b7d916 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s818",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Tanah Laut, siapa yang termasuk tim teknis pada kantor pelayanan perizinan terpadu?",
+      "source": "PERATURAN BUPATI 37/2010 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "37",
+          "year": 2010,
+          "about": "URAIAN TUGAS KANTOR PELAYANAN PERIZINAN TERPADU KABUPATEN TANAH LAUT",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk b3ff8da0d06c1786d4e831cc7796777c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s819",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kolaka, apa beda pembentukan desa, pemekaran desa, dan penyatuan desa?",
+      "source": "PERATURAN DAERAH KABUPATEN 26/2001 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "26",
+          "year": 2001,
+          "about": "P E R A T U R A N D E S A",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 37bbc2d06f4af06e2685b81c9f0c35c5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s820",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kota Yogyakarta, apa beda kendaraan dinas operasional dan kendaraan dinas operasional teknis atau khusus dalam pemberian BBM?",
+      "source": "PERATURAN WALIKOTA 42/2009 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "42",
+          "year": 2009,
+          "about": "PEMBERIAN BAHAN BAKAR MINYAK BAGI KENDARAAN DINAS OPERASIONAL DAN KENDARAAN DINAS OPERASIONAL TEKNIS/KHUSUS",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 8b31c98b44a3f0736f68d5c88f5b3a26 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s821",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Jembrana, satuan pendidikan formal itu berkedudukan sebagai apa dan di bawah dinas mana?",
+      "source": "PERATURAN BUPATI 65/2016 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "65",
+          "year": 2016,
+          "about": "PEMBENTUKAN SATUAN PENDIDIKAN FORMAL",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk e8274e62e76a0a8524946ad8042f80ec of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s822",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Bangka Tengah, Bank Syariah Bangka itu bank jenis apa, dan apa arti agio dalam penyertaan modalnya?",
+      "source": "PERATURAN DAERAH KABUPATEN 20/2006 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "20",
+          "year": 2006,
+          "about": "PENYERTAAN MODAL PEMERINTAH KABUPATEN BANGKA TENGAH PADA BANK SYARIAH BANGKA",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk a4889656fd5de973bb0fef5d242b86a5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s823",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Hulu Sungai Utara, apa yang dimaksud modal daerah dalam penambahan penyertaan modal ke bank?",
+      "source": "PERATURAN DAERAH KABUPATEN 4/2015 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2015,
+          "about": "PENAMBAHAN PENYERTAAN MODAL PEMERINTAH KABUPATEN HULU SUNGAI UTARA KEPADA 4 (EMPAT, BANK PERKREDITAN RAKYAT (BPR, SE-KABUPATEN HULU SUNGAI UTARA TAHUN ANGGARAN 2015-2016",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-21 from chunk 50193e34222c594afd799eb6792089ea of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s824",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Sleman, sampai umur berapa seorang bayi dianggap bayi baru lahir untuk jaminan kesehatan daerah?",
+      "source": "PERATURAN BUPATI 13/2015 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "13",
+          "year": 2015,
+          "about": "PEMBERIAN JAMINAN KESEHATAN DAERAH BAGI BAYI BARU LAHIR",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 9857992a34ed1c86996c09badead3f55 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s825",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Banjarbaru, sanggar kegiatan belajar itu berkedudukan sebagai apa?",
+      "source": "PERATURAN WALIKOTA 50/2009 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "50",
+          "year": 2009,
+          "about": "TUGAS POKOK, FUNGSI DAN TATA KERJA SANGGAR KEGIATAN BELAJAR (SKB) PADA DINAS PENDIDIKAN KOTA BANJARBARU",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0159c370d4a9b82181f7de62c6b8ff83 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s826",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Mamuju Utara, apa yang dimaksud asas tampung tantra?",
+      "source": "PERATURAN BUPATI 19/2013 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "19",
+          "year": 2013,
+          "about": "TUGAS POKOK, FUNGSI DAN RINCIAN TUGAS JABATAN STRUKTURAL PADA SEKRETARIAT DAERAH KABUPATEN MAMUJU UTARA",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 7fe29109c53ad950cdcba55db4352bc0 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s827",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Kabupaten Malang, apa beda pengujian dan kalibrasi alat kesehatan?",
+      "source": "PERATURAN BUPATI 25/2017 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "25",
+          "year": 2017,
+          "about": "PEMBENTUKAN UNIT PELAKSANA TEKNIS PENGUJIAN DAN KALIBRASI ALAT KESEHATAN PADA DINAS KESEHATAN",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0b615cf1c115e52e5adf5733600b7f16 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s828",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Banjarbaru, apa yang dimaksud tim pelaksana kegiatan pada SKPD?",
+      "source": "PERATURAN WALIKOTA 4/2012 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "4",
+          "year": 2012,
+          "about": "PEDOMAN PEMBENTUKAN TIM PELAKSANA KEGIATAN PADA SATUAN KERJA PERANGKAT DAERAH DI LINGKUNGAN PEMERINTAH KOTA BANJARBARU",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 7b93d876b6004ac1799bcbb40db23cc5 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s829",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Ogan Komering Ulu Timur, apa arti surplus anggaran daerah?",
+      "source": "PERATURAN DAERAH KABUPATEN 8/2014 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "8",
+          "year": 2014,
+          "about": "ANGGARAN PENDAPATAN DAN BELANJA DAERAH KABUPATEN OGAN KOMERING ULU TIMUR TAHUN ANGGARAN 2015",
+          "article": "Pasal 1"
+        }
+      ],
+      "near_duplicates": 9,
+      "provenance": "drafted 2026-11-21 from chunk 4bfa11b7e7fc7734082b964e57057830 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s830",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Di Sleman, unit apa saja yang dihitung sebagai bagian organisasi Badan Lingkungan Hidup?",
+      "source": "PERATURAN BUPATI 24.5/2014 Pasal 1 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "24.5",
+          "year": 2014,
+          "about": "URAIAN TUGAS, FUNGSI, DAN TATA KERJA BADAN LINGKUNGAN HIDUP",
+          "article": "Pasal 1"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 3c1bc913c175e0c94636ffec5c746883 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s831",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Menurut Pasal 24 Perda Kota Malang Nomor 11 Tahun 2015, studi kelayakan pengelolaan lampu jalan mencakup kelayakan apa saja dan untuk jangka berapa tahun?",
+      "source": "PERATURAN DAERAH KOTA 11/2015 Pasal 24 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "11",
+          "year": 2015,
+          "about": "PENYELENGGARAAN PENERANGAN JALAN",
+          "article": "Pasal 24"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 08c95ce60e5b6ca635a2c60d39d30153 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s832",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Menurut Pasal 3 Perbup Lamongan Nomor 47 Tahun 2016, dengan cara apa profesi guru dan pengawas sekolah dibina dan dikembangkan?",
+      "source": "PERATURAN BUPATI 47/2016 Pasal 3 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "47",
+          "year": 2016,
+          "about": "PEMBINAAN DAN PENGEMBANGAN PROFESI GURU",
+          "article": "Pasal 3"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0637f5db9fc43dd37801bf455c3823d1 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s833",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Berapa tarif pajak penerangan jalan untuk listrik yang dihasilkan sendiri menurut Pasal 6 Perda Maluku Tenggara Nomor 4 Tahun 2013?",
+      "source": "PERATURAN DAERAH KABUPATEN 4/2013 Pasal 6 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2013,
+          "about": "PAJAK PENERANGAN JALAN",
+          "article": "Pasal 6"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 002afebf839e1c4e14cd00e82ff4addd of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s834",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Peralatan apa yang wajib ada di ruang laktasi fasilitas kesehatan menurut Pasal 22 Perwali Sawahlunto Nomor 19 Tahun 2017?",
+      "source": "PERATURAN WALIKOTA 19/2017 Pasal 22 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "19",
+          "year": 2017,
+          "about": "IBU EKSKLUSIF PEDOMAN PELAKSANAAN PEMBERIAN AIR SUSU DENGAN RAHMAT TUHAN YANG MAHA ESA",
+          "article": "Pasal 22"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0658435fecc6302500ab1a5f4d8cc30f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s835",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Menurut Pasal 30 Perda Tana Tidung Nomor 4 Tahun 2016, sampai kapan perangkat daerah kesatuan bangsa dan politik yang lama tetap bertugas?",
+      "source": "PERATURAN DAERAH KABUPATEN 4/2016 Pasal 30 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2016,
+          "about": "KABUPATEN",
+          "article": "Pasal 30"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 00b95221723946c3218d14b578373e81 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s836",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Bidang apa saja yang ada di Dinas Kelautan dan Perikanan menurut Pasal 74 Perda Pandeglang Nomor 2 Tahun 2014?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2014 Pasal 74 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2014,
+          "about": "PEMBENTUKAN ORGANISASI PERANGKAT DAERAH KABUPATEN PANDEGLANG",
+          "article": "Pasal 74"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0493f897968022bacc53421b37ee79bb of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s837",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Apa fungsi kepala subbagian keuangan dinas menurut Pasal 20 Perwali Gorontalo Nomor 35 Tahun 2016?",
+      "source": "PERATURAN WALIKOTA 35/2016 Pasal 20 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN WALIKOTA",
+          "regulation_number": "35",
+          "year": 2016,
+          "about": "KEDUDUKAN, SUSUNAN ORGANISASI, TUGAS DAN FUNGSI, SERTA TATA KERJA DINAS PENGENDALIAN PENDUDUK, KELUARGA BERENCANA, PEMBERDAYAAN PEREMPUAN DAN PERLINDUNGAN ANAK KOTA GORONTALO",
+          "article": "Pasal 20"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 02eaa407bb8fe4e32e250741cbe36fec of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s838",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Dari mana saja pembiayaan KTM Gerbang Kayong boleh berasal menurut Pasal 15 Perda Kayong Utara Nomor 6 Tahun 2014?",
+      "source": "PERATURAN DAERAH KABUPATEN 6/2014 Pasal 15 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "6",
+          "year": 2014,
+          "about": "KOTA TERPADU MANDIRI GERBANG KAYONG",
+          "article": "Pasal 15"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 026b2d7533c33bca893239aace13b260 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s839",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Dalam bentuk apa pembinaan karier pendidik SMP negeri berasrama dilakukan menurut Pasal 23 Perda Rokan Hulu Nomor 5 Tahun 2017?",
+      "source": "PERATURAN DAERAH KABUPATEN 5/2017 Pasal 23 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2017,
+          "about": "PENGELOLAAN SEKOLAH MENENGAH PERTAMA NEGERI BERASRAMA",
+          "article": "Pasal 23"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 081e75e4d69793ae33d82029e4554c2d of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s840",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Apa ancaman pidana menurut Pasal 34 Perda Bantul Nomor 2 Tahun 2012 tentang minuman beralkohol?",
+      "source": "PERATURAN DAERAH KABUPATEN 2/2012 Pasal 34 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "2",
+          "year": 2012,
+          "about": "PENGAWASAN, PENGENDALIAN, PENGEDARAN DAN PELARANGAN PENJUALAN MINUMAN BERALKOHOL DI KABUPATEN BANTUL",
+          "article": "Pasal 34"
+        }
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 05f585dce54237056e7171987700d32a of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s841",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Apa syarat kenaikan gaji berkala pegawai PDAM menurut Pasal 30 Perbup Pasuruan Nomor 4 Tahun 2013?",
+      "source": "PERATURAN BUPATI 4/2013 Pasal 30 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "4",
+          "year": 2013,
+          "about": "POKOK-POKOK KEPEGAWAIAN PERUSAHAAN DAERAH AIR MINUM KABUPATEN PASURUAN",
+          "article": "Pasal 30"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 062511f17e9e1daeee78c32a0792fa63 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s842",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Menurut Pasal 116 Perda Ketapang Nomor 11 Tahun 2015, kegiatan apa saja yang termasuk pembongkaran bangunan gedung dan bagaimana harus dilaksanakan?",
+      "source": "PERATURAN DAERAH KABUPATEN 11/2015 Pasal 116 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "11",
+          "year": 2015,
+          "about": "BANGUNAN GEDUNG",
+          "article": "Pasal 116"
+        }
+      ],
+      "near_duplicates": 34,
+      "provenance": "drafted 2026-11-21 from chunk 031a75e58c386250f9acdd5b51ba16d4 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s843",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Kepada siapa hibah kepada pemerintah dan hibah kepada perusahaan daerah diberikan menurut Pasal 28H Perda Kota Pariaman Nomor 1 Tahun 2016?",
+      "source": "PERATURAN DAERAH KOTA 1/2016 Pasal 28H —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "1",
+          "year": 2016,
+          "about": "PERUBAHAN ATAS PERATURAN DAERAH NOMOR 6 TAHUN 2008 TENTANG POKOK-POKOK PENGELOLAAN KEUANGAN DAERAH",
+          "article": "Pasal 28H"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0643128b52c91707e77660633afd494f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s844",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Kecamatan mana saja yang rawan tanah longsor menurut Pasal 23 Perda Bengkulu Selatan Nomor 8 Tahun 2011 tentang RTRW?",
+      "source": "PERATURAN DAERAH KABUPATEN 08/2011 Pasal 23 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "08",
+          "year": 2011,
+          "about": "RENCANA TATA RUANG WILAYAH KABUPATEN BENGKULU SELATAN TAHUN 2011 - 2031",
+          "article": "Pasal 23"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0281cf9e44ca2e109880b1af7e051bd6 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s845",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Apa tugas pokok kepala seksi pemerintahan kecamatan menurut Pasal 7 Perbup Tabalong Nomor 61 Tahun 2015?",
+      "source": "PERATURAN BUPATI 61/2015 Pasal 7 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "61",
+          "year": 2015,
+          "about": "URAIAN TUGAS KECAMATAN DI KABUPATEN TABALONG",
+          "article": "Pasal 7"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 08c6e18474bfd3a884b098c3f62b1360 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s846",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Berapa tarif retribusi izin trayek untuk mobil sampai 8 tempat duduk menurut Pasal 8 Perda Musi Rawas Nomor 17 Tahun 2011?",
+      "source": "PERATURAN DAERAH KABUPATEN 17/2011 Pasal 8 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "17",
+          "year": 2011,
+          "about": "RETRIBUSIIZIN TRAYEK",
+          "article": "Pasal 8"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0496565f44fb51bc057e95ff38ef4b73 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s847",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Peraturan bupati apa saja yang dicabut oleh Pasal 12 Perbup Sleman Nomor 12 Tahun 2014 tentang bagi hasil pajak untuk desa?",
+      "source": "PERATURAN BUPATI 12/2014 Pasal 12 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "12",
+          "year": 2014,
+          "about": "BAGI HASIL PAJAK DAERAH DAN RETRIBUSI DAERAH BAGI DESA",
+          "article": "Pasal 12"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 09379c643fd0b05f1b09f97b9a795265 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s848",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Dalam APBN 2013 yang awal, sebelum diubah, berapa anggaran belanja pemerintah pusat direncanakan?",
+      "source": "UNDANG-UNDANG 19/2012 Pasal 6 —",
+      "answer_articles": [
+        {
+          "regulation_type": "UNDANG-UNDANG",
+          "regulation_number": "19",
+          "year": 2012,
+          "about": "ANGGARAN PENDAPATAN DAN BELANJA NEGARA TAHUN ANGGARAN 2013",
+          "article": "Pasal 6"
+        }
+      ],
+      "must_not_rank_first": [
+        "50f4912305c4dcf50a4e8049f88842b4"
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 845ef6da59d0102556700573f9187a1a of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s849",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Menurut perda DIY tentang organisasi sekretariat daerah, apa tugas asisten perekonomian dan pembangunan?",
+      "source": "PERATURAN DAERAH PROVINSI 5/2008 Pasal 9 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "5",
+          "year": 2008,
+          "about": "ORGANISASI DAN TATA KERJA SEKRETARIAT DAERAH DAN SEKRETARIAT DEWAN PERWAKILAN RAIKYAT DAERAH PROVINSI DAERAH ISTIMEWA YOGYAKARTA DENGAN RAHMAT TUHAN YANG MAHA ESA",
+          "article": "Pasal 9"
+        }
+      ],
+      "must_not_rank_first": [
+        "a71390e1af626ffef9120acef95f7d83"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 522e286019e3e92e7cde5de0d43d37d4 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s850",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Sulawesi Tengah, berapa garis sempadan sungai tak bertanggul di kawasan perkotaan yang tidak berpenduduk bila sungainya sedalam paling banyak 3 meter?",
+      "source": "PERATURAN DAERAH PROVINSI 16/2014 Pasal 8 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "16",
+          "year": 2014,
+          "about": "SUNGAI",
+          "article": "Pasal 8"
+        }
+      ],
+      "must_not_rank_first": [
+        "ef841c515d16ad9357d758e96f9ebba0"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 7be4b19dd2579d2bdac1e7f50568691b of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s851",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Kalimantan Timur, berapa tarif PKB untuk kepemilikan pertama kendaraan pribadi dan untuk ambulans?",
+      "source": "PERATURAN DAERAH PROVINSI 8/2014 Pasal 7 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "8",
+          "year": 2014,
+          "about": "PERUBAHAN ATAS PERATURAN DAERAH PROVINSI KALIMANTAN TIMUR NOMOR O1 TAHUN 2011 TENTANG PAJAK DAERAH PROVINSI KALIMANTAN TIMUR",
+          "article": "Pasal 7"
+        }
+      ],
+      "must_not_rank_first": [
+        "d32bf1d3a61efc5af8da412ca80c2dab"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 3d4122ad31baa4ab3daba92b3264f8dd of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s852",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Gunungkidul, kalau pelantikan kepala desa tidak bisa tepat waktu, paling lama berapa hari boleh ditunda?",
+      "source": "PERATURAN DAERAH KABUPATEN 5/2015 Pasal 55 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2015,
+          "about": "KEPALA DESA",
+          "article": "Pasal 55"
+        }
+      ],
+      "must_not_rank_first": [
+        "3f367673dc7f906eaa172c2007ad0e21"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 1b6db363252232cb0d27449288bda037 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s853",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Ketapang, berapa lama dan berapa luas wilayah izin untuk IUP eksplorasi mineral bukan logam?",
+      "source": "PERATURAN DAERAH KABUPATEN 8/2012 Pasal 43 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "8",
+          "year": 2012,
+          "about": "PELAKSANAAN PERTAMBANGAN MINERAL DAN BATUBARA DAERAH",
+          "article": "Pasal 43"
+        }
+      ],
+      "must_not_rank_first": [
+        "d6c35dc56e33c0be16d39117b3fd4089"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 09e5f7f839289c5bf71a21a2a29d6032 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s854",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Lampiran apa saja yang menyertai perubahan APBD Maluku Utara tahun anggaran 2013?",
+      "source": "PERATURAN DAERAH PROVINSI 10/2013 Pasal 5 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "10",
+          "year": 2013,
+          "about": "PERUBAHAN ANGGARAN PENDAPATAN DAN BELANJA DAERAH PROVINSI MALUKU UTARA TAHUNANGGARAN2013",
+          "article": "Pasal 5"
+        }
+      ],
+      "must_not_rank_first": [
+        "acb6fbb88bc6201e58d8def4f3e6605a"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 7f0e7d2d4fe8b0e33b91e29c794125f6 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s855",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di RSJ Sambang Lihum Kalimantan Selatan, dari mana saja pendapatan rumah sakit bisa bersumber?",
+      "source": "PERATURAN GUBERNUR 010/2012 Pasal 52 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "010",
+          "year": 2012,
+          "about": "PEDOMAN POLA TATA KELOLA BADAN LAYANAN UMUM DAERAH RUMAH SAKIT JIWA SAMBANG LIHUM",
+          "article": "Pasal 52"
+        }
+      ],
+      "must_not_rank_first": [
+        "55b27278302424be57f966323352cfbc"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk c716147c16d125900f168e620f796bf9 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s856",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di lingkungan Pemerintah Provinsi Gorontalo, apa ciri gratifikasi yang terkait kedinasan?",
+      "source": "PERATURAN GUBERNUR 27/2016 Pasal 7 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "27",
+          "year": 2016,
+          "about": "PEDOMAN PENGENDALIAN GRATIFIKASI DI LINGKUNGAN PEMERINTAH PROVINSI GORONTALO",
+          "article": "Pasal 7"
+        }
+      ],
+      "must_not_rank_first": [
+        "0634ea8b1fdc52cc6c0c0601be2eb7f4"
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 2eb8ecd060512cbe15b919acac69af14 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s857",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Dalam RTRW Provinsi Kalimantan Timur, rencana pengembangan kawasan strategis meliputi kawasan apa saja?",
+      "source": "PERATURAN DAERAH PROVINSI 1/2016 Pasal 38 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "1",
+          "year": 2016,
+          "about": "RENCANA TATA RUANG WILAYAH PROVINSI KALIMANTAN TIMUR TAHUN 2016 - 2036",
+          "article": "Pasal 38"
+        }
+      ],
+      "must_not_rank_first": [
+        "c20b0904ad76f866c498ab952aedcf4f"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk c4d5ba47449258823337a533bcd56614 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s858",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Menurut uraian tugas sekretariat daerah Kalimantan Tengah yang lama, ada lima staf ahli bidang apa saja?",
+      "source": "PERATURAN GUBERNUR 3/2013 Pasal 231 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "3",
+          "year": 2013,
+          "about": "TUGAS POKOK, FUNGSI DAN URAIAN TUGAS SEKRETARIAT DAERAH PROVINSI KALIMANTAN TENGAH",
+          "article": "Pasal 231"
+        }
+      ],
+      "must_not_rank_first": [
+        "a68e33d227785ecbb87504a61cf70af7"
+      ],
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-21 from chunk 10dd4ef7c585a589bcfa20410656428e of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s859",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Kalimantan Tengah, apa fungsi UPT laboratorium lingkungan pada badan lingkungan hidup?",
+      "source": "PERATURAN GUBERNUR 19/2015 Pasal 6 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "19",
+          "year": 2015,
+          "about": "ORGANISASI DAN TATA KERJA UNIT PELAKSANA TEKNIS LABORATORIUM LINGKUNGAN PADA BADAN LINGKUNGAN HIDUP PROVINSI KALIMANTAN TENGAH",
+          "article": "Pasal 6"
+        }
+      ],
+      "must_not_rank_first": [
+        "9fbb165789d24c0511440d4eb38d0008"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk b1d1bb408955fd3c78ccbf6843fe878f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s860",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Siapa yang bertanggung jawab menata organisasi dan pegawai saat IAIN Sultan Maulana Hasanuddin Banten beralih menjadi UIN?",
+      "source": "PERATURAN PRESIDEN 39/2017 Pasal 4 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN PRESIDEN",
+          "regulation_number": "39",
+          "year": 2017,
+          "about": "UNIVERSITAS ISI,AM NEGERI SULTAN MAULANA HASANUDDIN BANTEN",
+          "article": "Pasal 4"
+        }
+      ],
+      "must_not_rank_first": [
+        "716bea3086f7f01b3473090dbbcbb719"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 6c1d8275e51783f24520263bc85e07df of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s861",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Buton, hal apa yang harus diperhatikan PPNS daerah dalam penyelenggaraan administrasi penyidikan?",
+      "source": "PERATURAN DAERAH KABUPATEN 1/2015 Pasal 60 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "1",
+          "year": 2015,
+          "about": "PENYIDIK PEGAWAI NEGERI SIPIL DAERAH DI LINGKUNGAN PEMERINTAH KABUPATEN BUTON",
+          "article": "Pasal 60"
+        }
+      ],
+      "must_not_rank_first": [
+        "10e71fc220e255c952046cc9269820c9"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 1970d3d06ba48055fbe93d28f7cbaccc of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s862",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Kapan perda pajak reklame Kabupaten Pacitan mulai berlaku?",
+      "source": "PERATURAN DAERAH KABUPATEN 11/2010 Pasal 40 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "11",
+          "year": 2010,
+          "about": "PAJAK REKLAME",
+          "article": "Pasal 40"
+        }
+      ],
+      "must_not_rank_first": [
+        "bb64d3dac733598285d4fc818e9099a1"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 1aab92dca602b9448bae9258a50c92a7 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s863",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Polewali Mandar, etika bernegara PNS meliputi apa saja?",
+      "source": "PERATURAN BUPATI 45/2013 Pasal 5 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "45",
+          "year": 2013,
+          "about": "KODE ETIK PEGAWAI NEGERI SIPIL DI LINGKUNGAN PEMERINTAH KABUPATEN POLEWALI MANDAR",
+          "article": "Pasal 5"
+        }
+      ],
+      "must_not_rank_first": [
+        "e6457feeec07b67a640838ce24cc3846"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 15f321d924c3753280167ba40de9ed70 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s864",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di rumah sakit BLUD milik Provinsi Kalimantan Tengah, apa syarat bangun guna serah aset rumah sakit?",
+      "source": "PERATURAN GUBERNUR 12/2017 Pasal 12 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN GUBERNUR",
+          "regulation_number": "12",
+          "year": 2017,
+          "about": "PEDOMAN PELAKSANAAN KERJA SAMA OPERASIONAL PADA BADAN LAYANAN UMUM DAERAH RUMAH SAKIT UMUM DAERAH dr. DORIS SYLVANUS",
+          "article": "Pasal 12"
+        }
+      ],
+      "must_not_rank_first": [
+        "2e7e706ef712202b8af8503e03a1ad88"
+      ],
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-21 from chunk 553254d805524d896a771575f1dad3b6 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s865",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Berapa saldo kas awal Kabupaten Pangandaran per 1 Januari 2014 dalam pertanggungjawaban APBD?",
+      "source": "PERATURAN DAERAH KABUPATEN 3/2015 Pasal 5 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "3",
+          "year": 2015,
+          "about": "PERTANGGUNGJAWABAN PELAKSANAAN ANGGARAN PENDAPATAN DAN BELANJA DAERAH KABUPATEN PANGANDARAN TAHUN ANGGARAN 2014",
+          "article": "Pasal 5"
+        }
+      ],
+      "must_not_rank_first": [
+        "8d9433c5d1a59a1c784af37826cfbe23"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0114a1255e55d78f288c45494afa8f5f of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s866",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Lampiran apa saja yang memuat pertanggungjawaban pelaksanaan APBD Provinsi Gorontalo?",
+      "source": "PERATURAN DAERAH PROVINSI 5/2016 Pasal 10 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH PROVINSI",
+          "regulation_number": "5",
+          "year": 2016,
+          "about": "PERTANGGUNGJAWABAN PELAKSANAAN ANGGARAN PENDAPATAN DAN BELANJA DAERAH PROVINSI GORONTALO TAHUN ANGGARAN 2015",
+          "article": "Pasal 10"
+        }
+      ],
+      "must_not_rank_first": [
+        "2e5c3c4610472715254f9601cf6f26b9"
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 89d0d04010759f1d0b0b3b0310e98f37 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s867",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Di Pangkajene dan Kepulauan, siapa yang mengangkat dan memindahkan guru di sekolah milik pemerintah daerah?",
+      "source": "PERATURAN DAERAH KABUPATEN 5/2015 Pasal 77 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2015,
+          "about": "PENYELENGGARAAN PENDIDIKAN",
+          "article": "Pasal 77"
+        }
+      ],
+      "must_not_rank_first": [
+        "4922c20fffaa548613801e066e6cff97"
+      ],
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-21 from chunk 05bf49287d1f90ad93fe91371d1b078a of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s868",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Kota Malang, kapan walikota dapat menerbitkan STPD untuk PBB perkotaan?",
+      "source": "PERATURAN DAERAH KOTA 11/2011 Pasal 16 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "11",
+          "year": 2011,
+          "about": "PAJAK BUMI DAN BANGUNAN PERKOTAAN",
+          "article": "Pasal 16"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 13569e53a753e3a5dd07db8a698dea27 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s869",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Padang Lawas Utara, berapa lama masa berlaku KTP-el untuk WNI dan orang asing, dan apa kewajiban jika KTP-el hilang?",
+      "source": "PERATURAN DAERAH KABUPATEN 5/2016 Pasal 25 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "5",
+          "year": 2016,
+          "about": "PERUBAHAN ATAS PERATURAN DAERAH KABUPATEN PADANG LAWAS UTARA NOMOR 4 TAHUN 2012 TENTANG PENYELENGGARAAN ADMINISTRASI KEPENDUDUKAN",
+          "article": "Pasal 25"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 11a38581a778e07e0c202f1bd9269c19 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s870",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Baubau, kapan surat teguran pajak parkir dikeluarkan dan berapa lama wajib pajak harus melunasi setelahnya?",
+      "source": "PERATURAN DAERAH KOTA 14/2012 Pasal 22 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KOTA",
+          "regulation_number": "14",
+          "year": 2012,
+          "about": "PAJAK PARKIR",
+          "article": "Pasal 22"
+        }
+      ],
+      "near_duplicates": 10,
+      "provenance": "drafted 2026-11-21 from chunk 04d4f0932654202bb2ea73e5c23fd889 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s871",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Maros, dari mana sumber dana badan promosi pariwisata daerah?",
+      "source": "PERATURAN DAERAH KABUPATEN 02/2014 Pasal 36 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "02",
+          "year": 2014,
+          "about": "PENYELENGGARAAN KEPARIWISATAAN",
+          "article": "Pasal 36"
+        }
+      ],
+      "near_duplicates": 13,
+      "provenance": "drafted 2026-11-21 from chunk 0021151c26ef80437f00dc7d0c68693a of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s872",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Wakatobi, dalam jangka berapa tahun bupati masih bisa menerbitkan SKPDKB pajak reklame, dan dalam hal apa?",
+      "source": "PERATURAN BUPATI 6/2015 Pasal 11 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN BUPATI",
+          "regulation_number": "6",
+          "year": 2015,
+          "about": "TATA CARA PEMUNGUTAN PAJAK REKLAME DI KABUPATEN WAKATOBI",
+          "article": "Pasal 11"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 11c71254c847aeff86c687cd8f319110 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s873",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Mamasa, berapa bunga jika retribusi tempat rekreasi dan olahraga tidak dibayar?",
+      "source": "PERATURAN DAERAH KABUPATEN 20/2014 Pasal 12 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "20",
+          "year": 2014,
+          "about": "RETRIBUSI TEMPAT REKREASI DAN OLAHRAGA",
+          "article": "Pasal 12"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 16493c2c177c73c6ec137a30d823f47a of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s874",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Tabanan, setelah berapa tahun hak menagih pajak hiburan kedaluwarsa?",
+      "source": "PERATURAN DAERAH KABUPATEN 27/2011 Pasal 21 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "27",
+          "year": 2011,
+          "about": "PAJAK HIBURAN",
+          "article": "Pasal 21"
+        }
+      ],
+      "near_duplicates": 9,
+      "provenance": "drafted 2026-11-21 from chunk 02d37e713d57e03e43152bb7b5f87726 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s875",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Kabupaten Cirebon, bagaimana ketentuan label dan harga barang yang wajib dipatuhi toko modern?",
+      "source": "PERATURAN DAERAH KABUPATEN 7/2014 Pasal 11 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "7",
+          "year": 2014,
+          "about": "PENATAAN, PEMBINAAN PASAR TRADISIONAL, PUSAT PERBELANJAAN DAN TOKO MODERN",
+          "article": "Pasal 11"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 00482b2aafb9c605a32142c069a8fdbb of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s876",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Balangan, jika keberatan pajak mineral bukan logam dikabulkan, berapa imbalan bunga atas kelebihan bayar?",
+      "source": "PERATURAN DAERAH KABUPATEN 9/2013 Pasal 22 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "9",
+          "year": 2013,
+          "about": "PAJAK MINERAL BUKAN LOGAM DAN BATUAN",
+          "article": "Pasal 22"
+        }
+      ],
+      "near_duplicates": 24,
+      "provenance": "drafted 2026-11-21 from chunk 0dda0bb9fc84891cd408b4f5d4ea262c of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
+    },
+    {
+      "id": "s877",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Di Kebumen, warga usia berapa yang wajib mengikuti pendidikan dasar dan menengah?",
+      "source": "PERATURAN DAERAH KABUPATEN 4/2016 Pasal 19 —",
+      "answer_articles": [
+        {
+          "regulation_type": "PERATURAN DAERAH KABUPATEN",
+          "regulation_number": "4",
+          "year": 2016,
+          "about": "PERUBAHAN ATAS PERATURAN DAERAH KABUPATEN KEBUMEN NOMOR 22 TAHUN 2012 TENTANG PENYELENGGARAAN PENDIDIKAN",
+          "article": "Pasal 19"
+        }
+      ],
+      "provenance": "drafted 2026-11-21 from chunk 0b6019c102a960dc24a5bc61c65bc650 of id_reg_markdown (stage 0); machine-checked; NOT reviewed by a domain expert; drafted with the clause in view; second reading: 20 of 140 read against their clause at random, all 20 answer; for the 7 numeric template cases the figure was checked in every twin",
+      "fresh": "fresh-2026-11-21"
     }
   ]
 }

@@ -877,7 +877,9 @@ whose labels had been read. Both passages were written the same way as for the h
 * A larger test decides it. **The fresh set is written** (2026-11-20, `EVAL.md` §2d): 328
   answerable cases plus 30 out of domain in `queries_fresh.json`, which no sim or fit
   reads. When it is scored with the loop, plain, + A and + A + L are each scored once,
-  with passages written the same way as for train.
+  with passages written the same way as for train. **Topped up to 523** (2026-11-21): 140
+  more answerable from the sample's unread clauses, 25 more out of domain. The figures
+  below are on the first 358.
 * **The shipped engine on fresh, scored once** (2026-11-21, `TOP_K` 25, no rewordings,
   `EVAL_SPLIT=fresh vera.sh e2e fresh_plain25`): Recall@5 **68.6%**, @10 75.0%, @15 79.3%,
   @20 82.3%, @25 **83.2%**, MRR 0.548, right regulation in top 5 82.0%, `exact_ref` 51/51
