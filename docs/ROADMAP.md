@@ -893,6 +893,20 @@ whose labels had been read. Both passages were written the same way as for the h
   Weakest at 5: `definitional` 25/56 and `underspecified` 26/53. The gate refused 1 of 468
   real questions and 41 of 55 out of domain. **This is the baseline every later lever on
   fresh is compared with.**
+* **The loop's engine settings on all 523** (2026-11-21, `TOP_K=25 DENSE_TAIL_FROM=5
+  ROUNDS=2`, no rewordings, `vera.sh e2e fr523_loop`): Recall@5 65.8%, @10 74.8%, @25
+  **84.0%**, MRR 0.530. Against the baseline at 25, case by case:
+
+  | part | n | baseline | loop settings | won | lost |
+  |---|---:|---:|---:|---:|---:|
+  | first 328 | 328 | 83.2 | 86.0 | 15 | 6 |
+  | new 140 | 140 | 82.1 | 79.3 | 3 | 7 |
+  | all | 468 | 82.9 | **84.0** | 18 | 13 |
+
+  ! **+1.1 at 25, 18 won against 13 lost: not separable from noise.** The +2.8 the first
+  328 showed does not hold on the next 140. The settings cost a second round; they stay
+  opt-in, ✗ shipped. Passages (A, L) are not scored here: the drafter wrote these
+  questions with the clauses in view, so any passage from the same writer leaks.
 * ! **The passages for fresh must be written blind.** These questions were drafted with
   their clauses in view, so passages written in the same context would know the answer.
   A and L for fresh are to be written in a context that has seen only the questions.
