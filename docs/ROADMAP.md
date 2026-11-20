@@ -609,6 +609,36 @@ is read against that control:
 So the 35 "dense-deep" answers cannot be lifted by the two signals the engine has. They
 need a third signal, ✗ another arrangement of these two.
 
+**The third signal tried: a vocabulary bridge the corpus declares, dropped (2026-11-20).**
+`bridge_sim.py` mines "X yang selanjutnya disingkat/disebut Y" from the 38,701 chunks that
+say it.
+* It keeps 1,704 pairs, 970 of them acronyms, where one long form owns the short form in
+  at least 3 regulations and 60% of them.
+* A question containing one form gets the other appended for BM25.
+
+| pairs, direction | questions touched | answer in BM25's top 20: wins / losses | on the misses |
+|---|---|---|---|
+| all pairs, both ways | 339 | +11 −35 | +5 −0 |
+| acronyms, both ways | 152 | +5 −15 | +3 −0 |
+| acronym → long form | 113 | +3 −13 | +2 −0 |
+| long form → acronym | 44 | +2 −3 | +1 −0 |
+
+* **It finds a few missed answers, and loses more that were found.** An appended long
+  form is made of the corpus's commonest words ("daerah", "pegawai", "pemerintah"), and
+  it dilutes the question's own distinctive terms.
+* **The question usually uses the same form as the answer already.** Where the forms
+  differ, BM25 is not the arm that misses them.
+* **The ceiling it could lift is small.** Even with every pair, 5 of the 48 touched
+  misses enter BM25's top 20.
+
+**Where this leaves 95% at 25.** Measured, with this model and this corpus:
+* The best configuration reads 88.4% [88.7%].
+* Rounds, routing, deeper arms, two-signal ordering and the corpus's own vocabulary have
+  each been simulated against the engine's own lists. None moves it past noise.
+* What is left is the labels: `review-002.csv` is open, and a quarter of a 30-miss sample
+  were equally valid answers. After that, a better space for the same model size
+  (fine-tuning), which is out of scope.
+
 **Defaults.** The lift is on, because it corrects a rule. The tail and the rounds stay
 opt-in as requested. Turning them on by default is a separate decision, and it needs the
 cache-off latency on the VPS profile too.
