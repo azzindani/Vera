@@ -936,17 +936,17 @@ whose labels had been read. Both passages were written the same way as for the h
   It never read a label, a clause or an engine reply. `TOP_K` 25, n = 468, each config
   scored once, won/lost case by case against the shipped engine:
 
-  | method | Recall@5 | Recall@10 | Recall@25 | MRR | right reg. top 5 | won −lost @5 | @25 |
-  |---|---:|---:|---:|---:|---:|---:|---:|
-  | shipped (`balanced`) | 65.2% | 73.7% | 82.9% | 0.523 | 80.8% | | |
-  | `literal` | 61.1% | 68.6% | 81.2% | 0.489 | 81.4% | +27 −46 | +7 −15 |
-  | `balanced_expanded` (siblings) | 61.5% | 70.9% | 82.1% | 0.504 | 79.5% | +13 −30 | +11 −15 |
-  | `CANDIDATE_POOL` 120 | 65.2% | 73.7% | 82.9% | 0.523 | 80.8% | identical | identical |
-  | tail from 5, round 2 | 65.6% | 74.6% | 83.8% | 0.528 | 80.3% | +7 −5 | +18 −14 |
-  | tail from 10, round 2 | 65.6% | 74.1% | 85.3% | 0.530 | 80.6% | +6 −4 | +18 −7 |
-  | **+ A blind** | 72.2% | 82.9% | 91.5% | 0.603 | 81.2% | +50 −17 | +46 −6 |
-  | + A blind, tail 5, round 2 | 72.2% | 84.0% | 91.2% | 0.609 | 81.2% | +54 −21 | +47 −8 |
-  | **+ A blind, tail 10, round 2** | **73.7%** | **84.2%** | **92.1%** | **0.612** | 82.1% | +56 −16 | +50 −7 |
+  | method | @5 | @10 | @15 | @20 | @25 | MRR | right reg. top 5 | won −lost @5 | @25 |
+  |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+  | shipped (`balanced`) | 65.2% | 73.7% | 78.8% | 81.6% | 82.9% | 0.523 | 80.8% | | |
+  | `literal` | 61.1% | 68.6% | 73.5% | 74.8% | 81.2% | 0.489 | 81.4% | +27 −46 | +7 −15 |
+  | `balanced_expanded` (siblings) | 61.5% | 70.9% | 77.4% | 80.1% | 82.1% | 0.504 | 79.5% | +13 −30 | +11 −15 |
+  | `CANDIDATE_POOL` 120 | 65.2% | 73.7% | 78.8% | 81.6% | 82.9% | 0.523 | 80.8% | identical | identical |
+  | tail from 5, round 2 | 65.6% | 74.6% | 79.5% | 80.8% | 83.8% | 0.528 | 80.3% | +7 −5 | +18 −14 |
+  | tail from 10, round 2 | 65.6% | 74.1% | 80.6% | 83.3% | 85.3% | 0.530 | 80.6% | +6 −4 | +18 −7 |
+  | **+ A blind** | 72.2% | 82.9% | 87.6% | 90.0% | 91.5% | 0.603 | 81.2% | +50 −17 | +46 −6 |
+  | + A blind, tail 5, round 2 | 72.2% | 84.0% | 86.5% | 90.2% | 91.2% | 0.609 | 81.2% | +54 −21 | +47 −8 |
+  | **+ A blind, tail 10, round 2** | **73.7%** | **84.2%** | **87.4%** | **90.4%** | **92.1%** | **0.612** | 82.1% | +56 −16 | +50 −7 |
 
   (`EVAL_SPLIT=fresh vera.sh e2e fa_*`; the registry profiles need
   `ALGORITHMS_PATH=/cfg/algorithms.json` and, from Git Bash,
