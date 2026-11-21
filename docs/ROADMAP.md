@@ -963,6 +963,35 @@ whose labels had been read. Both passages were written the same way as for the h
     second passage (L) is not scored here. A blind L means reading round 1's replies
     for 400 questions.
 
+* **The corpus re-embedded with Ravel's 1.4 headers** (2026-11-21). Every chunk was
+  re-embedded with `id_regulation_md@1.4` header + body (Ravel bundle v5), and 3,077
+  chunks were relabelled through vLLM (bundle v6, mean cosine to their old vectors 0.978).
+  It was prepared into a new volume (`vera-v6`) by `ravel db prepare`:
+  * 1,691,419 rows servable, in 846 clusters;
+  * canary cosine 1.00000;
+  * gate floor 0.48, 0/543 real questions refused, AUC 0.963.
+
+  It was served beside the 1.3 database (`ravel-clone`), with the shipped engine at
+  `TOP_K` 25, no rewordings, on the same questions:
+
+  | split | labels | @5 | @10 | @15 | @20 | @25 | MRR | won −lost @5 | @25 |
+  |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+  | fresh, 468 | 1.3 | 65.2% | 73.7% | 78.8% | 81.6% | 82.9% | 0.523 | | |
+  | fresh, 468 | **1.4** | **68.4%** | **77.6%** | **83.5%** | **85.9%** | **87.2%** | **0.576** | +44 −29 | +29 −9 |
+  | train, 604 | 1.3 | 68.7% | 78.6% | 83.6% | 85.1% | 86.8% | 0.541 | | |
+  | train, 604 | 1.4 | 66.4% | 76.0% | 81.6% | 83.3% | 85.9% | 0.533 | +32 −46 | +20 −25 |
+
+  (`vera.sh e2e v6_fresh`, `v6_train`, `v4_train`; `EVAL_SPLIT=fresh` for fresh.)
+  * **The splits disagree.** Fresh gains at every cut-off, and at 25 by 29 to 9. Train
+    loses at every cut-off, by less. Over all 1,072 questions, @5 is a tie (76 won, 75 lost)
+    and @25 nets +15 (49 to 34). Neither split alone is significant at 5.
+  * ! Train is the set the scoring weights were fitted on, against the 1.3 space. Fresh
+    was tuned on by nobody, so it is the fairer reading. But "the weights favour the space
+    they were fitted in" is a hypothesis, ✗ measured. Refitting on 1.4 and scoring fresh
+    once would test it.
+  * Serving: `vera-v6` is what the stack now runs. `ravel-clone` (1.3) is kept, so a
+    rollback is a volume swap.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
   second written after reading the first round), 93.5% on the holdout.
