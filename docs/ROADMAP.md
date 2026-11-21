@@ -930,6 +930,38 @@ whose labels had been read. Both passages were written the same way as for the h
     leak.
   * A blind number needs a writer that has seen only the questions: a fresh session, or a
     person. `hyde_fresh.json` stays as the upper bound.
+* **Every method on all 523, + A written blind** (2026-11-21). The passages are in
+  `hyde_fresh_blind.json`, one for each of the 400 questions that are neither exact refs
+  nor out of domain. A new session wrote them from a file of ids and question text only.
+  It never read a label, a clause or an engine reply. `TOP_K` 25, n = 468, each config
+  scored once, won/lost case by case against the shipped engine:
+
+  | method | Recall@5 | Recall@10 | Recall@25 | MRR | right reg. top 5 | won −lost @5 | @25 |
+  |---|---:|---:|---:|---:|---:|---:|---:|
+  | shipped (`balanced`) | 65.2% | 73.7% | 82.9% | 0.523 | 80.8% | | |
+  | `literal` | 61.1% | 68.6% | 81.2% | 0.489 | 81.4% | +27 −46 | +7 −15 |
+  | `balanced_expanded` (siblings) | 61.5% | 70.9% | 82.1% | 0.504 | 79.5% | +13 −30 | +11 −15 |
+  | `CANDIDATE_POOL` 120 | 65.2% | 73.7% | 82.9% | 0.523 | 80.8% | identical | identical |
+  | tail from 5, round 2 | 65.6% | 74.6% | 83.8% | 0.528 | 80.3% | +7 −5 | +18 −14 |
+  | tail from 10, round 2 | 65.6% | 74.1% | 85.3% | 0.530 | 80.6% | +6 −4 | +18 −7 |
+  | **+ A blind** | 72.2% | 82.9% | 91.5% | 0.603 | 81.2% | +50 −17 | +46 −6 |
+  | + A blind, tail 5, round 2 | 72.2% | 84.0% | 91.2% | 0.609 | 81.2% | +54 −21 | +47 −8 |
+  | **+ A blind, tail 10, round 2** | **73.7%** | **84.2%** | **92.1%** | **0.612** | 82.1% | +56 −16 | +50 −7 |
+
+  (`EVAL_SPLIT=fresh vera.sh e2e fa_*`; the registry profiles need
+  `ALGORITHMS_PATH=/cfg/algorithms.json` and, from Git Bash,
+  `MSYS2_ENV_CONV_EXCL=ALGORITHMS_PATH`, or the path is rewritten to `C:/Program Files/Git/cfg`.)
+  * **HyDE holds on a set nobody tuned on.** Written blind, + A gives +7 at 5 and +8.6 at 25.
+    That is far more than the +3 that train's 100 suggested (±9 there) and under the
+    leaked +12 from the drafter. The leaked 98.2% (328 cases) and this 91.5% (468) bracket
+    what the step is worth.
+  * **Tail from 10, round 2 is the one engine setting that pays here**: +18 −7 at 25, and
+    it adds on top of the passage (92.1%). Tail from 5 is noise again.
+  * `literal` and sibling expansion lose at 5 on fresh, as they did on the holdout. A pool
+    of 120 changes nothing, because each arm still returns 60.
+  * ! Still short of 95% at 25: 37 misses in 468, and 95% allows 23. The agent loop's
+    second passage (L) is not scored here. A blind L means reading round 1's replies
+    for 400 questions.
 
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
