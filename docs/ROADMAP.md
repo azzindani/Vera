@@ -1018,6 +1018,43 @@ whose labels had been read. Both passages were written the same way as for the h
   * Serving: `vera-v6` is what the stack now runs. `ravel-clone` (1.3) is kept, so a
     rollback is a volume swap.
 
+* **95% at 25 on fresh, on the 1.4 corpus** (2026-11-22). All on `vera-v6`, `TOP_K` 25, the
+  shipped engine, one run per row:
+
+  | fresh, 468 | @5 | @10 | @15 | @20 | @25 | MRR |
+  |---|---:|---:|---:|---:|---:|---:|
+  | shipped | 68.4% | 77.6% | 83.5% | 85.9% | 87.2% | 0.576 |
+  | tail from 10, round 2 | 68.2% | 77.8% | 83.8% | 86.3% | 88.2% | 0.576 |
+  | + A blind | 75.2% | 87.2% | 91.0% | 92.9% | 94.7% | 0.625 |
+  | + A blind, tail 10, round 2 | 76.1% | 87.4% | 91.5% | 92.9% | 94.2% | 0.633 |
+  | + A blind, wider definition cues | 75.6% | 87.8% | 91.5% | 93.2% | 94.9% | 0.628 |
+  | **+ A and question·A, wider cues** | **79.7%** | **88.7%** | **92.3%** | **93.8%** | **95.1%** | **0.670** |
+
+  * **The corpus re-embedding is what moved it.** + A blind read 91.5% at 25 on the 1.3
+    corpus (above) and 94.7% on 1.4.
+  * **The two rewordings.** The agent sends A, then the question followed by A, as a second
+    wording (`rewordings: [A, question + " " + A]`). Against A alone that wins 21 and
+    loses 2 at 5, and wins 6 and loses 5 at 25. It was chosen on holdout, not on
+    fresh. On holdout (168, the train-side passages `hyde_holdout.json`) A reads 94.0% at
+    25, A + question·A 95.8%, A + L 95.8% and A + two question rewordings 94.0%. It needs
+    nothing written beyond A, so it is blind wherever A is.
+  * **Wider definition cues.** `definitions.cues` gained `apa arti`, `arti istilah`,
+    `apa maksud`, `apa makna`, `apa beda`, `yang disebut`, `tergolong`, `yang termasuk` and
+    `itu apa`. They were read off the 27 train definitional questions that matched no cue
+    (of 54), not off fresh. On train (604, plain) they are +1 −0 at 5 and change nothing
+    at 10 or 25.
+    * ! They are applied **by hand** to `corpus_meta.scoring_vocabulary` on the scratch
+      volume, with a backup kept. ✗ Shipped. The rule belongs in the profile, so shipping
+      it needs:
+      - a new `id_regulation_md` version, and an `id_regulation` version beside it (the
+        profiles must agree, `tests/test_profiles.py`);
+      - a way to refresh a served database's vocabulary without a reload. None exists:
+        `db relabel` carries labels only.
+  * ! 95.1% is 445 of 468, and 95% is 444.6. The bar is met by one case, inside the noise,
+    and on one run. It holds only while the agent writes A as this blind passage did.
+  * Within 60, the answer is in the reply for 97.6% (+ A blind). Of the 25 misses at 25,
+    6 sit at 26–29 and 11 are not in the first 60.
+
 **Where this leaves 95% at 25.** Measured, with this model and this corpus:
 * The best configuration reads 88.4% [88.7%]. With an agent loop (two hypothetical answers, the
   second written after reading the first round), 93.5% on the holdout.
