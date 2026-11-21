@@ -985,10 +985,36 @@ whose labels had been read. Both passages were written the same way as for the h
   * **The splits disagree.** Fresh gains at every cut-off, and at 25 by 29 to 9. Train
     loses at every cut-off, by less. Over all 1,072 questions, @5 is a tie (76 won, 75 lost)
     and @25 nets +15 (49 to 34). Neither split alone is significant at 5.
-  * ! Train is the set the scoring weights were fitted on, against the 1.3 space. Fresh
-    was tuned on by nobody, so it is the fairer reading. But "the weights favour the space
-    they were fitted in" is a hypothesis, ✗ measured. Refitting on 1.4 and scoring fresh
-    once would test it.
+  * **Refitting the weights on 1.4 changes nothing** (2026-11-21), so "the weights favour
+    the space they were fitted in" is ✗. The fit ran **through the engine**, not through
+    `fit_pool.py`: that script's mirror now agrees with the engine's top 10 on 169 of 604
+    queries, because the ordering rules since (structure, the currency lift) are not in
+    it.
+    * Method: each configuration was one `e2e.py` run with
+      `EVAL_ARGS={"factor_weights": ...}` on `EVAL_SPLIT=train` (436, holdout excluded).
+    * The grid: 31 configurations, `authority` × `structural` × `topical` in steps of
+      0.25 with 0.5 ≤ Σ ≤ 1. Then the floor at 0 / 0.2 / 0.3 / 0.4 on the best of them.
+    * The grid is flat: train MRR runs 0.518 to 0.542, and the shipped weights rank 7th
+      (0.534).
+    * The winner was scored once on holdout and once on fresh, beside the shipped
+      weights.
+
+    | weights | split | @5 | @10 | @15 | @20 | @25 | MRR | won −lost @5 | @25 |
+    |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+    | shipped (floor 0.3, auth 0.5, struct 0.25, topical 0.25) | train 436 | 67.9% | 77.5% | 82.3% | 84.2% | 86.0% | 0.534 | | |
+    | refit (floor **0.2**, auth 0.5, struct **0**, topical 0.25) | train 436 | 68.8% | 78.2% | | | 86.2% | 0.542 | | |
+    | shipped | holdout 168 | 62.5% | 72.0% | 79.8% | 81.0% | 85.7% | 0.531 | | |
+    | refit | holdout 168 | 61.3% | 70.2% | 79.8% | 83.3% | 85.1% | 0.523 | +4 −6 | +3 −4 |
+    | shipped | fresh 468 | 68.4% | 77.6% | 83.5% | 85.9% | 87.2% | 0.576 | | |
+    | refit | fresh 468 | 67.5% | 77.6% | 83.3% | 86.5% | 87.6% | 0.580 | +7 −11 | +6 −4 |
+
+    (Script `fit_engine.py`, run unpinned: ranking does not depend on cores, and the
+    shipped fresh row reproduces the pinned run to the case.)
+    * **The shipped weights stand.** The refit is worth +0.008 MRR on the set it was fitted
+      on and loses on holdout. On fresh it is 18 cases each way at 5.
+    * So 1.4's loss on train is not the weights. The labels read differently on the two
+      sets: the train questions were drafted while reading 1.3-era chunks. That is a
+      hypothesis, ✗ measured.
   * Serving: `vera-v6` is what the stack now runs. `ravel-clone` (1.3) is kept, so a
     rollback is a volume swap.
 
