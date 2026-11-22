@@ -1,5 +1,10 @@
 # PRE_EMBEDDING.md
 
+> ! **Superseded by Ravel.** A corpus is now built by `ravel build` and loaded by
+> `ravel db prepare` (Ravel `docs/pipeline/DATABASE.md`). This page records the original
+> path, which `dev_tools/pre_embed/` still provides to the test fixtures and the eval
+> tools; a new corpus does not go through it.
+
 The offline pipeline that turns source documents into the database the engine serves.
 Runs on the operator's GPU box, never on the query path.
 

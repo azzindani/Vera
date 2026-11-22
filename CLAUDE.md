@@ -72,7 +72,7 @@ short:
 |---|---|
 | `crates/` | `contract/` (domain types + wire contract; zero I/O), `embed/` (provider trait, space validation), `store/` (Postgres: corpus meta, centroids, the arms), `engine/` (routing, fusion, factors), `mcp/` (the binary: settings, transports, tools) |
 | `config/` | the algorithms (`algorithms.json`, `algorithms.no_prior.json`) and scoring vocabularies, mounted read-only |
-| `migrations/` | post-ingest SQL, applied **by hand**; ✗ the schema, which is `dev_tools/pre_embed/schema.sql` |
+| `migrations/` | post-ingest SQL, applied **by hand**; ✗ the schema, which Ravel generates (`migrations/README.md`) |
 | `docker/`, `docker-compose*.yml` | the images; the stack, its VPS profile, and the eval overlay |
 | `dev_tools/` | offline: `pre_embed/`, `cluster_maint/`, `eval/` (the harness that gates quality, `corpora.json`), `fixtures/` |
 | `docs/` | `design/`, `operations/`, `eval/`, `project/`: **[`docs/README.md`](docs/README.md) is the index** |
@@ -124,6 +124,10 @@ Vera reads.
    the corpus first for every query, and it looks correct.
 10. **Effort is escalated on measured disagreement, never by default.** A query
    answered confidently in one round must not be made to spend thirty seconds.
+11. **Everything a measurement needs is in git.** A result is reproduced by
+   `dev_tools/eval/eval_corpus.py` from `corpora.json` and `eval.env`, never from the
+   operator's `.env` or a shell history (`EVAL.md` §1). Ravel holds the same rule for
+   building a corpus (Ravel `CLAUDE.md` §5.19).
 
 ---
 

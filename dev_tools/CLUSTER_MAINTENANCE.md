@@ -3,6 +3,10 @@
 How layer-2 clusters are built, how they go stale, and the design for keeping them
 healthy.
 
+Vera owns clustering (Ravel `CLAUDE.md` §5.17): a Ravel bundle ships with `cluster_id`
+empty. Ravel's `CLUSTERING.md` is its optional rehearsal of the same step and defers to
+this page for the live side.
+
 ! **What exists today is the initial clustering** (`cluster_maint/kmeans.py`) and a
 routing-recall check (`cluster_maint/eval_routing.py`). Incremental assignment,
 size-triggered splits and the atomic version swap described in §2–§3 are **designed and

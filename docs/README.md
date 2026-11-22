@@ -56,7 +56,7 @@ The per-corpus serving and question sets are in `dev_tools/eval/` (`corpora.json
 | doc | |
 |---|---|
 | [`../dev_tools/README.md`](../dev_tools/README.md) | the offline tools: what each does, none on the query path |
-| [`../dev_tools/PRE_EMBEDDING.md`](../dev_tools/PRE_EMBEDDING.md) | the original ingest → embed → load path |
+| [`../dev_tools/PRE_EMBEDDING.md`](../dev_tools/PRE_EMBEDDING.md) | the original ingest → embed → load path, superseded by Ravel |
 | [`../dev_tools/CLUSTER_MAINTENANCE.md`](../dev_tools/CLUSTER_MAINTENANCE.md) | k-means and routing recall |
 | [`../migrations/README.md`](../migrations/README.md) | the post-ingest SQL, applied by hand |
 

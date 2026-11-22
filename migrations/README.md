@@ -1,8 +1,10 @@
 # migrations
 
-! **`dev_tools/pre_embed/schema.sql` is the source of truth for the corpus
-schema.** `ingest.py` applies it when a corpus is built. Nothing in this
-directory is applied automatically, by the engine or by anything else.
+! **The corpus schema is Ravel's**: generated from the bundle manifest by Ravel's
+`src/bundle/schema.py` and applied by `ravel db prepare` (Ravel writes, Vera reads).
+`dev_tools/pre_embed/schema.sql` is the copy the legacy `ingest.py` path and the test
+fixtures (`dev_tools/fixtures/seed.py`) apply. Nothing in this directory is applied
+automatically, by the engine or by anything else.
 
 What lives here is what a corpus needs *after* ingestion, applied by hand:
 
