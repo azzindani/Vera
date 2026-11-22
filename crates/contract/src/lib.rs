@@ -7,7 +7,7 @@
 //! shape from another.
 //!
 //! Field names here are the **wire format** an agent parses, fixed by
-//! `docs/OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
+//! `docs/design/OUTPUT_CONTRACT.md`. Renaming one is a breaking change, ✗ a refactor.
 
 pub mod algorithms;
 pub mod contract;
@@ -44,7 +44,7 @@ impl Chunk {
     /// Provenance for this chunk, always derived from stored fields.
     ///
     /// ! Never synthesizes. If ingest recorded no locator, the locator is empty
-    /// rather than guessed (`docs/FAILURE_MODES.md` §7).
+    /// rather than guessed (`docs/design/FAILURE_MODES.md` §7).
     #[must_use]
     pub fn source(&self) -> Source {
         Source {

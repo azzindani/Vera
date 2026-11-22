@@ -13,13 +13,13 @@
 # for two cores, and that contention is what sets p95 under concurrency. Give
 # each its own pair and the numbers come out optimistic.
 #
-# The 4 GB budget, measured rather than guessed (see docs/HARDWARE.md §2):
+# The 4 GB budget, measured rather than guessed (see docs/operations/HARDWARE.md §2):
 #
 #   embed   3072 MB   float32 weights measured at 2,553 MB anon, + runtime.
 #                     ! 1280 MB was budgeted here for months and fits NO usable
 #                     configuration: float32 is SIGKILLed by its first request,
 #                     and the narrow dtypes that do fit are 22x slower on CPU
-#                     (docs/HARDWARE.md §2).
+#                     (docs/operations/HARDWARE.md §2).
 #   db      4096 MB   shared_buffers 512 + work_mem + the rest as page cache.
 #                     Measured peak 1,846 MB at 355K rows, 5,907 MB at 5.1M.
 #   engine   512 MB   14 MB at 355K, 42 MB at 5.1M. Oversized deliberately.
@@ -34,7 +34,7 @@
 # ! The engine line used to read "8.5 MB + 4 concurrent x 23.4 MB = 102 MB". That
 # was arithmetic and was never measured. Measured peak RSS is 14/12/14 MB across
 # CLUSTER_BATCH 1/2/5 -- flat, because the engine never holds a cluster; Postgres
-# does the scan and returns ranked ids (docs/HARDWARE.md §2).
+# does the scan and returns ranked ids (docs/operations/HARDWARE.md §2).
 #
 # The 512 MB stays anyway. It costs nothing on a box this size, and the headroom
 # is what a bad day is for. The honest statement is that it is a ceiling, ✗ a
@@ -94,7 +94,7 @@ services:
         limits:
           # ! 3072M, not 1280M. float32 needs 2,553 MB anon and is the only
           # dtype that is both correct for this corpus and fast on CPU
-          # (docs/HARDWARE.md §2).
+          # (docs/operations/HARDWARE.md §2).
           memory: 3072M
 
   engine:

@@ -5,7 +5,7 @@
 //! and legal results cannot be ordered on that alone. A district
 //! `PERATURAN BUPATI` and the national `UNDANG-UNDANG` it implements both match
 //! a query about tax penalties; only metadata separates them, and that metadata
-//! is already in every row (`docs/SCORING.md` §1).
+//! is already in every row (`docs/design/SCORING.md` §1).
 //!
 //! ! Factors are a **bounded prior on relevance, ✗ a replacement for it**
 //! (invariant 9). The shape is
@@ -22,7 +22,7 @@
 //!
 //! Measured through the real server by `dev_tools/eval/e2e.py` — one binary,
 //! the weights varied per request, so every row is the product, ✗ an arm
-//! (`docs/EVAL.md` §1). 44 cases:
+//! (`docs/eval/EVAL.md` §1). 44 cases:
 //!
 //! | | Recall@5 | Recall@10 | MRR |
 //! |---|---|---|---|
@@ -135,7 +135,7 @@ pub struct Vocabulary {
     /// ! Strictly greater, ✗ at least. The distinction is one character and it
     /// moves the floor: `content_terms` is the input to `coverage`, and a
     /// threshold fitted on one tokenisation applied to another is a cut nothing
-    /// measured (`docs/SCORING.md` §3).
+    /// measured (`docs/design/SCORING.md` §3).
     pub min_term_chars: usize,
     /// The corpus's definitions provision, and the questions that ask for one.
     /// `None`: the corpus declares none, and nothing is reordered for it.
@@ -331,7 +331,7 @@ impl Vocabulary {
     /// a coarse national-vs-local split does at least as well. At n=40 the fine
     /// ordering is not evidence-backed; it is here because a table stating
     /// something legally false is wrong whether or not this eval set can detect
-    /// it (`docs/EVAL.md` §5).
+    /// it (`docs/eval/EVAL.md` §5).
     #[must_use]
     pub fn id_regulation() -> Self {
         let tiers: &[(&str, u8)] = &[
@@ -647,7 +647,7 @@ pub struct Weights {
     /// Minimum share of the query's content terms a candidate must contain to
     /// be ranked at all · **a floor, ✗ a weight**.
     ///
-    /// ! This is the relevance gate of `docs/SCORING.md` §3, and it is worth
+    /// ! This is the relevance gate of `docs/design/SCORING.md` §3, and it is worth
     /// more than every weight below combined: +12.5 points Recall@5 on its own
     /// against +5.0 for the best single factor.
     ///

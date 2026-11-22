@@ -23,7 +23,7 @@ fixtures/        a ~30-row corpus so integration tests can run in CI
 |---|---|
 | [PRE_EMBEDDING.md](PRE_EMBEDDING.md) | the offline ingestion pipeline |
 | [CLUSTER_MAINTENANCE.md](CLUSTER_MAINTENANCE.md) | cluster drift, and the design for handling it |
-| [../docs/EVAL.md](../docs/EVAL.md) | what the eval measures and what it gates |
+| [../docs/eval/EVAL.md](../docs/eval/EVAL.md) | what the eval measures and what it gates |
 
 ---
 
@@ -69,12 +69,12 @@ It places (fits the routing structure from the bundle's vectors), loads with eac
 cluster in the same pass, applies the provenance guard and the optional RUM and BM25 indexes,
 records the corpus canary, and reports ready only when the database itself says so. Measured
 on the 1.7M-chunk corpus: about 16.5 minutes, and the engine starts on the result with no
-canary override. Full description: Ravel's `docs/DATABASE.md`.
+canary override. Full description: Ravel's `docs/pipeline/DATABASE.md`.
 
 ! **The canary comes from the bundle.** Chunk bodies cannot serve as one for a corpus whose
 documents were embedded behind a header: a correct provider scores 0.84 against the stored
 vector and a wrong one 0.73. The bundle's reference sentence, embedded through the same
-query path on both sides, is held to the usual 0.98 (`docs/EMBEDDING.md`). A corpus with no
+query path on both sides, is held to the usual 0.98 (`docs/design/EMBEDDING.md`). A corpus with no
 `corpus_canary` row keeps the old chunk-body check.
 
 ---
@@ -134,7 +134,7 @@ python eval/pool_depth.py            # needs only the database
 "was the answer retrieved at all?". It runs the text arm alone straight against Postgres,
 so it needs **no embedder and no GPU**, and it is the cheapest check in the repo —
 useful whenever a change to chunking or the corpus might have moved what is reachable.
-Results in [../docs/EVAL.md](../docs/EVAL.md) §4.
+Results in [../docs/eval/EVAL.md](../docs/eval/EVAL.md) §4.
 
 ---
 

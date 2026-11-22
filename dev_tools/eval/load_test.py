@@ -12,7 +12,7 @@ cache hits. Start the embedder with `QUERY_CACHE=0` to measure what a new questi
 
 ! The default URL is 127.0.0.1, ✗ localhost. On Windows, Python resolving `localhost` costs ~2 s per request
 (IPv6 attempt first, then fallback), which is more than the whole server-side query. The first 355K numbers taken
-for `docs/HARDWARE.md` §8 read 3.0 s p50 for exactly this reason; the same stack answers in ~0.9 s. Set VERA_HTTP
+for `docs/operations/HARDWARE.md` §8 read 3.0 s p50 for exactly this reason; the same stack answers in ~0.9 s. Set VERA_HTTP
 to override, but keep an IP literal.
 
 ! A refusal (503 + Retry-After) is counted as `refused`, not as an error: it is the engine's backpressure doing

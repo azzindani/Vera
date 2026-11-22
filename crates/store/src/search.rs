@@ -4,7 +4,7 @@
 //! engine's resident set is flat. Every arm selects `(id, score)` under a
 //! `LIMIT`, so Postgres performs the scan and a few hundred short rows cross the
 //! wire. Measured engine peak RSS is 14 / 12 / 14 MB at `CLUSTER_BATCH` 1 / 2 / 5
-//! (`docs/HARDWARE.md` §6a). Adding a column that returns `dense` would undo the
+//! (`docs/operations/HARDWARE.md` §6a). Adding a column that returns `dense` would undo the
 //! guarantee that the loop below is often credited with.
 //!
 //! ! Clusters are scanned in **batches of `CLUSTER_BATCH`** (`CLAUDE.md` §7.5).
@@ -176,7 +176,7 @@ impl SearchOps {
     /// measured on the 1.7M corpus, a cold 5-cluster probe read 114K buffers and
     /// took 7.3 s. `chunk_vectors` holds `(cluster_id, id, dense)` for servable
     /// rows only, sorted by cluster, with `dense` stored PLAIN (inline, ✗ TOAST),
-    /// so a probe is a few contiguous megabytes (`docs/HARDWARE.md` §9).
+    /// so a probe is a few contiguous megabytes (`docs/operations/HARDWARE.md` §9).
     ///
     /// ! It holds ONLY servable rows: whoever builds it applies `indexable`, so the
     /// arm does not join back to `chunks` to check it.
@@ -250,7 +250,7 @@ impl SearchOps {
     ///
     /// ! It costs a LOT of latency: 1,858 ms against 6,282 ms at 5M rows, and
     /// the fallback is the worst-scaling arm in the system (41.9× for 14× the
-    /// rows, `docs/HARDWARE.md` §6). This probe is why that is a deployment
+    /// rows, `docs/operations/HARDWARE.md` §6). This probe is why that is a deployment
     /// choice rather than a code change.
     async fn has_bm25(&self) -> Result<bool, StoreError> {
         if let Some(v) = self.bm25.get() {
@@ -722,7 +722,7 @@ impl SearchOps {
     }
 
     /// Other chunks of the same regulation · the sibling expansion of
-    /// `docs/SCORING.md` §7.
+    /// `docs/design/SCORING.md` §7.
     ///
     /// ! Keyed on `(regulation_type, regulation_number, year)`, which is
     /// exactly `chunks_identifier_idx`. Number and year alone are NOT unique
@@ -772,7 +772,7 @@ impl SearchOps {
     /// corpus, so 5% of the time the right document sits in a cluster that was
     /// never probed. A known regulation number must never be lost that way, so
     /// this scans globally and is never gated by cluster selection
-    /// (`docs/FAILURE_MODES.md` §1).
+    /// (`docs/design/FAILURE_MODES.md` §1).
     ///
     /// # Errors
     /// Database failure.
@@ -1103,7 +1103,7 @@ impl SearchOps {
         let rows = c
             .query(
                 // ! `about` is selected because the topical factor needs it
-                // (`docs/SCORING.md` §2) and ships at weight 0.25. Omitting it
+                // (`docs/design/SCORING.md` §2) and ships at weight 0.25. Omitting it
                 // made that weight silently inert: the factor was fitted
                 // against real subject lines and evaluated against NULL.
                 "SELECT id, body, source_title, source_url, chapter, article,
@@ -1275,7 +1275,7 @@ impl ChunkRow {
 /// applies the tie-break in memory.
 ///
 /// ! This shrinks the window rather than closing it: a tie group straddling
-/// `OVERFETCH × k` is still resolved by the database. `docs/EVAL.md` §4
+/// `OVERFETCH × k` is still resolved by the database. `docs/eval/EVAL.md` §4
 /// records the residual, measured rather than assumed.
 const OVERFETCH: i64 = 3;
 // ! Below 1 every arm would silently read LESS than it was asked for, and the

@@ -6,12 +6,12 @@
 //! ! The **only** outbound model call Vera ever makes is an *embedding* call.
 //! There is no completion path here and there must never be one — an LLM in the
 //! engine breaks statelessness and makes every query cost a model round-trip
-//! (`docs/OUTPUT_CONTRACT.md` §1).
+//! (`docs/design/OUTPUT_CONTRACT.md` §1).
 //!
 //! ! Corpus and query must land in the **same vector space**: same model, same
 //! version, same instruction, same pooling, same normalization. That is why the
 //! model id is pinned and a mismatch fails closed rather than degrading quietly
-//! (`docs/EMBEDDING.md` §2).
+//! (`docs/design/EMBEDDING.md` §2).
 
 use async_trait::async_trait;
 
@@ -140,7 +140,7 @@ impl EmbeddingProvider for StubProvider {
 ///
 /// ! Embeddings only. There is no completion method here and there must never
 /// be one — an LLM on the query path breaks statelessness and makes every
-/// query cost a model round-trip (`docs/OUTPUT_CONTRACT.md` §1).
+/// query cost a model round-trip (`docs/design/OUTPUT_CONTRACT.md` §1).
 ///
 /// The declared model and width come from the corpus, so a provider serving
 /// different weights than the corpus was built with fails closed rather than

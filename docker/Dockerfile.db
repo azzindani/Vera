@@ -60,7 +60,7 @@ COPY --from=rum-builder /usr/share/postgresql/${PG_MAJOR}/extension/rum* \
 #
 # ! Not fatal if it is absent. SearchOps::has_bm25() probes and falls back to
 # the sparsevec scan, so the arm still answers — measured 6,282 ms instead of
-# 1,858 ms at 5M (docs/HARDWARE.md §6).
+# 1,858 ms at 5M (docs/operations/HARDWARE.md §6).
 ARG PG_SEARCH_REF=0.25.9
 ARG PG_SEARCH_DEB=postgresql-16-pg-search_0.25.9-1PARADEDB-bookworm_amd64.deb
 RUN set -eux; \

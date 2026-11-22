@@ -1,4 +1,4 @@
-//! Per-request search options · `docs/TOOL_SURFACE.md`.
+//! Per-request search options · `docs/design/TOOL_SURFACE.md`.
 //!
 //! What the **caller** may steer, as opposed to what the engine keeps. The line
 //! is not about trust: it is about what the caller can possibly know. Latency
@@ -75,7 +75,7 @@ impl Mode {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct FactorWeights {
     /// Minimum share of the query's content terms a candidate must contain ·
-    /// **a floor, ✗ a weight** (`docs/SCORING.md` §3). Worth more than every
+    /// **a floor, ✗ a weight** (`docs/design/SCORING.md` §3). Worth more than every
     /// weight below combined.
     pub relevance_floor: f32,
     pub authority: f32,
@@ -93,7 +93,7 @@ pub struct FactorWeights {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Expansion {
-    /// Other chunks of the same regulation · `docs/SCORING.md` §7.
+    /// Other chunks of the same regulation · `docs/design/SCORING.md` §7.
     Siblings,
 }
 

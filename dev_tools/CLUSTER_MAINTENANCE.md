@@ -25,7 +25,7 @@ Routing quality is recall for the dense arm: a query routed to the wrong cluster
 misses, with no error. Drift is therefore a correctness problem, not hygiene.
 
 The measurement that detects it is **routing recall** — was the labelled article in a
-probed cluster at all — which `eval_routing.py` reports and `../docs/EVAL.md` gates.
+probed cluster at all — which `eval_routing.py` reports and `../docs/eval/EVAL.md` gates.
 
 ---
 

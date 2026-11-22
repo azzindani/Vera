@@ -225,7 +225,7 @@ impl QueryVectorizer {
     /// ! Why it exists: the `text` arm ORs every term, so a function word matches
     /// most of the corpus and the arm's cost is the MATCH COUNT, ✗ the ranking. At
     /// 5.0M rows it took 6.2 s; keeping IDF >= 2 took 1.4 s with no hit-rate loss on
-    /// the 44 labelled queries (`docs/HARDWARE.md` §8.3). Keeping only the 3-4
+    /// the 44 labelled queries (`docs/operations/HARDWARE.md` §8.3). Keeping only the 3-4
     /// rarest terms lost half the hits, so this is a floor on IDF, ✗ a term count.
     #[must_use]
     pub fn prune(&self, text: &str, min_idf: f32) -> String {

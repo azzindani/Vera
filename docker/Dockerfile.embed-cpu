@@ -2,7 +2,7 @@
 #
 # ! NOT WIRED INTO docker-compose.yml, and not usable against the current
 # corpus: its vectors are orthogonal to the stored ones and the startup canary
-# refuses them (docs/HARDWARE.md §1). It is kept because it is the measurement
+# refuses them (docs/operations/HARDWARE.md §1). It is kept because it is the measurement
 # that proved the corpus space is a property of one container tag, and because
 # it is a working CPU embedder for the day that stops being true.
 #

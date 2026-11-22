@@ -1,4 +1,4 @@
-"""Score the retrieval arms against the labeled query set · docs/EVAL.md §3.
+"""Score the retrieval arms against the labeled query set · docs/eval/EVAL.md §3.
 
 Reports Recall@k and MRR per arm and for RRF fusion, so a dial change that
 helps one arm and hurts the whole is visible rather than averaged away.

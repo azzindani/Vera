@@ -137,6 +137,10 @@ jobs:
       - name: Chunker tests
         run: python dev_tools/pre_embed/test_chunking.py
 
+      # Every docs/<dir>/X.md path, relative link and index entry resolves.
+      - name: Docs references
+        run: python dev_tools/check_docs.py
+
       - name: Seed the fixture corpus
         run: python dev_tools/fixtures/seed.py
 

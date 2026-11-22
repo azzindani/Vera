@@ -4,7 +4,7 @@
 
 ! Exists because the pinned TEI CPU image cannot serve this model: ONNX Runtime
 declines `last_token` pooling, the candle backend takes over, and MKL's SGEMM
-faults (`docs/HARDWARE.md` §1). The GPU image is fine; this is the 2 vCPU / 4 GB
+faults (`docs/operations/HARDWARE.md` §1). The GPU image is fine; this is the 2 vCPU / 4 GB
 profile's only gap.
 
 ! The pooling, the normalization and the dtype are the WHOLE contract. The

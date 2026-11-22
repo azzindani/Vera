@@ -69,7 +69,7 @@ fn ac_03_a_provider_serving_another_space_fails_closed() {
 #[test]
 fn ac_04_no_llm_completion_call_exists_anywhere_on_the_query_path() {
     // ! Structural check, not a runtime one. The invariant is "the engine never
-    // calls an LLM" (docs/OUTPUT_CONTRACT.md §1) — a unit test cannot observe
+    // calls an LLM" (docs/design/OUTPUT_CONTRACT.md §1) — a unit test cannot observe
     // the absence of a call, so assert against the source of every crate on the
     // query path.
     //

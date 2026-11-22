@@ -59,7 +59,7 @@ pub fn definitions(registry: &contract::Registry) -> Vec<Value> {
                     },
                     // ! Every option below NARROWS. A value above the server's
                     // ceiling is clamped and the clamp is reported in
-                    // `applied.clamped` (`docs/TOOL_SURFACE.md` §2).
+                    // `applied.clamped` (`docs/design/TOOL_SURFACE.md` §2).
                     "mode": {
                         "type": "string",
                         "enum": ["hybrid", "keyword", "semantic"],
@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn search_knowledge_never_accepts_a_domain() {
         // ! Invariant 13, as a schema assertion. The tool now takes several
-        // options (`docs/TOOL_SURFACE.md`), and this is the one that must never
+        // options (`docs/design/TOOL_SURFACE.md`), and this is the one that must never
         // join them: an agent that can assert a knowledge base makes the
         // engine's own detection non-authoritative, and nothing in the output
         // would reveal it happened.

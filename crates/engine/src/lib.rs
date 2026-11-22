@@ -7,7 +7,7 @@
 //! what keeps the query path replicable (architecture/STANDARDS §2).
 //!
 //! The numbers in these modules' docs are measured, ✗ assumed — they come from
-//! the 182K-row spike corpus, and `docs/EVAL.md` is what keeps them honest.
+//! the 182K-row spike corpus, and `docs/eval/EVAL.md` is what keeps them honest.
 
 pub mod currency;
 pub mod factors;
@@ -41,7 +41,7 @@ pub enum Trust {
 ///
 /// ! An empty result set is `None`, never `Low`. "I found nothing" and "I found
 /// something weak" are different answers and the agent must be able to tell
-/// them apart (`docs/OUTPUT_CONTRACT.md` §4).
+/// them apart (`docs/design/OUTPUT_CONTRACT.md` §4).
 #[must_use]
 pub fn trust_from(domain_matched: bool, results: usize, top_score: f32) -> Trust {
     if !domain_matched || results == 0 {

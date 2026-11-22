@@ -6,7 +6,7 @@
 Routing recall is the share of labelled questions whose answer chunk sits in one of the
 probed clusters: the ceiling the dense arm can reach (`EVAL.md` §4d). One level probes
 the `--probe` nearest of every leaf centroid; two levels probe the nearest leaves among
-the children of the S nearest parents (`docs/SCALING.md` §2). The gap between the two
+the children of the S nearest parents (`docs/operations/SCALING.md` §2). The gap between the two
 columns is exactly what the parent level costs, independent of fusion and ranking.
 
 ! Read-only. The engine's own arithmetic: cosine to unit-normalised centroids, ties on

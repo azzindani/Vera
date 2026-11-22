@@ -5,7 +5,7 @@
 //! and the client sees a protocol error rather than a message.
 //!
 //! All configuration is read from the environment (invariant 12) and resolved
-//! once, at startup, by [`Settings::from_env`]. See `docs/CONFIGURATION.md` for
+//! once, at startup, by [`Settings::from_env`]. See `docs/operations/CONFIGURATION.md` for
 //! the full table and `.env.example` for a working set.
 
 mod bm25;
@@ -292,12 +292,12 @@ impl Settings {
                 // ! Declared by the corpus (`corpus_meta.gate.foreign`), ✗ configured.
                 gate_foreign: d.gate_foreign,
                 // ! Fitted against the eval set, never chosen by hand
-                // (`docs/SCORING.md` §4) -- and env-driven for the same reason
+                // (`docs/design/SCORING.md` §4) -- and env-driven for the same reason
                 // the arm weights are: they are properties of the CORPUS, and
                 // refitting after a re-chunk must not require a release.
                 factor_weights: engine::Weights {
                     // ! A floor, not a weight -- and the single most valuable
-                    // dial measured (`docs/SCORING.md` §3).
+                    // dial measured (`docs/design/SCORING.md` §3).
                     relevance_floor: parsed(
                         "RELEVANCE_FLOOR",
                         "number",

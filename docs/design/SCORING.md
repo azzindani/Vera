@@ -729,7 +729,7 @@ are good.
 ## 11. Currency · a revoked regulation and the one that revoked it
 
 Ravel reads, from the verb beside each citation, which regulation revokes, replaces or
-amends which (`Ravel/docs/RELATIONS.md`), and loads it as `doc_status`. A search for a
+amends which (`Ravel/docs/pipeline/RELATIONS.md`), and loads it as `doc_status`. A search for a
 subject finds both the old regulation and the one that ended it, and relevance alone can
 put the dead one first, because it was written in the words the query uses.
 

@@ -1,4 +1,4 @@
--- Provenance is immutable after ingest · docs/FAILURE_MODES.md §7.
+-- Provenance is immutable after ingest · docs/design/FAILURE_MODES.md §7.
 --
 -- Enforced in the DATABASE, ✗ in the engine, so no future code path — engine,
 -- migration, or an operator's ad-hoc UPDATE — can rewrite a citation out from

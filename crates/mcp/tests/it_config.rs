@@ -49,7 +49,7 @@ fn only_measured_algorithms_are_offered_to_an_agent() {
     // ! An unfitted algorithm is a raw weight vector with a friendly name.
     // `balanced_expanded` ships without a `fitted` block on purpose: sibling
     // expansion was measured at +2.3 points, which is ONE case out of 44 and
-    // is not separable from noise on this eval set (docs/SCORING.md §7).
+    // is not separable from noise on this eval set (docs/design/SCORING.md §7).
     let r = contract::Registry::parse(&repo_file("config/algorithms.json")).expect("loads");
     let offered = r.offered();
     assert!(offered.contains(&"balanced"), "{offered:?}");

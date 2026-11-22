@@ -3,7 +3,7 @@
 -- The `sparse` arm is BM25 over a `sparsevec` column with NO index: pgvector's
 -- `<#>` walks every row. That is affordable at 355K (150 ms) and is the worst
 -- scaling in the system at 5M (6,282 ms — 41.9x for 14x the rows, because the
--- 1.6 GB column stops fitting the page cache). `docs/HARDWARE.md` §6.
+-- 1.6 GB column stops fitting the page cache). `docs/operations/HARDWARE.md` §6.
 --
 -- `pg_search` is Tantivy — Lucene's algorithms in Rust — as a Postgres index
 -- type. Same arm, same job, with posting lists instead of a scan.

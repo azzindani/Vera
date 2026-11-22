@@ -9,7 +9,7 @@
 config — rather than a subprocess started with this shell's environment. Under
 the VPS overlay that is the only way to find out whether the profile in
 docker-compose.vps.yml actually serves, as opposed to whether the arithmetic in
-docs/HARDWARE.md §2 adds up.
+docs/operations/HARDWARE.md §2 adds up.
 
 ! `run.py` scores the ARMS: it reimplements fusion in Python with equal
 weights. This drives the shipped binary instead — same weights, same gate,

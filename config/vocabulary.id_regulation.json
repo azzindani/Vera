@@ -26,7 +26,7 @@
     "Recall@5 is identical (57.5% in-sample, 47.5% leave-one-out at n=40). The",
     "fine ordering is NOT evidence-backed here. It is correct anyway, because a",
     "table stating something legally false is wrong whether or not a 40-case",
-    "eval set can detect it (docs/EVAL.md §5).",
+    "eval set can detect it (docs/eval/EVAL.md §5).",
     "",
     "max_tier is 10 and no entry reaches it: the scale is the published",
     "hierarchy (UUD 1945 = 9), not the set of types this corpus happens to hold.",

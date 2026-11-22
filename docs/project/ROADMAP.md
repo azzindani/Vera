@@ -1181,7 +1181,7 @@ compute stay. The embedder's resident size is still reported, ✗ held to a numb
 ## Guardrails · every change, every stage
 
 * The holdout does not get worse beyond its confidence interval, overall or for any type.
-* BEIR (`docs/BEIR.md`) with `literal` does not drop more than 1 point on any set. A
+* BEIR (`docs/eval/BEIR.md`) with `literal` does not drop more than 1 point on any set. A
   gain that only works on our own labels is a fit, not an improvement.
 * p50 ≤ 1 s on 2 vCPU / 8 GB at 1.7M rows, and no accuracy change costs more than +10%
   warm p50 (Stage 4).

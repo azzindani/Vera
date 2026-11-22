@@ -49,7 +49,7 @@ after chunking — from worst arm to best, on the same model and the same querie
 ! Re-chunking changes every chunk id, which is why the eval labels are article-level.
 It also changes the arms' relative strength, which is why the fusion weights must be
 refitted afterwards. Both of those are documented failures, not hypotheticals
-(`../docs/FAILURE_MODES.md` §3).
+(`../docs/design/FAILURE_MODES.md` §3).
 
 ---
 
@@ -68,7 +68,7 @@ refitted afterwards. Both of those are documented failures, not hypotheticals
 ! Point 4 is the one that was skipped, and it cost the dense arm entirely. The corpus
 was embedded through a backend whose output does not match the model's reference
 implementation; the mismatch is invisible to the startup canary because both sides end
-up in the same wrong space. `../docs/EMBEDDING.md` §5 has the measurement. Verifying
+up in the same wrong space. `../docs/design/EMBEDDING.md` §5 has the measurement. Verifying
 against an **independent** implementation is the check that catches it, and it is cheap
 before the run and very expensive after.
 

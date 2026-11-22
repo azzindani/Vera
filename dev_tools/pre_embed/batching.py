@@ -1,12 +1,12 @@
 """Byte-aware batching for the embedding endpoint.
 
 ! FROZEN — Ravel owns this now: `src/runtime/batching.py` in
-github.com/azzindani/Ravel, ported per that project's `docs/ABSORPTION.md` §7 with the
+github.com/azzindani/Ravel, ported per that project's `docs/project/ABSORPTION.md` §7 with the
 typing tightened and the two constants documented as defaults rather than policy. Fix a
 bug there, not here.
 
 This copy is kept only because `ingest.py` and `eval_arms.py` in this directory still
-import it, and they have not migrated yet — Ravel's `docs/MIGRATION.md` §3 moves the
+import it, and they have not migrated yet — Ravel's `docs/project/MIGRATION.md` §3 moves the
 whole of `pre_embed/`, and §3a records this hand-off. It goes when they do. Do not add to
 it in the meantime: two copies that both change is exactly the drift §3 warns about.
 

@@ -8,11 +8,11 @@ weights. `search_knowledge` takes `factor_weights` per request, so the same
 binary, the same corpus and the same vocabulary answer every row here and the
 difference between rows IS the scoring layer.
 
-! `factor_weights` is the EXPERIMENTAL surface (`docs/TOOL_SURFACE.md` §5) and
+! `factor_weights` is the EXPERIMENTAL surface (`docs/design/TOOL_SURFACE.md` §5) and
 this is what it is for: measuring a configuration before it becomes a profile.
 Nothing here should reach a caller as advice.
 
-Rows are the configurations `docs/EVAL.md` §4 and `docs/SCORING.md` §3 quote.
+Rows are the configurations `docs/eval/EVAL.md` §4 and `docs/design/SCORING.md` §3 quote.
 """
 
 from __future__ import annotations

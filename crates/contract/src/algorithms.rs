@@ -34,7 +34,7 @@
 //!
 //! # What is deliberately NOT here
 //!
-//! No viewpoints, no consensus, no in-engine effort tiers. `docs/SCORING.md`
+//! No viewpoints, no consensus, no in-engine effort tiers. `docs/design/SCORING.md`
 //! §5-§6 designed all three, borrowed from `06_ID_Legal`, and they are dropped
 //! rather than built.
 //!
@@ -329,7 +329,7 @@ impl std::fmt::Display for RegistryError {
                 f,
                 "algorithm `{name}` has a prior bound of {}.{:02}x, above the {MAX_PRIOR_BOUND:.2}x \
                  the fit was constrained to · a prior wider than the pool's own relevance spread \
-                 can reorder the pool on metadata alone (docs/SCORING.md §3, invariant 9)",
+                 can reorder the pool on metadata alone (docs/design/SCORING.md §3, invariant 9)",
                 bound_centi / 100,
                 bound_centi % 100
             ),
@@ -366,7 +366,7 @@ impl Registry {
                     harness: "dev_tools/eval/e2e.py".to_owned(),
                     note: Some(
                         "Fitted before the 2026-09-19 re-embed, on a corpus where the dense arm \
-                         contributed 0.0%. Needs refitting (docs/SCORING.md §9)."
+                         contributed 0.0%. Needs refitting (docs/design/SCORING.md §9)."
                             .to_owned(),
                     ),
                 }),

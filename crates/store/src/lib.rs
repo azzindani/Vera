@@ -171,15 +171,15 @@ pub fn query_prefix(
 /// Build a bounded connection pool.
 ///
 /// ! `max_size` is the database half of the concurrency budget
-/// (`docs/MCP_ENGINE.md` §4). Postgres connections each carry `work_mem`, so an
+/// (`docs/design/MCP_ENGINE.md` §4). Postgres connections each carry `work_mem`, so an
 /// unbounded pool is an OOM vector on the 4 GB target just as surely as an
 /// unbounded request queue is.
 ///
 /// ! No `statement_timeout` is set here, so a slow query holds its permit for
-/// as long as it runs (`docs/FAILURE_MODES.md` §12).
+/// as long as it runs (`docs/design/FAILURE_MODES.md` §12).
 ///
 /// `NoTls` because the engine and the database share a host or a private
-/// network in every deployment described in `docs/HARDWARE.md`. Exposing Postgres
+/// network in every deployment described in `docs/operations/HARDWARE.md`. Exposing Postgres
 /// across a public network is a deployment change that must add TLS here.
 ///
 /// `statement_timeout_ms` is the **third** concurrency bound, beside the
@@ -187,7 +187,7 @@ pub fn query_prefix(
 /// as long as it runs: four of those and every later caller is refused while
 /// `permits_available` sits at zero forever. It is reachable, ✗ theoretical —
 /// the text arm ORs every lexeme of its input, and a pathological query
-/// measured 48 seconds over 98.7% of the corpus (`docs/FAILURE_MODES.md` §12).
+/// measured 48 seconds over 98.7% of the corpus (`docs/design/FAILURE_MODES.md` §12).
 ///
 /// ! Set as a connection **option**, ✗ a `SET` per checkout. libpq applies it
 /// when the session is established, so it costs no round-trip and cannot be

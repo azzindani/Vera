@@ -12,8 +12,8 @@ ones, where the canary needs 0.98.
 `cpu-1.9.3`**, agreeing to five decimals across five chunks. Two independent
 implementations agreeing with each other and disagreeing with the corpus is what
 established that the CORPUS is the outlier: it is in the space of the pinned
-`86-1.7.2` image and nothing else reproduces it (`docs/EMBEDDING.md` §5,
-`docs/HARDWARE.md` §1).
+`86-1.7.2` image and nothing else reproduces it (`docs/design/EMBEDDING.md` §5,
+`docs/operations/HARDWARE.md` §1).
 
 Kept rather than deleted for two reasons: it is the measurement that pinned the
 defect down, and it is a working CPU embedder for this model on the day the

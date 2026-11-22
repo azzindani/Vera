@@ -12,7 +12,7 @@
 #
 # Resource limits are deliberately NOT set here — bulk-loading and index builds
 # want the whole machine. Overlay the target profile to test the guarantees in
-# docs/HARDWARE.md:
+# docs/operations/HARDWARE.md:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 
@@ -43,7 +43,7 @@ services:
       # like a bug. Passing it here covers both cases.
       - -c
       - shared_preload_libraries=pg_search
-      # Budget mirrors docs/HARDWARE.md even when the container is
+      # Budget mirrors docs/operations/HARDWARE.md even when the container is
       # unconstrained, so query plans resemble the target box's.
       - -c
       - shared_buffers=${PG_SHARED_BUFFERS:-1500MB}
@@ -83,7 +83,7 @@ services:
     # file. This service used to run
     # ghcr.io/huggingface/text-embeddings-inference:86-1.7.2. That image produced
     # the vector space the corpus was re-embedded AWAY from on 2026-09-19
-    # (docs/EMBEDDING.md §5d): 2.6% Recall@5 against the reference
+    # (docs/design/EMBEDDING.md §5d): 2.6% Recall@5 against the reference
     # implementation's 79.5%. An engine pointed at it now fails its startup
     # canary and refuses to serve -- correctly, and it meant `docker compose up`
     # could not serve the corpus in this repository.
@@ -150,14 +150,14 @@ services:
       QUEUE_WAIT_MS: ${QUEUE_WAIT_MS:-2000}
       CLUSTERS_PROBED: ${CLUSTERS_PROBED:-5}
       # Two-level routing when the database has a parent level (Ravel `db prepare`);
-      # 0 = one level. docs/SCALING.md §2.
+      # 0 = one level. docs/operations/SCALING.md §2.
       PARENTS_PROBED: ${PARENTS_PROBED:-8}
       TWO_LEVEL_FROM: ${TWO_LEVEL_FROM:-8192}
-      # Chunks a named regulation or article contributes, ranked first. docs/ROADMAP.md Stage 1.
+      # Chunks a named regulation or article contributes, ranked first. docs/project/ROADMAP.md Stage 1.
       NAMED_CHUNKS: ${NAMED_CHUNKS:-5}
       # ! Latency only. Engine RSS measured flat at 14/12/14 MB across 1/2/5,
       # because the engine never holds a cluster -- Postgres does the scan and
-      # returns ranked ids (docs/HARDWARE.md §6a). 5 is worth -182 ms.
+      # returns ranked ids (docs/operations/HARDWARE.md §6a). 5 is worth -182 ms.
       CLUSTER_BATCH: ${CLUSTER_BATCH:-1}
       # ! 2.0, ✗ the 0.0 this carried until 2026-09-19. The old corpus was
       # embedded by a provider that did not reproduce the declared space, so the

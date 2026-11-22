@@ -1,13 +1,13 @@
-//! The `search_knowledge` response contract · `docs/OUTPUT_CONTRACT.md` §2.
+//! The `search_knowledge` response contract · `docs/design/OUTPUT_CONTRACT.md` §2.
 //!
 //! ! Vera returns **evidence**, the agent writes the prose. Nothing here holds a
 //! summary field, and nothing here may ever hold one: summarizing needs an LLM,
 //! and putting one in the engine breaks statelessness and adds a model
-//! dependency the design exists to avoid (`docs/OUTPUT_CONTRACT.md` §1).
+//! dependency the design exists to avoid (`docs/design/OUTPUT_CONTRACT.md` §1).
 
 use serde::{Deserialize, Serialize};
 
-/// How much the engine trusts this result set · `docs/OUTPUT_CONTRACT.md` §4.
+/// How much the engine trusts this result set · `docs/design/OUTPUT_CONTRACT.md` §4.
 ///
 /// `None` is not "an error" — it is the honest answer when no domain anchor
 /// matched. A confidently wrong domain is worse than "nothing matched".
@@ -90,7 +90,7 @@ pub struct SearchResult {
     /// Fused RRF score.
     ///
     /// ! The RETRIEVAL score, ✗ the number the results are ordered by. Ranking
-    /// multiplies it by a metadata prior (`docs/SCORING.md` §2), so a result
+    /// multiplies it by a metadata prior (`docs/design/SCORING.md` §2), so a result
     /// list ordered by rank is deliberately not sorted by this field. Reporting
     /// the product instead would hide how much of the order is retrieval and
     /// how much is metadata, which is the one thing a caller auditing a
@@ -98,7 +98,7 @@ pub struct SearchResult {
     pub score: f32,
     pub scores: ComponentScores,
     pub source: Source,
-    /// The result this one was expanded from · `docs/SCORING.md` §7.
+    /// The result this one was expanded from · `docs/design/SCORING.md` §7.
     ///
     /// ! Present only on an expanded chunk. **No arm retrieved it** — it came
     /// in as a sibling of a candidate that was retrieved, and was admitted by
@@ -108,7 +108,7 @@ pub struct SearchResult {
     /// supports, so the distinction is on the wire.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expanded_from: Option<String>,
-    /// Whether a later regulation revoked or amended this one · `docs/SCORING.md` §11.
+    /// Whether a later regulation revoked or amended this one · `docs/design/SCORING.md` §11.
     ///
     /// ! A label, ✗ a filter. A revoked regulation is still a correct answer to "what did
     /// the 2008 rule say", so it stays in the list, marked, and ranks below the regulation
@@ -160,7 +160,7 @@ pub struct SearchResponse {
     pub progress: Vec<String>,
     pub token_estimate: usize,
     pub truncated: bool,
-    /// What the engine actually used · `docs/TOOL_SURFACE.md` §2.
+    /// What the engine actually used · `docs/design/TOOL_SURFACE.md` §2.
     ///
     /// ! Present even when the caller passed no options. "The defaults were
     /// used" is itself the reproducibility record, and a field that appears
@@ -175,7 +175,7 @@ impl SearchResponse {
     /// The honest empty answer: no domain anchor matched above threshold.
     ///
     /// ! `success: true` — the engine worked correctly and found nothing. This
-    /// is deliberately distinct from an error (`docs/OUTPUT_CONTRACT.md` §4).
+    /// is deliberately distinct from an error (`docs/design/OUTPUT_CONTRACT.md` §4).
     #[must_use]
     pub fn no_matching_domain(query: impl Into<String>, progress: Vec<String>) -> Self {
         let mut out = Self {

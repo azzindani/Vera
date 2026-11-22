@@ -2,7 +2,7 @@
 
 ## v0.1.1 · 2026-11-18 · ranking inside the regulation, a faster embedder
 
-A point release. The v0.2.0 accuracy targets (`docs/ROADMAP.md` Stage 3) are **not**
+A point release. The v0.2.0 accuracy targets (`docs/project/ROADMAP.md` Stage 3) are **not**
 reached, so this is not v0.2.0. The Stage 4 performance targets are reached against
 revised thresholds, with the originals kept in brackets in the roadmap. Same model
 (Qwen3-Embedding-0.6B), same corpus vectors, no re-embed.
@@ -39,7 +39,7 @@ revised thresholds, with the originals kept in brackets in the roadmap. Same mod
 
 ### Measured
 
-Accuracy on the real 1.7M corpus (`vera.sh e2e defs1`, `defs1_h`; `docs/ROADMAP.md`
+Accuracy on the real 1.7M corpus (`vera.sh e2e defs1`, `defs1_h`; `docs/project/ROADMAP.md`
 Stage 3). The v0.1.0 column is the same engine on the 496-case Stage 0 set:
 
 | | v0.1.0 · all [holdout] | v0.1.1 · 604 [168] |
@@ -53,7 +53,7 @@ Stage 3). The v0.1.0 column is the same engine on the 496-case Stage 0 set:
 | off-topic refused | 62 / 106 | **74 / 106** |
 
 Performance on two pinned cores (`docker-compose.vps.yml`, `load_test.py`, cache misses;
-`docs/ROADMAP.md` Stage 4):
+`docs/project/ROADMAP.md` Stage 4):
 
 | | v0.1.0 | v0.1.1 |
 |---|---|---|
@@ -67,7 +67,7 @@ Performance on two pinned cores (`docker-compose.vps.yml`, `load_test.py`, cache
 
 ### Measured and dropped
 
-Each of these is recorded in `docs/ROADMAP.md` with the run that dropped it:
+Each of these is recorded in `docs/project/ROADMAP.md` with the run that dropped it:
 - refitting fusion and the priors;
 - twin collapse;
 - sibling expansion;
@@ -115,8 +115,8 @@ An MCP retrieval server (stdio and HTTP) over a Ravel-prepared PostgreSQL databa
 
 ### Measured
 
-Whole stack on two pinned cores and 8 GB (`docker-compose.vps.yml`), `docs/HARDWARE.md`
-§9, `docs/SCALING.md` §2. Rows above 1.7M are replicas: latency and memory only.
+Whole stack on two pinned cores and 8 GB (`docker-compose.vps.yml`), `docs/operations/HARDWARE.md`
+§9, `docs/operations/SCALING.md` §2. Rows above 1.7M are replicas: latency and memory only.
 
 | rows | p50 cold / warm | p95 cold | 4 clients | engine memory |
 |---|---|---|---|---|
@@ -125,8 +125,8 @@ Whole stack on two pinned cores and 8 GB (`docker-compose.vps.yml`), `docs/HARDW
 | 10.3M | 604 / 480 ms | 918 ms | 2.67 q/s | 105 MB |
 | 20.6M | 708 / 629 ms | 1,158 ms | 2.29 q/s | 15 MB |
 
-On the real 1.7M corpus, 196 labelled questions (`docs/EVAL.md` §2b, §4c-ter;
-`docs/SCORING.md` §9b): Recall@5 **57.1%**, Recall@10 **68.4%**, MRR **0.438**, the answer
+On the real 1.7M corpus, 196 labelled questions (`docs/eval/EVAL.md` §2b, §4c-ter;
+`docs/design/SCORING.md` §9b): Recall@5 **57.1%**, Recall@10 **68.4%**, MRR **0.438**, the answer
 inside the top 50 for **85.2%**; 0 of 196 real questions refused, 35 of 46 off-topic
 refused. Nothing OOM-killed at any size; overload is refused with `503` + `Retry-After`.
 
@@ -152,4 +152,4 @@ refused. Nothing OOM-killed at any size; overload is refused with `503` + `Retry
   admitted as legal questions.
 - **The embedder sets the throughput ceiling** (~2.5 q/s on two cores); the database sits
   at 30-70% CPU.
-- **100M rows across several databases** is designed (`docs/SCALING.md` §3-§4), ✗ built.
+- **100M rows across several databases** is designed (`docs/operations/SCALING.md` §3-§4), ✗ built.

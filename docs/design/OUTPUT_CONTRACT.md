@@ -54,7 +54,7 @@ one.
         "locator": { "section": "Pasal 9 ayat (3)" }
       },
       // ! Present only when another regulation is KNOWN to have ended or changed this
-      // one (`docs/SCORING.md` §11). Its absence means no revocation was found, ✗ that
+      // one (`docs/design/SCORING.md` §11). Its absence means no revocation was found, ✗ that
       // the regulation is in force: the revoker may not be in the corpus.
       "currency": {
         "status": "revoked",                          // revoked | partially_revoked | amended

@@ -5,7 +5,7 @@ document corpus that returns ranked, **source-cited** results for an AI agent to
 summarize and a human to independently verify.
 
 Runs on **2 vCPU / 8 GB**, no GPU on the query path, up to **20M rows** measured. Measured, not budgeted — see
-[docs/HARDWARE.md](docs/HARDWARE.md).
+[docs/operations/HARDWARE.md](docs/operations/HARDWARE.md).
 
 ---
 
@@ -29,7 +29,7 @@ returns nothing rather than guessing.
 
 On the real 1.7M corpus, two pinned cores (`docker-compose.vps.yml`), measured
 2026-11-15 to 2026-11-17. Details are in [CHANGELOG.md](CHANGELOG.md) and
-`docs/ROADMAP.md`.
+`docs/project/ROADMAP.md`.
 
 | | 604 cases [168 holdout] |
 |---|---|
@@ -57,7 +57,7 @@ the real corpus: their latency and memory are real, their recall is not measured
 | throughput, 4 clients | 2.7 q/s | 2.7 q/s | 2.7 q/s | 2.3 q/s |
 | engine memory | 30 MB | 56 MB | 105 MB | **15 MB** (two-level routing) |
 
-Quality at v0.1.0 on the real 1.7M corpus, 196 labelled questions (`docs/EVAL.md`):
+Quality at v0.1.0 on the real 1.7M corpus, 196 labelled questions (`docs/eval/EVAL.md`):
 
 | | |
 |---|---|
@@ -74,7 +74,7 @@ Nothing was OOM-killed at any size; past four clients extra load is refused with
 
 Three BEIR test sets. Every engine gets the same chunks and the same query vectors
 (Qwen3-Embedding-0.6B), and nothing was tuned on BEIR. Full method:
-[docs/BEIR.md](docs/BEIR.md).
+[docs/eval/BEIR.md](docs/eval/BEIR.md).
 
 | nDCG@10 | SciFact | NFCorpus | FiQA |
 |---|---|---|---|
@@ -120,7 +120,7 @@ docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 ```
 
 Configuration is entirely environment-driven, with no defaults for anything the
-process cannot safely guess. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+process cannot safely guess. See [docs/operations/CONFIGURATION.md](docs/operations/CONFIGURATION.md).
 
 ## Architecture at a glance
 
@@ -133,7 +133,7 @@ process cannot safely guess. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 - **Fusion** — Reciprocal Rank Fusion over ranks. No reranker, no model in the loop.
 - **Scoring** — retrieval finds what is relevant; metadata factors (authority,
   structure, subject) reorder inside a bounded prior, and a revoked regulation never
-  outranks the one that revoked it. [docs/SCORING.md](docs/SCORING.md).
+  outranks the one that revoked it. [docs/design/SCORING.md](docs/design/SCORING.md).
 
 ## Layout
 
@@ -151,21 +151,21 @@ dev_tools/       offline, operator-side: embedding, clustering, eval, fixtures
 
 | Doc | Contents |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | the three routing layers, the three arms, why there is no ANN index |
-| [docs/MCP_ENGINE.md](docs/MCP_ENGINE.md) | tool surface, request path, concurrency, the OOM guarantee |
-| [docs/TOOL_SURFACE.md](docs/TOOL_SURFACE.md) | what an agent may steer per request, and what the engine keeps |
-| [docs/SCORING.md](docs/SCORING.md) | the multi-factor model, the algorithm registry, pool expansion — and why viewpoints and consensus are dropped |
-| [docs/OUTPUT_CONTRACT.md](docs/OUTPUT_CONTRACT.md) | response schema, provenance, confidence |
-| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | every environment variable and what it costs |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | deploying, health, what each refusal means |
-| [docs/EMBEDDING.md](docs/EMBEDDING.md) | the vector space and how it is enforced |
-| [docs/HARDWARE.md](docs/HARDWARE.md) | measured memory, latency, concurrency, disk, scaling |
-| [docs/EVAL.md](docs/EVAL.md) | the harness that gates retrieval quality |
-| [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md) | what breaks silently, and what stops it |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | v0.2.0: staged accuracy targets on the regulation corpus |
-| [docs/BEIR.md](docs/BEIR.md) | public benchmark: Vera against pgvector and Qdrant on three BEIR sets |
-| [docs/SCALING.md](docs/SCALING.md) | from 20M rows to 100M across databases: two-level routing built, the rest designed |
-| [docs/STANDARDS_COMPLIANCE.md](docs/STANDARDS_COMPLIANCE.md) | mapping to the upstream standard |
+| [docs/design/ARCHITECTURE.md](docs/design/ARCHITECTURE.md) | the three routing layers, the three arms, why there is no ANN index |
+| [docs/design/MCP_ENGINE.md](docs/design/MCP_ENGINE.md) | tool surface, request path, concurrency, the OOM guarantee |
+| [docs/design/TOOL_SURFACE.md](docs/design/TOOL_SURFACE.md) | what an agent may steer per request, and what the engine keeps |
+| [docs/design/SCORING.md](docs/design/SCORING.md) | the multi-factor model, the algorithm registry, pool expansion — and why viewpoints and consensus are dropped |
+| [docs/design/OUTPUT_CONTRACT.md](docs/design/OUTPUT_CONTRACT.md) | response schema, provenance, confidence |
+| [docs/operations/CONFIGURATION.md](docs/operations/CONFIGURATION.md) | every environment variable and what it costs |
+| [docs/operations/OPERATIONS.md](docs/operations/OPERATIONS.md) | deploying, health, what each refusal means |
+| [docs/design/EMBEDDING.md](docs/design/EMBEDDING.md) | the vector space and how it is enforced |
+| [docs/operations/HARDWARE.md](docs/operations/HARDWARE.md) | measured memory, latency, concurrency, disk, scaling |
+| [docs/eval/EVAL.md](docs/eval/EVAL.md) | the harness that gates retrieval quality |
+| [docs/design/FAILURE_MODES.md](docs/design/FAILURE_MODES.md) | what breaks silently, and what stops it |
+| [docs/project/ROADMAP.md](docs/project/ROADMAP.md) | v0.2.0: staged accuracy targets on the regulation corpus |
+| [docs/eval/BEIR.md](docs/eval/BEIR.md) | public benchmark: Vera against pgvector and Qdrant on three BEIR sets |
+| [docs/operations/SCALING.md](docs/operations/SCALING.md) | from 20M rows to 100M across databases: two-level routing built, the rest designed |
+| [docs/project/STANDARDS_COMPLIANCE.md](docs/project/STANDARDS_COMPLIANCE.md) | mapping to the upstream standard |
 
 ## Where the corpus comes from — [Ravel](https://github.com/azzindani/Ravel)
 

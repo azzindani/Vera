@@ -26,7 +26,7 @@ use crate::identifier;
 pub struct Config {
     pub clusters_probed: usize,
     /// Parents searched first when the database carries a parent level (two-level
-    /// routing, `docs/SCALING.md` §2). `0` routes over every leaf even when it does.
+    /// routing, `docs/operations/SCALING.md` §2). `0` routes over every leaf even when it does.
     pub parents_probed: usize,
     /// Two levels only from this many leaf clusters. Below it every leaf is held and
     /// scanned: one level loses no routing recall, and its memory is small (846 leaves
@@ -55,7 +55,7 @@ pub struct Config {
     /// `year`, `chapter` and `article`, and a candidate whose metadata was
     /// never loaded cannot be reordered — so cutting to `top_k` before the
     /// fetch would mean factors could only ever re-rank the results that
-    /// already won (`docs/SCORING.md` §8).
+    /// already won (`docs/design/SCORING.md` §8).
     ///
     /// Bounds the fetch too: the fused union is at most `3 × per_arm_k`, and
     /// this caps it independently of that.
@@ -82,7 +82,7 @@ pub struct Config {
     ///
     /// ! `0.0` (off) by default, so every published number stays reproducible. At
     /// 5.0M rows `2.0` took that arm from 6.2 s to 1.4 s with the hit rate
-    /// unchanged on the 44 labelled queries (`docs/HARDWARE.md` §8.3); it applies
+    /// unchanged on the 44 labelled queries (`docs/operations/HARDWARE.md` §8.3); it applies
     /// to the `text` arm ONLY -- `pg_search`'s cost does not depend on the terms.
     pub text_min_idf: f32,
     /// Minimum cosine for the startup canary round-trip.
@@ -143,7 +143,7 @@ pub struct Config {
     /// ignored and reported. `0` turns the feature off. Each costs one more embedding
     /// and one more search.
     pub max_rewordings: usize,
-    /// Relative influence of each metadata factor (`docs/SCORING.md` §2).
+    /// Relative influence of each metadata factor (`docs/design/SCORING.md` §2).
     ///
     /// ! `Weights::OFF` is exactly the identity on the fused order, so this
     /// layer can be disabled in production without a rebuild.
@@ -786,7 +786,7 @@ impl Pipeline {
     /// ! Two levels: the nearest `parents_probed` parents in memory, then the nearest
     /// `clusters_probed` leaves among their children, ranked by Postgres. A leaf under a
     /// parent that was not probed cannot be chosen: that is the recall this trades for
-    /// an O(√k) resident set, measured in `docs/SCALING.md` §2.
+    /// an O(√k) resident set, measured in `docs/operations/SCALING.md` §2.
     async fn probe(&self, q: &[f32]) -> Result<Vec<(i32, f32)>, PipelineError> {
         if !self.two_level {
             return Ok(select_clusters(
@@ -949,7 +949,7 @@ impl Pipeline {
     }
 
     /// The workhorse · search under caller-supplied options
-    /// (`docs/TOOL_SURFACE.md`).
+    /// (`docs/design/TOOL_SURFACE.md`).
     ///
     /// ! Options **narrow**, never widen. `resolve` clamps every numeric field
     /// to the configured ceiling and records each clamp, so a caller that asks
@@ -1348,7 +1348,7 @@ impl Pipeline {
     /// Pull in other chunks of the regulations that ranked, and admit the ones
     /// that are relevant on their own evidence.
     ///
-    /// `docs/SCORING.md` §7. In 10% of labelled cases the engine held the right
+    /// `docs/design/SCORING.md` §7. In 10% of labelled cases the engine held the right
     /// regulation and returned the wrong clause of it; the right clause was
     /// never a candidate, so no amount of re-weighting reaches it.
     ///
@@ -1475,7 +1475,7 @@ impl Pipeline {
         }
     }
 
-    /// Reorder a pool on its metadata (`docs/SCORING.md` §2).
+    /// Reorder a pool on its metadata (`docs/design/SCORING.md` §2).
     ///
     /// ! `apply_floor` is false when the query named a regulation, and the
     /// floor is then skipped entirely — the same exemption the domain gate
@@ -1556,7 +1556,7 @@ impl Pipeline {
     /// Only a FULL revocation orders (`status == "revoked"`): a partially revoked
     /// regulation is partly in force, and its amender has no claim to outrank it. Nothing
     /// is removed, no score changes, and a revoked regulation whose revoker is not among the
-    /// candidates keeps its place (`docs/SCORING.md` §11).
+    /// candidates keeps its place (`docs/design/SCORING.md` §11).
     /// Is any ranking applied? "Factors off" must mean exactly the fused order, so the
     /// ordering rules (structure, currency) run only when this is true.
     fn ranking_on(applied: &contract::AppliedOptions) -> bool {
@@ -2049,7 +2049,7 @@ impl Pipeline {
     /// ! This loop is **not** the OOM guarantee, though it was documented as one.
     /// The store returns `(id, score)` rows under a `LIMIT`, so no shape of this
     /// loop puts a cluster in this process — measured peak RSS is flat across
-    /// `cluster_batch` (`docs/HARDWARE.md` §6a). What the loop decides is how
+    /// `cluster_batch` (`docs/operations/HARDWARE.md` §6a). What the loop decides is how
     /// many round trips the dense arm costs.
     ///
     /// ! `cluster_batch` is validated at startup, so the chunk size here cannot
@@ -2432,7 +2432,7 @@ pub enum PipelineError {
 /// ```
 ///
 /// which is not what happened and sends the reader to the wrong file. A refusal
-/// is the one message an operator reads under time pressure; `docs/OPERATIONS.md`
+/// is the one message an operator reads under time pressure; `docs/operations/OPERATIONS.md`
 /// asks every one of them to name the variable and the value.
 #[derive(Debug, thiserror::Error)]
 pub enum StartupError {
@@ -3846,7 +3846,7 @@ mod live {
     async fn the_response_serialises_with_success_first() {
         // ! serde_json runs with preserve_order. Without it keys sort
         // alphabetically and the contract's "success first" rule silently stops
-        // holding (`docs/OUTPUT_CONTRACT.md` §3).
+        // holding (`docs/design/OUTPUT_CONTRACT.md` §3).
         let p = pipeline(open_cfg()).await;
         let r = p
             .search_with("jalan", &contract::SearchOptions::default())

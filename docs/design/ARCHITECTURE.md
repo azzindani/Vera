@@ -5,6 +5,54 @@ How Vera is built. The tool contract is in `MCP_ENGINE.md`; the response schema 
 
 ---
 
+## 0. In one screen
+
+What is built is marked `[built]`; what was dropped is marked ✗.
+
+```
+LAYER 1  domain gate     → centroid similarity + lexical evidence; serve or refuse
+LAYER 2  k-means clusters → pick the 5 nearest centroids (held hot in the engine)
+LAYER 3  per-cluster scan → load CLUSTER_BATCH (default 1), flat halfvec scan, drop
+                            over chunk_vectors, stored in cluster order  [built]
+                          ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM, off
+                            by default: an arm at weight 0 is not run)
+                          ⊕ global exact-identifier path (routing bypassed)
+                          ⊕ region arm: BM25 within the region a question names
+                            (migration 0007)  [built]
+                          → RRF over RANKS → candidate pool
+SCORING  multi-factor     → relevance floor, then authority / structural / topical,
+                            the prior bounded inside the pool's own spread  [built]
+                          · the tables it reads are the CORPUS's, declared in
+                            corpus_meta.scoring_vocabulary  [built]
+                          · which weights apply is a NAMED ALGORITHM the caller
+                            selects; unknown name refused, unfitted not offered
+                            [built]
+                          · a factor is variable x transform x weight, DECLARED.
+                            The grammar is closed so 1+Sum(w) stays checkable;
+                            the combination rule is fixed  [built, SCORING.md §10]
+                          ✗ viewpoints · consensus — dropped, not pending. A
+                            bounded prior forces weight vectors to agree, so
+                            agreement measures nothing (docs/design/SCORING.md §5)
+EXPAND   opt-in           → siblings of a candidate, admitted by the same
+                            relevance gate, never merged unscored  [built, off by
+                            default]
+```
+
+- **Embedding:** one model, both ends. The **corpus declares** its model, width,
+  pooling and instruction in `corpus_meta`; the engine builds itself to match and
+  refuses to serve if a startup canary cannot reproduce the space. Nothing is compiled
+  in. `docs/design/EMBEDDING.md`.
+- **Store:** PostgreSQL + pgvector. Dense as `halfvec`, sparse as `sparsevec`, text as
+  `tsvector` ordered by a RUM index. **No global ANN index** — routing does the pruning.
+- **Fusion:** RRF over ranks, never over scores. No model reranker. Fusion yields a
+  **candidate pool**, ✗ a final ranking.
+- **Scoring:** six factor families, only two of which need retrieval. Weights are
+  fitted per query type against the eval set, never chosen. `docs/design/SCORING.md`.
+- **Containers:** stateless Rust engine · Postgres/pgvector+RUM · embedding server.
+- **Offline tools** live in `dev_tools/` and never touch the query path.
+
+---
+
 ## 1. The problem
 
 Retrieval over a large corpus is normally either accurate and heavy — a global ANN
@@ -82,9 +130,9 @@ set small.
 ! **That holds only if a cluster's rows are physically close.** `cluster_id` is assigned after ingest, so
 the ~2,000 rows of a cluster are scattered across the heap and its TOAST. Measured on the 5.0M replica, a
 cold probe of 5 clusters took 5,477 ms in the heap and 91 ms from a table stored in cluster order
-(`docs/HARDWARE.md` §8.2-8.3). **Built since 2026-11-14:** Ravel's `db prepare` writes
+(`docs/operations/HARDWARE.md` §8.2-8.3). **Built since 2026-11-14:** Ravel's `db prepare` writes
 `chunk_vectors (cluster_id, id, dense)` sorted by cluster with `dense` stored PLAIN, and the dense arm
-reads it when present -- 7,622 ms -> 54 ms cold on the 1.7M corpus (`docs/HARDWARE.md` §9).
+reads it when present -- 7,622 ms -> 54 ms cold on the 1.7M corpus (`docs/operations/HARDWARE.md` §9).
 
 `CLUSTERS_PROBED` is the central dial. It trades recall against latency — and
 notably **not** against RAM, because of §4.

@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "The algorithm registry · docs/SCORING.md §4, loaded via ALGORITHMS_PATH.",
+    "The algorithm registry · docs/design/SCORING.md §4, loaded via ALGORITHMS_PATH.",
     "",
     "Two rules govern what may be added here, and both are enforced at startup",
     "by contract::algorithms rather than by review:",

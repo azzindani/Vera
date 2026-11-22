@@ -100,7 +100,7 @@ CREATE INDEX IF NOT EXISTS chunks_identifier_idx
     ON chunks (regulation_type, regulation_number, year);
 
 -- ---------------------------------------------------------------------------
--- doc_status · written by Ravel (docs/RELATIONS.md), read by the engine.
+-- doc_status · written by Ravel (docs/pipeline/RELATIONS.md), read by the engine.
 --
 -- ! Ravel's schema takes precedence where the two differ. This copy exists so the
 -- fixture and a fresh clone have the table the engine probes for; a corpus without it

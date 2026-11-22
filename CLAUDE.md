@@ -39,7 +39,7 @@ Vera's job:    embed → gate → route → search → fuse → SCORE → return
 Retrieval finds what is relevant; **scoring decides what matters**. Legal results
 cannot be ordered on text similarity alone — a district regulation and the national
 law it implements both match the query, and only metadata separates them. The
-multi-factor model is in `docs/SCORING.md`, and the algorithms a caller may
+multi-factor model is in `docs/design/SCORING.md`, and the algorithms a caller may
 select from are declared in a file, ✗ compiled in (`config/algorithms.json`).
 
 Vera **never calls an LLM**. It does not summarize, rerank with a model, or interpret.
@@ -50,90 +50,42 @@ keeps the engine stateless, light and replicable.
 
 ## 3. Architecture in one screen
 
-Full detail in `docs/ARCHITECTURE.md`.
+The whole engine, with what is built and what was dropped, is `ARCHITECTURE.md` §0. In
+short:
 
-```
-LAYER 1  domain gate     → centroid similarity + lexical evidence; serve or refuse
-LAYER 2  k-means clusters → pick the 5 nearest centroids (held hot in the engine)
-LAYER 3  per-cluster scan → load CLUSTER_BATCH (default 1), flat halfvec scan, drop
-                            over chunk_vectors, stored in cluster order  [built]
-                          ⊕ global sparse (BM25) ⊕ global text (tsvector/RUM, off
-                            by default: an arm at weight 0 is not run)
-                          ⊕ global exact-identifier path (routing bypassed)
-                          ⊕ region arm: BM25 within the region a question names
-                            (migration 0007)  [built]
-                          → RRF over RANKS → candidate pool
-SCORING  multi-factor     → relevance floor, then authority / structural / topical,
-                            the prior bounded inside the pool's own spread  [built]
-                          · the tables it reads are the CORPUS's, declared in
-                            corpus_meta.scoring_vocabulary  [built]
-                          · which weights apply is a NAMED ALGORITHM the caller
-                            selects; unknown name refused, unfitted not offered
-                            [built]
-                          · a factor is variable x transform x weight, DECLARED.
-                            The grammar is closed so 1+Sum(w) stays checkable;
-                            the combination rule is fixed  [built, SCORING.md §10]
-                          ✗ viewpoints · consensus — dropped, not pending. A
-                            bounded prior forces weight vectors to agree, so
-                            agreement measures nothing (docs/SCORING.md §5)
-EXPAND   opt-in           → siblings of a candidate, admitted by the same
-                            relevance gate, never merged unscored  [built, off by
-                            default]
-```
-
-- **Embedding:** one model, both ends. The **corpus declares** its model, width,
-  pooling and instruction in `corpus_meta`; the engine builds itself to match and
-  refuses to serve if a startup canary cannot reproduce the space. Nothing is compiled
-  in. `docs/EMBEDDING.md`.
+- **Gate → route → search → fuse → score.** A domain gate serves or refuses; k-means
+  routing picks the clusters the dense arm scans; global sparse, exact-identifier and
+  region arms run beside it; RRF over ranks makes a candidate pool; the multi-factor model
+  orders it, after a relevance floor, by a **named algorithm** declared in `config/`.
+- **Embedding:** one model, both ends, declared by the corpus in `corpus_meta`; a startup
+  canary refuses to serve a space it cannot reproduce. (`EMBEDDING.md`)
 - **Store:** PostgreSQL + pgvector. Dense as `halfvec`, sparse as `sparsevec`, text as
-  `tsvector` ordered by a RUM index. **No global ANN index** — routing does the pruning.
-- **Fusion:** RRF over ranks, never over scores. No model reranker. Fusion yields a
-  **candidate pool**, ✗ a final ranking.
-- **Scoring:** six factor families, only two of which need retrieval. Weights are
-  fitted per query type against the eval set, never chosen. `docs/SCORING.md`.
+  `tsvector` ordered by RUM. **No global ANN index**: routing does the pruning.
 - **Containers:** stateless Rust engine · Postgres/pgvector+RUM · embedding server.
-- **Offline tools** live in `dev_tools/` and never touch the query path.
+  Offline tools live in `dev_tools/` and never touch the query path.
 
 ---
 
-## 4. Repository structure
+## 4. Where things are
 
-```
-vera/
-├── CLAUDE.md                   ← you are here
-├── README.md
-├── .env.example                ← every knob, with working values
-├── docker-compose.yml          ← the stack; overlay docker-compose.vps.yml for the target profile
-│
-├── crates/
-│   ├── contract/               ← domain types + the wire contract. Zero I/O, zero sibling deps.
-│   ├── embed/                  ← the embedding provider trait, HTTP client, space validation
-│   ├── store/                  ← Postgres access: corpus meta, centroids, the three arms
-│   ├── engine/                 ← pure logic: routing, RRF fusion, trust
-│   └── mcp/                    ← the binary: settings, transports, tool dispatch
-│
-├── migrations/                 ← post-ingest SQL, applied BY HAND. ✗ the schema:
-│                               dev_tools/pre_embed/schema.sql is the source of truth
-├── docker/                     ← Dockerfile.engine, Dockerfile.db (pgvector + RUM)
-│
-├── docs/                       ← how the running system works
-│   ├── ARCHITECTURE.md  MCP_ENGINE.md  OUTPUT_CONTRACT.md  TOOL_SURFACE.md
-│   ├── CONFIGURATION.md  OPERATIONS.md  HARDWARE.md  SCORING.md
-│   ├── EMBEDDING.md  EVAL.md  FAILURE_MODES.md  STANDARDS_COMPLIANCE.md
-│   ├── SCALING.md              ← 20M → 100M across databases: designed, ✗ built
-│   ├── BEIR.md                 ← public benchmark vs pgvector and Qdrant: measured
-│   ├── ROADMAP.md              ← v0.2.0 accuracy targets, staged; the bar every change is held to
-│
-└── dev_tools/                  ← offline, operator-side. Never on the query path.
-    ├── pre_embed/              ← ingest → chunk → embed → load
-    ├── cluster_maint/          ← k-means, routing recall
-    ├── eval/                   ← the harness that gates quality
-    └── fixtures/               ← a tiny corpus so CI can run integration tests
-```
+| path | holds |
+|---|---|
+| `crates/` | `contract/` (domain types + wire contract; zero I/O), `embed/` (provider trait, space validation), `store/` (Postgres: corpus meta, centroids, the arms), `engine/` (routing, fusion, factors), `mcp/` (the binary: settings, transports, tools) |
+| `config/` | the algorithms (`algorithms.json`, `algorithms.no_prior.json`) and scoring vocabularies, mounted read-only |
+| `migrations/` | post-ingest SQL, applied **by hand**; ✗ the schema, which is `dev_tools/pre_embed/schema.sql` |
+| `docker/`, `docker-compose*.yml` | the images; the stack, its VPS profile, and the eval overlay |
+| `dev_tools/` | offline: `pre_embed/`, `cluster_maint/`, `eval/` (the harness that gates quality, `corpora.json`), `fixtures/` |
+| `docs/` | `design/`, `operations/`, `eval/`, `project/`: **[`docs/README.md`](docs/README.md) is the index** |
+| `.env.example` | every knob, with working values |
+
+A doc is named the same everywhere, so `SCORING.md` §3 means `docs/design/SCORING.md` §3.
+Sections here are cited across the code as `CLAUDE.md` §5.n (a principle) and §7.n (a
+never-rule): keep their numbers when editing.
 
 Language split follows the upstream rule "libraries dictate language": the engine is
 Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
-(transformers, GPU, k-means).
+(transformers, GPU, k-means). The corpus is built by Ravel, which writes the schema
+Vera reads.
 
 ---
 
@@ -148,7 +100,7 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
    sparse and text arms scan globally and an exact identifier bypasses routing entirely.
    Measured at 14× the corpus: the dense arm goes 46 → 57 ms while sparse goes 150 →
    6,282 ms. Routing is proven; **the global arms are what does not scale**, and that is
-   the accepted cost of the guarantee, ✗ an oversight (`docs/HARDWARE.md` §6).
+   the accepted cost of the guarantee, ✗ an oversight (`docs/operations/HARDWARE.md` §6).
 4. **OOM is impossible by construction, and the reason is measured.** The engine's
    **per-request** cost is flat — it never materialises the corpus, every arm returns
    `(id, score)` rows under a `LIMIT`, so Postgres does the scanning and the
@@ -156,7 +108,7 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
    `CLUSTER_BATCH` 1/2/5, and 39 → 42 MB from idle to a 12-way burst at 5.1M rows.
    ! Its **fixed** cost is O(k), ✗ constant: centroids are held hot and `k ∝ n`, so
    the engine's floor is 9 MB at 355K and 39 MB at 5.1M, before any query.
-   `docs/HARDWARE.md` §2.
+   `docs/operations/HARDWARE.md` §2.
 5. **Provenance is captured at ingestion and immutable.** Never synthesize a source link
    at query time; omit what ingestion did not record. Immutability is a database
    trigger (`migrations/0002_provenance_immutable.sql`), ✗ a convention — and it is only true for a corpus the
@@ -177,7 +129,7 @@ Rust (tiny stateless footprint, tokio concurrency); the offline tools are Python
 
 ## 6. Tool surface (agent-facing, read-only, 6 of ≤ 8 tools)
 
-Schemas in `docs/MCP_ENGINE.md`; per-request arguments in `docs/TOOL_SURFACE.md`. The read-only analog of the upstream
+Schemas in `docs/design/MCP_ENGINE.md`; per-request arguments in `docs/design/TOOL_SURFACE.md`. The read-only analog of the upstream
 LOCATE→INSPECT→PATCH→VERIFY loop is **ROUTE → SEARCH → READ → VERIFY**.
 
 | Tool | Role | Returns |
@@ -226,5 +178,5 @@ and on failure `error` + `hint`.
 ---
 
 *Upstream standard: `https://github.com/azzindani/Standards/blob/main/local_mcp/STANDARDS.md`.*
-*Where this file or `docs/STANDARDS_COMPLIANCE.md` conflicts with it, this project takes
+*Where this file or `docs/project/STANDARDS_COMPLIANCE.md` conflicts with it, this project takes
 precedence, per the standard's own precedence rule.*

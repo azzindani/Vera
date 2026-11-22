@@ -8,7 +8,7 @@
 //! ! This is an **ordering rule between two members of the pool**, ✗ a prior. It never
 //! multiplies a score by a number nobody measured, never removes a result, and does
 //! nothing for a revoked regulation whose revoker did not make the pool: that one keeps its
-//! place and is labelled instead. `docs/SCORING.md` §11 records why it is not a weight.
+//! place and is labelled instead. `docs/design/SCORING.md` §11 records why it is not a weight.
 //!
 //! Pure: documents and revokers in, an order out. No database, no I/O.
 

@@ -370,7 +370,7 @@ async fn a_canary_sample_is_available_at_the_declared_width() {
 
 /// a runaway query is killed rather than holding its permit
 ///
-/// ! The third concurrency bound (`docs/FAILURE_MODES.md` §12). Without it a
+/// ! The third concurrency bound (`docs/design/FAILURE_MODES.md` §12). Without it a
 /// slow query holds its semaphore permit for as long as it runs, and four of
 /// those wedge the server at `permits_available: 0` forever. Reachable, ✗
 /// theoretical: the text arm ORs every lexeme of its input, and a query built

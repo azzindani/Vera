@@ -5,7 +5,7 @@
 # MKL's SGEMM faults. See dev_tools/pre_embed/server.py's own header.
 #
 # ! More importantly, it is what the corpus was re-embedded with on 2026-09-19
-# (docs/EMBEDDING.md §5d). The TEI image the compose file used before produced a
+# (docs/design/EMBEDDING.md §5d). The TEI image the compose file used before produced a
 # space this corpus no longer lives in -- 2.6% Recall@5 against 79.5%. An engine
 # pointed at TEI now fails its startup canary and refuses to serve, which is the
 # guard working, and is also why this image has to exist in the repository
@@ -45,7 +45,7 @@ COPY dev_tools/pre_embed/server.py /app/server.py
 # ! bfloat16, ✗ the file's own float32 default. float32 needs 2,553 MB of anon
 # memory against the 1,280 MB docker-compose.vps.yml budgets, so the container
 # is SIGKILLed by its first request. bfloat16 needs 296 MB and measures the same
-# recall (docs/HARDWARE.md §2). The canary is what licenses the change.
+# recall (docs/operations/HARDWARE.md §2). The canary is what licenses the change.
 ENV MODEL_DIR=/data/model \
     DTYPE=bfloat16 \
     PORT=80
