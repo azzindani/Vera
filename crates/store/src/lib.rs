@@ -200,12 +200,51 @@ pub fn connect(
     max_size: usize,
     statement_timeout_ms: u64,
 ) -> Result<Pool, StoreError> {
+    connect_in(conn_str, None, max_size, statement_timeout_ms)
+}
+
+/// [`connect`], with every connection's `search_path` set to `schema, public`.
+///
+/// ! A domain is `(database, schema)` (`docs/operations/SCALING.md` §4a): one database can
+/// hold several corpora, a schema each. Every query here is unqualified, so the path is
+/// the only thing that says which corpus a pool reads. `public` stays on it, after the
+/// schema, because the extensions' types (`halfvec`, `sparsevec`) live there.
+///
+/// # Errors
+/// An unparseable connection string, a schema that is not a plain lower-case name, or a
+/// pool that cannot be built.
+pub fn connect_in(
+    conn_str: &str,
+    schema: Option<&str>,
+    max_size: usize,
+    statement_timeout_ms: u64,
+) -> Result<Pool, StoreError> {
     let mut pg_cfg: tokio_postgres::Config = conn_str.parse()?;
+    let mut mine = Vec::new();
+    if let Some(name) = schema {
+        // ! Checked, ✗ quoted: the name goes into a connection option, where a space or a
+        // comma would silently become a second option or a second schema.
+        let plain = !name.is_empty()
+            && name.len() < 64
+            && name.starts_with(|c: char| c.is_ascii_lowercase() || c == '_')
+            && name
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
+        if !plain {
+            return Err(StoreError::Pool(format!(
+                "schema {name:?}: lower-case letters, digits and _ only"
+            )));
+        }
+        mine.push(format!("-c search_path={name},public"));
+    }
     if statement_timeout_ms > 0 {
+        mine.push(format!("-c statement_timeout={statement_timeout_ms}"));
+    }
+    if !mine.is_empty() {
         // ! Appended, ✗ replacing. A connection string may already carry
         // options an operator set deliberately.
         let existing = pg_cfg.get_options().unwrap_or_default().to_owned();
-        let mine = format!("-c statement_timeout={statement_timeout_ms}");
+        let mine = mine.join(" ");
         let merged = if existing.is_empty() {
             mine
         } else {

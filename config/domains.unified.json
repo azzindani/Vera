@@ -1,0 +1,17 @@
+{
+  "_doc": "Unified mode (docs/operations/SCALING.md §4a): one database, a schema per corpus, one engine. Each entry names the schema its corpus lives in, the BM25 vocabulary Ravel wrote beside its bundle (mounted read-only at /bundles from BUNDLES_DIR), and the algorithms it is ranked by. `dsn_env` (default DATABASE_URL) names the variable holding the connection string, never the string: it carries a password. Separated mode is the same list with one dsn_env per database.",
+  "domains": [
+    {
+      "name": "id_reg",
+      "schema": "id_reg",
+      "vocab": "/bundles/bundle_id_reg_markdown_v6/corpus.bm25.json",
+      "algorithms": "/cfg/algorithms.json"
+    },
+    {
+      "name": "ca_laws",
+      "schema": "ca_laws",
+      "vocab": "/bundles/bundle_ca_laws_v2/corpus.bm25.json",
+      "algorithms": "/cfg/algorithms.no_prior.json"
+    }
+  ]
+}

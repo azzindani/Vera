@@ -142,7 +142,10 @@ def main() -> None:
     # ! A domain is (database, schema) (`SCALING.md` §4a). Unified mode names a schema; the
     # connection's search path reaches it, `public` after it for the extensions' types.
     schema = db.get("schema")
-    engine_options = f"?options=-csearch_path%3D{schema},public" if schema else ""
+    # ! `domains` serves every domain a file in config/ lists, one engine over all of
+    # them; the schema is then only the harness's, to resolve this question set's labels.
+    domains = corpus.get("domains")
+    engine_options = f"?options=-csearch_path%3D{schema},public" if schema and not domains else ""
     harness_options = f" options='-c search_path={schema},public'" if schema else ""
     engine_env = dict(
         os.environ,
@@ -153,6 +156,7 @@ def main() -> None:
         VOCAB_DIR=str(bundle),
         BM25_VOCAB="/vocab/corpus.bm25.json",
         ALGORITHMS_PATH=f"/cfg/{corpus['algorithms']}",
+        **({"DOMAINS_FILE": f"/cfg/{domains}", "BUNDLES_DIR": str(ravel / "work")} if domains else {}),
         **corpus.get("engine", {}),
         **dict(s.split("=", 1) for s in args.set),
     )

@@ -9,6 +9,7 @@
 //! the full table and `.env.example` for a working set.
 
 mod bm25;
+mod domains;
 mod http;
 mod identifier;
 mod pipeline;
@@ -126,6 +127,18 @@ fn load_vocabulary() -> Result<engine::Vocabulary, ConfigError> {
 /// fitted way to rank needs no file, and requiring one would mean every
 /// deployment carries a copy of numbers the binary already has.
 fn load_algorithms(env_weights: &engine::Weights) -> Result<contract::Registry, ConfigError> {
+    load_algorithms_from(
+        std::env::var("ALGORITHMS_PATH").ok().as_deref(),
+        env_weights,
+    )
+}
+
+/// [`load_algorithms`] from a named file, for a domain whose `DOMAINS_FILE` entry names
+/// its own: Indonesia ranks by `balanced`, a corpus that declares no prior by `no_prior`.
+fn load_algorithms_from(
+    path: Option<&str>,
+    env_weights: &engine::Weights,
+) -> Result<contract::Registry, ConfigError> {
     let fallback = contract::Registry::builtin(contract::FactorWeights {
         relevance_floor: env_weights.relevance_floor,
         authority: env_weights.authority,
@@ -134,10 +147,7 @@ fn load_algorithms(env_weights: &engine::Weights) -> Result<contract::Registry, 
         completeness: env_weights.completeness,
         topical: env_weights.topical,
     });
-    let Some(path) = std::env::var("ALGORITHMS_PATH")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-    else {
+    let Some(path) = path.filter(|v| !v.trim().is_empty()) else {
         // ! Validated too. `builtin` is assembled from the FACTOR_* variables,
         // so an operator can push the prior bound past MAX_PRIOR_BOUND without
         // ever writing a registry file -- and `.env.example` itself shipped
@@ -191,6 +201,9 @@ struct Settings {
     database_url: String,
     embed_endpoint: String,
     bm25_vocab: std::path::PathBuf,
+    /// `DOMAINS_FILE`: the domains to serve, when more than the one `DATABASE_URL` names
+    /// (`docs/operations/SCALING.md` §4a). `None` serves exactly that one, as before.
+    domains_file: Option<std::path::PathBuf>,
     max_concurrency: usize,
     transport: Transport,
     http_addr: String,
@@ -212,6 +225,10 @@ impl Settings {
             database_url: required("DATABASE_URL")?,
             embed_endpoint: required("EMBED_ENDPOINT")?,
             bm25_vocab: required("BM25_VOCAB")?.into(),
+            domains_file: std::env::var("DOMAINS_FILE")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+                .map(|v| v.trim().into()),
 
             max_concurrency: parsed("MAX_CONCURRENCY", "positive integer", 4usize)?,
             transport: parsed("TRANSPORT", "transport (stdio|http)", Transport::Stdio)?,
@@ -464,56 +481,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         contract::DEFAULT_ALGORITHM
     );
 
-    // ! `ARM_FANOUT` connections per permitted search: the dense, sparse and text
-    // arms run concurrently (`pipeline.rs::arms`), so one search can hold three.
-    // +2: plus the startup canary and health probes, which must not have to wait
-    // behind a full queue.
-    let pool = store::connect(
-        &s.database_url,
-        s.max_concurrency * ARM_FANOUT + 2,
-        s.statement_timeout,
-    )?;
-    let ops = store::SearchOps::new(pool);
-
-    // The corpus decides the vector space; the provider is built to match it.
-    let meta = ops.corpus_meta().await?;
-    log!(
-        "corpus {} \u{b7} {} @ {}d \u{b7} {} pooling{}",
-        meta.id,
-        meta.dense_model,
-        meta.dense_dim,
-        meta.dense_pooling,
-        if meta.dense_instruction.is_some() {
-            " \u{b7} instruction-aware"
-        } else {
-            ""
-        }
-    );
-
-    let dim = usize::try_from(meta.dense_dim).unwrap_or(0);
-    let provider = Arc::new(embed::HttpProvider::new(
-        &s.embed_endpoint,
-        &meta.dense_model,
-        dim,
-    )?);
-    let vectorizer = bm25::QueryVectorizer::load(&s.bm25_vocab)?;
-
-    let pipe = Arc::new(
-        Pipeline::new(
-            ops,
-            provider,
-            vectorizer,
-            &meta.dense_model.clone(),
-            s.pipeline.clone(),
-        )
-        .await?,
-    );
-    log!(
-        "ready \u{b7} {} clusters, probing {} \u{b7} concurrency {}",
-        pipe.cluster_count(),
-        s.pipeline.clusters_probed,
-        s.max_concurrency
-    );
+    let (domain_list, registry) = open_domains(&s).await?;
+    let domain_list = Arc::new(domain_list);
 
     // ! Bounded concurrency (`CLAUDE.md` \u{a7}7.6). Peak RAM is fixed costs plus
     // this ceiling times the per-request ceiling, and both terms are bounded.
@@ -530,7 +499,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             // one; the bound has to be on TIME as well as on depth, or
             // backpressure never actually reaches the client.
             let server = Arc::new(Server {
-                pipe,
+                domains: domain_list.clone(),
+                registry,
                 permits,
                 queue_wait: Some(s.queue_wait),
                 limits,
@@ -549,7 +519,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         // served.
         Transport::Stdio => {
             let server = Arc::new(Server {
-                pipe,
+                domains: domain_list.clone(),
+                registry,
                 permits,
                 queue_wait: None,
                 limits,
@@ -559,6 +530,124 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+/// Every domain `DOMAINS_FILE` lists, or the one `DATABASE_URL` names when it is unset,
+/// opened and checked; with the algorithms they offer between them.
+async fn open_domains(
+    s: &Settings,
+) -> Result<(Vec<domains::Domain>, contract::Registry), Box<dyn std::error::Error>> {
+    // ! One entry, ✗ a list, when no DOMAINS_FILE is set: the deployment that existed
+    // before domains did, served by the same code path.
+    let entries = match &s.domains_file {
+        None => vec![domains::Entry {
+            name: String::new(),
+            schema: None,
+            vocab: s.bm25_vocab.clone(),
+            algorithms: None,
+            dsn_env: "DATABASE_URL".to_owned(),
+        }],
+        Some(path) => {
+            let body = std::fs::read_to_string(path)
+                .map_err(|e| format!("DOMAINS_FILE={} \u{b7} {e}", path.display()))?;
+            domains::parse(&body)
+                .map_err(|e| format!("DOMAINS_FILE={} \u{b7} {e}", path.display()))?
+        }
+    };
+    let mut opened: Vec<domains::Domain> = Vec::with_capacity(entries.len());
+    let mut provider: Option<(Arc<embed::HttpProvider>, String, i32)> = None;
+    for entry in &entries {
+        opened.push(open_domain(s, entry, &mut provider).await?);
+    }
+    let registry = domains::merged_registry(&opened);
+    Ok((opened, registry))
+}
+
+/// One domain: its pool, pinned to its schema; its corpus's declaration; its canary.
+async fn open_domain(
+    s: &Settings,
+    entry: &domains::Entry,
+    provider: &mut Option<(Arc<embed::HttpProvider>, String, i32)>,
+) -> Result<domains::Domain, Box<dyn std::error::Error>> {
+    let dsn = if entry.dsn_env == "DATABASE_URL" {
+        s.database_url.clone()
+    } else {
+        std::env::var(&entry.dsn_env)
+            .map_err(|_| format!("{} is not set \u{b7} DOMAINS_FILE names it", entry.dsn_env))?
+    };
+    // ! `ARM_FANOUT` connections per permitted search: the dense, sparse and text
+    // arms run concurrently (`pipeline.rs::arms`), so one search can hold three.
+    // +2: plus the startup canary and health probes, which must not have to wait
+    // behind a full queue.
+    let pool = store::connect_in(
+        &dsn,
+        entry.schema.as_deref(),
+        s.max_concurrency * ARM_FANOUT + 2,
+        s.statement_timeout,
+    )?;
+    let ops = store::SearchOps::new(pool);
+
+    // The corpus decides the vector space; the provider is built to match it.
+    let meta = ops.corpus_meta().await?;
+    log!(
+        "corpus {}{} \u{b7} {} @ {}d \u{b7} {} pooling{}",
+        meta.id,
+        entry
+            .schema
+            .as_deref()
+            .map(|x| format!(" (schema {x})"))
+            .unwrap_or_default(),
+        meta.dense_model,
+        meta.dense_dim,
+        meta.dense_pooling,
+        if meta.dense_instruction.is_some() {
+            " \u{b7} instruction-aware"
+        } else {
+            ""
+        }
+    );
+
+    // ! One provider for every domain, because they must share one space: a second
+    // space needs its own embedder, which `SCALING.md` §4 designs and this does not
+    // build. Refused at startup, ✗ embedded with the wrong model (§7.7).
+    let shared = if let Some((p, model, dim)) = provider.as_ref() {
+        if *model != meta.dense_model || *dim != meta.dense_dim {
+            return Err(format!(
+                "domain {} declares {} @ {}d, the first declares {model} @ {dim}d \u{b7} \
+                 one engine serves one vector space",
+                meta.id, meta.dense_model, meta.dense_dim
+            )
+            .into());
+        }
+        p.clone()
+    } else {
+        let dim = usize::try_from(meta.dense_dim).unwrap_or(0);
+        let p = Arc::new(embed::HttpProvider::new(
+            &s.embed_endpoint,
+            &meta.dense_model,
+            dim,
+        )?);
+        *provider = Some((p.clone(), meta.dense_model.clone(), meta.dense_dim));
+        p
+    };
+    let vectorizer = bm25::QueryVectorizer::load(&entry.vocab)?;
+    let mut cfg = s.pipeline.clone();
+    if entry.algorithms.is_some() {
+        cfg.algorithms = load_algorithms_from(entry.algorithms.as_deref(), &cfg.factor_weights)?;
+    }
+    let pipe =
+        Arc::new(Pipeline::new(ops, shared, vectorizer, &meta.dense_model.clone(), cfg).await?);
+    log!(
+        "ready \u{b7} {} clusters, probing {} \u{b7} concurrency {}",
+        pipe.cluster_count(),
+        s.pipeline.clusters_probed,
+        s.max_concurrency
+    );
+    let name = if entry.name.is_empty() {
+        meta.id.clone()
+    } else {
+        entry.name.clone()
+    };
+    Ok(domains::Domain { name, pipe })
+}
 async fn serve_stdio(server: &Server) -> Result<(), Box<dyn std::error::Error>> {
     let mut lines = BufReader::new(tokio::io::stdin()).lines();
     let mut stdout = tokio::io::stdout();
@@ -590,7 +679,10 @@ async fn serve_stdio(server: &Server) -> Result<(), Box<dyn std::error::Error>> 
 /// about a tool call is identical either way, which is the only reason an eval
 /// harness driving stdio says anything about the HTTP deployment.
 pub(crate) struct Server {
-    pub(crate) pipe: Arc<Pipeline>,
+    /// What is served: one domain without `DOMAINS_FILE`, as many as it lists with it.
+    pub(crate) domains: Arc<Vec<domains::Domain>>,
+    /// Every domain's algorithms, merged: what `tools/list` advertises.
+    pub(crate) registry: contract::Registry,
     pub(crate) permits: Arc<Semaphore>,
     /// How long a call may wait for a permit. `None` waits forever, which is
     /// correct only for a serial transport.
@@ -619,7 +711,7 @@ impl Server {
             }
             protocol::Route::ToolsList => Some(protocol::ok(
                 id.as_ref(),
-                &json!({ "tools": tools::definitions(self.pipe.algorithms()) }),
+                &json!({ "tools": tools::definitions(&self.registry) }),
             )),
             protocol::Route::ToolsCall(params) => {
                 // ! The permit is taken BEFORE dispatch and dropped after, so
@@ -628,7 +720,7 @@ impl Server {
                 let Some(permit) = self.admit().await else {
                     return Some(protocol::busy(id.as_ref(), self.queue_wait));
                 };
-                let out = dispatch(&self.pipe, &params, self.limits).await;
+                let out = dispatch(&self.domains, &self.registry, &params, self.limits).await;
                 drop(permit);
                 Some(protocol::ok(id.as_ref(), &protocol::tool_content(&out)))
             }
@@ -664,23 +756,181 @@ async fn admit_within(
     }
 }
 
-async fn dispatch(pipe: &Pipeline, params: &Value, limits: Limits) -> Value {
+async fn dispatch(
+    domains: &[domains::Domain],
+    registry: &contract::Registry,
+    params: &Value,
+    limits: Limits,
+) -> Value {
     let name = params.get("name").and_then(Value::as_str).unwrap_or("");
     let args = params.get("arguments").cloned().unwrap_or(json!({}));
 
-    match name {
-        "list_domains" => list_domains(pipe),
-        "list_algorithms" => list_algorithms(pipe),
-        "search_knowledge" => search_knowledge(pipe, &args).await,
-        "read_chunk" => read_chunk(pipe, &args, limits).await,
-        "get_provenance" => get_provenance(pipe, &args, limits).await,
-        "explain_routing" => explain_routing(pipe, &args).await,
-        other => tools::error(
-            "tools/call",
-            &format!("unknown tool: {other}"),
-            "call tools/list to see the available tools",
-        ),
+    // ! One domain is the deployment that existed before domains did, and it is served
+    // by exactly the code it was: no gate is asked twice, no reply is rewritten.
+    if let [only] = domains {
+        let pipe = &only.pipe;
+        return match name {
+            "list_domains" => list_domains(pipe),
+            "list_algorithms" => list_algorithms(pipe.algorithms()),
+            "search_knowledge" => search_knowledge(pipe, &args).await,
+            "read_chunk" => read_chunk(pipe, &args, limits).await,
+            "get_provenance" => get_provenance(pipe, &args, limits).await,
+            "explain_routing" => explain_routing(pipe, &args).await,
+            other => unknown_tool(other),
+        };
     }
+    match name {
+        "list_domains" => list_all_domains(domains),
+        "list_algorithms" => list_algorithms(registry),
+        "search_knowledge" => {
+            let Some(q) = args.get("query").and_then(Value::as_str) else {
+                return search_knowledge(&domains[0].pipe, &args).await;
+            };
+            let verdicts = domains::gates(domains, q).await;
+            let mut out = search_knowledge(&verdicts[0].domain.pipe, &args).await;
+            note(&mut out, &verdicts);
+            out
+        }
+        "explain_routing" => {
+            let Some(q) = args.get("query").and_then(Value::as_str) else {
+                return explain_routing(&domains[0].pipe, &args).await;
+            };
+            let verdicts = domains::gates(domains, q).await;
+            let mut out = explain_routing(&verdicts[0].domain.pipe, &args).await;
+            note(&mut out, &verdicts);
+            if let Some(obj) = out.as_object_mut() {
+                obj.insert(
+                    "domains".into(),
+                    verdicts
+                        .iter()
+                        .map(|v| {
+                            json!({
+                                "domain": v.domain.name,
+                                "centroid_similarity": v.similarity,
+                                "would_serve": v.serves,
+                                "gate_failed": v.failed,
+                            })
+                        })
+                        .collect(),
+                );
+            }
+            out
+        }
+        "read_chunk" => {
+            let Some(id) = args.get("id").and_then(Value::as_str) else {
+                return read_chunk(&domains[0].pipe, &args, limits).await;
+            };
+            match holder(domains, id).await {
+                Ok(Some(d)) => read_chunk(&d.pipe, &args, limits).await,
+                Ok(None) => read_chunk(&domains[0].pipe, &args, limits).await,
+                Err(e) => e,
+            }
+        }
+        "get_provenance" => get_provenance_all(domains, &args, limits).await,
+        other => unknown_tool(other),
+    }
+}
+
+fn unknown_tool(other: &str) -> Value {
+    tools::error(
+        "tools/call",
+        &format!("unknown tool: {other}"),
+        "call tools/list to see the available tools",
+    )
+}
+
+/// Put which domain answered, and how the others judged the query, first in `progress`.
+fn note(out: &mut Value, verdicts: &[domains::Verdict<'_>]) {
+    let line = Value::String(domains::describe(verdicts));
+    if let Some(progress) = out.get_mut("progress").and_then(Value::as_array_mut) {
+        progress.insert(0, line);
+    } else if let Some(obj) = out.as_object_mut() {
+        obj.insert("progress".into(), json!([line]));
+    }
+}
+
+/// The one domain holding chunk `id`, if any.
+///
+/// ! Two is an error, ✗ the first: an id the engine cannot attribute to one source is a
+/// provenance it would be guessing (`CLAUDE.md` §7.8).
+async fn holder<'a>(
+    domains: &'a [domains::Domain],
+    id: &str,
+) -> Result<Option<&'a domains::Domain>, Value> {
+    let mut found = None;
+    for d in domains {
+        match d.pipe.provenance(&[id.to_owned()]).await {
+            Ok(rows) if !rows.is_empty() => {
+                if let Some(first) = found.replace(d) {
+                    return Err(tools::error(
+                        "read_chunk",
+                        &format!("chunk {id} is in domains {} and {}", first.name, d.name),
+                        "an id must name one source · report this corpus pair",
+                    ));
+                }
+            }
+            Ok(_) => {}
+            Err(e) => {
+                return Err(tools::error(
+                    "read_chunk",
+                    &e.to_string(),
+                    "check the database",
+                ));
+            }
+        }
+    }
+    Ok(found)
+}
+
+fn list_all_domains(domains: &[domains::Domain]) -> Value {
+    let rows: Vec<Value> = domains
+        .iter()
+        .map(|d| {
+            let m = d.pipe.corpus();
+            json!({
+                "id": d.name,
+                "description": format!(
+                    "{} embedded with {} at {} dims · {} clusters",
+                    m.id, m.dense_model, m.dense_dim, d.pipe.cluster_count()
+                ),
+            })
+        })
+        .collect();
+    let n = rows.len();
+    tools::sized(json!({
+        "success": true,
+        "op": "list_domains",
+        "domains": rows,
+        "progress": [format!("listed {n} domains")],
+        "token_estimate": 0,
+    }))
+}
+
+async fn get_provenance_all(domains: &[domains::Domain], args: &Value, limits: Limits) -> Value {
+    let ids = provenance_ids(args, limits);
+    if ids.is_empty() {
+        return get_provenance(&domains[0].pipe, args, limits).await;
+    }
+    let mut rows = Vec::new();
+    let mut seen: std::collections::BTreeMap<String, &str> = std::collections::BTreeMap::new();
+    for d in domains {
+        match d.pipe.provenance(&ids).await {
+            Ok(found) => {
+                for r in found {
+                    if let Some(other) = seen.insert(r.id.clone(), &d.name) {
+                        return tools::error(
+                            "get_provenance",
+                            &format!("chunk {} is in domains {other} and {}", r.id, d.name),
+                            "an id must name one source · report this corpus pair",
+                        );
+                    }
+                    rows.push(r);
+                }
+            }
+            Err(e) => return tools::error("get_provenance", &e.to_string(), "check the database"),
+        }
+    }
+    provenance_reply(&rows)
 }
 
 fn list_domains(pipe: &Pipeline) -> Value {
@@ -706,8 +956,7 @@ fn list_domains(pipe: &Pipeline) -> Value {
 /// names because an offer is a recommendation; this is introspection, and
 /// hiding an algorithm the engine will accept would leave a caller unable to
 /// find out why a name it was told about works.
-fn list_algorithms(pipe: &Pipeline) -> Value {
-    let reg = pipe.algorithms();
+fn list_algorithms(reg: &contract::Registry) -> Value {
     let rows: Vec<Value> = reg
         .algorithms
         .iter()
@@ -854,13 +1103,14 @@ async fn read_chunk(pipe: &Pipeline, args: &Value, limits: Limits) -> Value {
     }
 }
 
-async fn get_provenance(pipe: &Pipeline, args: &Value, limits: Limits) -> Value {
-    // ! Capped. An agent that pastes a whole result set back is the normal
-    // case, and an uncapped IN-list is an unbounded query and an unbounded
-    // reply — the one place a read-only server can still be made to allocate
-    // without limit.
-    let ids: Vec<String> = args
-        .get("ids")
+/// The ids a `get_provenance` call asks for, capped.
+///
+/// ! Capped. An agent that pastes a whole result set back is the normal
+/// case, and an uncapped IN-list is an unbounded query and an unbounded
+/// reply — the one place a read-only server can still be made to allocate
+/// without limit.
+fn provenance_ids(args: &Value, limits: Limits) -> Vec<String> {
+    args.get("ids")
         .and_then(Value::as_array)
         .map(|a| {
             a.iter()
@@ -868,7 +1118,34 @@ async fn get_provenance(pipe: &Pipeline, args: &Value, limits: Limits) -> Value 
                 .take(limits.max_provenance_ids)
                 .collect()
         })
-        .unwrap_or_default();
+        .unwrap_or_default()
+}
+
+fn provenance_reply(rows: &[store::ChunkRow]) -> Value {
+    let incomplete = rows.iter().filter(|r| !r.provenance_complete()).count();
+    tools::sized(json!({
+        "success": true,
+        "op": "get_provenance",
+        "sources": rows.iter().map(|r| json!({
+            "id": r.id,
+            "title": r.source_title,
+            "url": r.source_url,
+            "chapter": r.chapter,
+            "article": r.article,
+            "truncated_at_source": r.truncated_at_source,
+            "provenance_complete": r.provenance_complete(),
+        })).collect::<Vec<_>>(),
+        "progress": [format!("resolved {} ids", rows.len())],
+        "token_estimate": 0,
+        "hint": (incomplete > 0).then(|| format!(
+            "{incomplete} of {} have no source_url · cite by title and locator",
+            rows.len()
+        )),
+    }))
+}
+
+async fn get_provenance(pipe: &Pipeline, args: &Value, limits: Limits) -> Value {
+    let ids = provenance_ids(args, limits);
     if ids.is_empty() {
         return tools::error(
             "get_provenance",
@@ -877,28 +1154,7 @@ async fn get_provenance(pipe: &Pipeline, args: &Value, limits: Limits) -> Value 
         );
     }
     match pipe.provenance(&ids).await {
-        Ok(rows) => {
-            let incomplete = rows.iter().filter(|r| !r.provenance_complete()).count();
-            tools::sized(json!({
-                "success": true,
-                "op": "get_provenance",
-                "sources": rows.iter().map(|r| json!({
-                    "id": r.id,
-                    "title": r.source_title,
-                    "url": r.source_url,
-                    "chapter": r.chapter,
-                    "article": r.article,
-                    "truncated_at_source": r.truncated_at_source,
-                    "provenance_complete": r.provenance_complete(),
-                })).collect::<Vec<_>>(),
-                "progress": [format!("resolved {} ids", rows.len())],
-                "token_estimate": 0,
-                "hint": (incomplete > 0).then(|| format!(
-                    "{incomplete} of {} have no source_url · cite by title and locator",
-                    rows.len()
-                )),
-            }))
-        }
+        Ok(rows) => provenance_reply(&rows),
         Err(e) => tools::error("get_provenance", &e.to_string(), "check the database"),
     }
 }
@@ -958,6 +1214,7 @@ mod tests {
             database_url: "host=db dbname=vera".into(),
             embed_endpoint: "http://embed:80".into(),
             bm25_vocab: "/vocab/corpus.bm25.json".into(),
+            domains_file: None,
             max_concurrency: 4,
             transport: Transport::Http,
             http_addr: "0.0.0.0:8081".into(),

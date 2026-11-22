@@ -142,7 +142,7 @@ clusters. The engine:
 
 A request still never names a domain (§7.13). It can only be narrowed by the gate.
 
-### 4a. Separated and unified: a domain is a schema · designed 2026-11-22, ✗ built
+### 4a. Separated and unified: a domain is a schema · built 2026-11-22, ✗ measured
 
 Two deployments, one engine:
 
@@ -151,7 +151,7 @@ Two deployments, one engine:
 | for | production: corpora on different machines, scaled and replaced apart | local and personal: every corpus on one box |
 | storage | one database per corpus, its tables in `public` | one database, one **schema** per corpus (`id_reg`, `ca_laws`, `fr_legi` …) |
 | containers | one Postgres per corpus, one engine over all | one Postgres, one volume, one engine |
-| today | ✓ what runs: `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✗ |
+| today | ✓ what runs: `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | built (`DOMAINS_FILE`, `config/domains.unified.json`); steps 3b and 3c ✗ measured |
 
 **A domain is `(database, schema)`.** Each domain keeps everything it has today, in its own
 schema: `chunks`, `corpus_meta`, centroids, the sparse vocabulary, the scoring vocabulary,
@@ -172,8 +172,15 @@ database. Its results are then the same by construction, and that is checked, �
   connection string (default `DATABASE_URL`). ! Names, ✗ connection strings: a DSN carries
   a password (§7.14) and the file is in git. Separated is N entries with N `dsn_env`; unified
   is N entries sharing `DATABASE_URL`, each with its schema; a mix is allowed. Validated at
-  startup (§7.12): an entry whose canary fails is not served, and the engine says so. Unset,
-  the engine serves the one database `DATABASE_URL` names, exactly as today.
+  startup (§7.12): an entry whose canary fails, or that declares another vector space,
+  refuses the start. Unset, the engine serves the one database `DATABASE_URL` names, by
+  the same code path as before.
+- **Built first: selection, ✗ fusion.** Each domain's own gate judges the query (its
+  centroid similarity and lexical evidence, `explain_routing`'s two halves); the best
+  domain that would serve it answers, with its reply unchanged, and the reply's first
+  `progress` line says how every domain judged it. Fusing two domains' replies would
+  rebuild their numbered citations and summary payload, and is left until a question set
+  shows a question one domain cannot answer alone.
 - **A `Pipeline` is already a domain**: its store, centroids, gate floors, scoring
   vocabulary and BM25 vocabulary. The multi-domain engine holds one per entry and shares
   the embedding provider between them; a chunk id is looked up in each domain in turn for
@@ -202,7 +209,7 @@ centroids.
 | 1 | a real corpus of ≥5M rows (not a replica) | routing recall and BM25 at scale with real vocabulary |
 | 2 | ~~two-level routing (§2)~~ **built**: 184 MB -> 15 MB at 20.6M; recall loss measured at 846 leaves only | the loss at 10K+ leaves, on step 1's corpus |
 | 3 | a second database (any second corpus) | multi-database selection, cross-database fusion |
-| 3a | `DOMAINS`, one pool per `(database, schema)`; `ravel db prepare --schema` | one engine serving a corpus from a schema |
+| 3a | ~~`DOMAINS`, one pool per `(database, schema)`; `ravel db prepare --schema`~~ **built**: `DOMAINS_FILE`, Ravel's schema from the DSN's `search_path` | one engine serving a corpus from a schema |
 | 3b | Indonesia served from a schema of a unified database | its fresh scores equal `vera-v6`'s, case by case |
 | 3c | Canada beside it in the same database | each corpus's own score unchanged; each refuses the other's questions |
 | 4 | §3 option 1, only if step 1 shows BM25 over budget | lexical arm past the cache |

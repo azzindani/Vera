@@ -54,7 +54,8 @@ pub(crate) async fn serve(
 async fn health(State(s): State<Arc<Server>>) -> Response {
     Json(json!({
         "success": true,
-        "clusters": s.pipe.cluster_count(),
+        "clusters": s.domains.iter().map(|d| d.pipe.cluster_count()).sum::<usize>(),
+        "domains": s.domains.len(),
         "permits_available": s.permits.available_permits(),
         "version": env!("CARGO_PKG_VERSION"),
     }))

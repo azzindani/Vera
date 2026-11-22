@@ -22,6 +22,17 @@ operator knows, and each fails *silently* if guessed wrong rather than loudly.
 | `EMBED_ENDPOINT` | embedding server base URL | the corpus's vector space lives behind this URL; the wrong one is caught by the canary, but only if it is a *different* model |
 | `BM25_VOCAB` | path to this corpus's vocabulary artifact | sparse vectors are indexed by vocabulary **position**; another run's vocabulary compares unrelated dimensions and returns plausible nonsense |
 
+### Several domains · `DOMAINS_FILE`
+
+| Variable | Default | What it does |
+|---|---|---|
+| `DOMAINS_FILE` | *(unset)* | A JSON file of domains (`config/domains.unified.json`): each its `name`, `schema`, BM25 `vocab`, `algorithms` and `dsn_env`, the variable holding its connection string. Unset serves the one database `DATABASE_URL` names, by the same code as before. Set, each domain's own gate judges a query and the best one that would serve it answers; the reply's first `progress` line says how each domain judged it (`SCALING.md` §4a). |
+| `BUNDLES_DIR` | `./config/.bundles` (empty) | Host directory mounted read-only at `/bundles`, where each domain's `vocab` is read: Ravel's `work/`. |
+
+! The file names environment variables, never connection strings: a DSN carries a password
+(`CLAUDE.md` §7.14). Every domain must declare the same vector space; one that does not
+refuses the start, since one engine has one embedder (§7.7).
+
 ---
 
 ## 2. Transport

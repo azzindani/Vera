@@ -217,6 +217,10 @@ services:
       # `corpus_meta.scoring_vocabulary`.
       ALGORITHMS_PATH: ${ALGORITHMS_PATH:-}
       VOCABULARY_PATH: ${VOCABULARY_PATH:-}
+      # Several domains, one engine (docs/operations/SCALING.md §4a): a JSON file listing
+      # each domain's schema, vocabulary and algorithms (config/domains.*.json). Unset
+      # serves the one database DATABASE_URL names, as always.
+      DOMAINS_FILE: ${DOMAINS_FILE:-}
     volumes:
       # ! Sparse vectors are indexed by vocabulary POSITION. Serving a corpus
       # against another run's vocabulary compares unrelated dimensions and
@@ -228,6 +232,9 @@ services:
       # an operator sets ALGORITHMS_PATH and the engine dies saying the file is
       # missing -- which reads as a bad path rather than a missing mount.
       - ./config:/cfg:ro
+      # ! Every domain's vocabulary, for DOMAINS_FILE: the Ravel bundles directory,
+      # read-only. Unset mounts this repository's empty `.bundles` placeholder.
+      - ${BUNDLES_DIR:-./config/.bundles}:/bundles:ro
     ports:
       - "${ENGINE_BIND:-127.0.0.1}:${ENGINE_PORT:-8081}:8081"
     depends_on:
