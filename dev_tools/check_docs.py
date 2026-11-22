@@ -4,7 +4,7 @@
 
 A path `docs/<dir>/X.md` names a file that exists, when a doc of that name exists here at
 all (one that does not is Ravel's). A relative markdown link resolves. Every doc is in the
-index. Exits non-zero, naming each failure.
+index, and every file of `dev_tools/eval/` is in its README. Exits non-zero, naming each failure.
 """
 
 from __future__ import annotations
@@ -43,6 +43,12 @@ def main() -> int:
     for p in sorted((ROOT / "docs").glob("*/*.md")):
         if p.relative_to(ROOT / "docs").as_posix() not in index:
             failures.append(f"docs/README.md does not list {p.relative_to(ROOT).as_posix()}")
+    evals = (ROOT / "dev_tools" / "eval" / "README.md").read_text(encoding="utf-8")
+    for f in listed:
+        if f.startswith("dev_tools/eval/") and f != "dev_tools/eval/README.md":
+            name = f.removeprefix("dev_tools/eval/").split("/")[0]
+            if f"`{name}" not in evals and f"{name}/" not in evals:
+                failures.append(f"dev_tools/eval/README.md does not list {name}")
     print("\n".join(failures) if failures else "docs: every reference resolves")
     return 1 if failures else 0
 

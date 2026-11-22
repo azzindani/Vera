@@ -41,8 +41,8 @@ name alone (`SCORING.md` §3) is unambiguous; this page says where it lives.
 | [`EVAL.md`](eval/EVAL.md) | the question sets, the metrics, the current results |
 | [`BEIR.md`](eval/BEIR.md) | public benchmarks, against pgvector and Qdrant |
 
-The per-corpus serving and question sets are in `dev_tools/eval/` (`corpora.json`,
-`queries_*.json`).
+The per-corpus serving, the question sets and every eval script are in `dev_tools/eval/`,
+indexed by [`../dev_tools/eval/README.md`](../dev_tools/eval/README.md).
 
 ## project/ — direction and standards
 

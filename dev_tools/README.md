@@ -13,44 +13,18 @@ operator's own hardware, not on the VPS.
 ## Layout
 
 ```
-pre_embed/       source documents → chunks → vectors → Postgres
+pre_embed/       the legacy ingest path (superseded by Ravel); the fixtures use it
 cluster_maint/   k-means over the dense vectors; layer-2 centroids
-eval/            the harness that gates retrieval quality
+eval/            the harness that gates retrieval quality (eval/README.md)
 fixtures/        a ~30-row corpus so integration tests can run in CI
 ```
 
 | Doc | |
 |---|---|
-| [PRE_EMBEDDING.md](PRE_EMBEDDING.md) | the offline ingestion pipeline |
+| [PRE_EMBEDDING.md](PRE_EMBEDDING.md) | the original ingestion pipeline, superseded by Ravel |
+| [eval/README.md](eval/README.md) | every eval script and question set, by what it is for |
 | [CLUSTER_MAINTENANCE.md](CLUSTER_MAINTENANCE.md) | cluster drift, and the design for handling it |
 | [../docs/eval/EVAL.md](../docs/eval/EVAL.md) | what the eval measures and what it gates |
-
----
-
-## Building a corpus
-
-```bash
-python pre_embed/ingest.py --manifest <manifest.json> --run-id <run-id>
-python cluster_maint/kmeans.py
-```
-
-`ingest.py` produces text, dense vector and sparse vector in **one pass over one text**.
-That is the load-bearing property: the corpus this project inherited had them produced
-by separate runs, which is why its vectors could not be reproduced from its text.
-
-It is streaming and resumable. Each batch is embedded, written and committed, so
-`ingest_progress` makes a re-run continue rather than restart — a crash at 90% does not
-throw away the GPU time.
-
-The run records its own recipe into `corpus_meta`: model, dimension, pooling,
-normalization, dtype, instruction, tokenizer hash, and the BM25 vocabulary hash. The
-engine reads that at startup and builds itself to match, rather than asserting a model
-the corpus may not share.
-
-! **The vocabulary is part of the corpus.** Sparse vectors are indexed by vocabulary
-position. Keep the `.bm25.json` artifact with the database it was built from, and point
-`BM25_VOCAB` at that one — another run's vocabulary compares unrelated dimensions and
-returns plausible nonsense rather than failing.
 
 ---
 
@@ -79,6 +53,36 @@ query path on both sides, is held to the usual 0.98 (`docs/design/EMBEDDING.md`)
 
 ---
 
+## Building a corpus the legacy way
+
+! **Superseded by Ravel** (`ravel build`, then the section above). `pre_embed/` stays for
+the fixtures and the eval tools that import it (`PRE_EMBEDDING.md`).
+
+```bash
+python pre_embed/ingest.py --manifest <manifest.json> --run-id <run-id>
+python cluster_maint/kmeans.py
+```
+
+`ingest.py` produces text, dense vector and sparse vector in **one pass over one text**.
+That is the load-bearing property: the corpus this project inherited had them produced
+by separate runs, which is why its vectors could not be reproduced from its text.
+
+It is streaming and resumable. Each batch is embedded, written and committed, so
+`ingest_progress` makes a re-run continue rather than restart — a crash at 90% does not
+throw away the GPU time.
+
+The run records its own recipe into `corpus_meta`: model, dimension, pooling,
+normalization, dtype, instruction, tokenizer hash, and the BM25 vocabulary hash. The
+engine reads that at startup and builds itself to match, rather than asserting a model
+the corpus may not share.
+
+! **The vocabulary is part of the corpus.** Sparse vectors are indexed by vocabulary
+position. Keep the `.bm25.json` artifact with the database it was built from, and point
+`BM25_VOCAB` at that one — another run's vocabulary compares unrelated dimensions and
+returns plausible nonsense rather than failing.
+
+---
+
 ## Clustering
 
 ```bash
@@ -101,6 +105,9 @@ the assignment rule is inspectable rather than a library default.
 ---
 
 ## Scoring
+
+One corpus, served and scored from what git holds: `python eval/eval_corpus.py <corpus>`
+(`EVAL.md` §1). Underneath it:
 
 ```bash
 VERA_HTTP=http://localhost:8081 python eval/e2e.py    # the deployed server
