@@ -13,6 +13,7 @@
       "bundle": "work/bundle_id_reg_markdown_v6",
       "db": {"container": "vera-db", "volume": "vera-v6", "port": 25432, "user": "vera", "name": "vera"},
       "queries": "queries.json",
+      "fresh_queries": "queries_fresh.json",
       "algorithms": "algorithms.json",
       "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
       "measured": "docs/eval/EVAL.md; the fresh split is EVAL_SPLIT=fresh"

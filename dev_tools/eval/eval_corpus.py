@@ -162,7 +162,9 @@ def main() -> None:
             f"host=127.0.0.1 port={db['port']} dbname={db['name']} user={db['user']} "
             f"password={password}"
         ),
-        EVAL_QUERIES=corpus["queries"],
+        # ! The fresh split is its own file (`e2e._queries_file`): read through `queries`,
+        # `--split fresh` found no fresh case in it and scored nothing.
+        EVAL_QUERIES=corpus["fresh_queries"] if args.split == "fresh" else corpus["queries"],
         EVAL_SPLIT=args.split,
         EVAL_CASES_OUT=f"{stem}.cases.json",
     )

@@ -329,6 +329,9 @@ def main():
               f"sparse={w('SPARSE_WEIGHT', '1.0')} text={w('TEXT_WEIGHT', '1.0')}")
     print(f"  split {split}" + (f" · args {os.environ['EVAL_ARGS']}"
                                  if os.environ.get("EVAL_ARGS") else ""))
+    if not n:
+        # ! A split with no case in the file read is a wrong file, ✗ a score of nothing.
+        sys.exit(f"no scorable case for split {split!r} in {_queries_file().name}")
     print(f"  n={n}   Recall@5 {100 * hit5 / n:.1f}%   "
           f"Recall@10 {100 * hit10 / n:.1f}%   MRR {sum(rr) / len(rr):.3f}")
     # ! With n this size a Recall@5 difference is only worth reading past its noise:

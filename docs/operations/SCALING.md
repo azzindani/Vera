@@ -142,6 +142,50 @@ clusters. The engine:
 
 A request still never names a domain (§7.13). It can only be narrowed by the gate.
 
+### 4a. Separated and unified: a domain is a schema · designed 2026-11-22, ✗ built
+
+Two deployments, one engine:
+
+| | separated | unified |
+|---|---|---|
+| for | production: corpora on different machines, scaled and replaced apart | local and personal: every corpus on one box |
+| storage | one database per corpus, its tables in `public` | one database, one **schema** per corpus (`id_reg`, `ca_laws`, `fr_legi` …) |
+| containers | one Postgres per corpus, one engine over all | one Postgres, one volume, one engine |
+| today | ✓ what runs: `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✗ |
+
+**A domain is `(database, schema)`.** Each domain keeps everything it has today, in its own
+schema: `chunks`, `corpus_meta`, centroids, the sparse vocabulary, the scoring vocabulary,
+the gate floors, its startup canary. Nothing is merged into shared tables, so a domain
+served from a schema reads the same rows through the same indexes as from its own
+database. Its results are then the same by construction, and that is checked, ✗ assumed
+(§5, step 3b).
+
+- **The engine opens one pool per domain**, its connections pinned to the domain's schema
+  (`search_path` in the connection options). Its SQL is unqualified already (`chunks`,
+  `corpus_meta`), so no query changes. ! The two column probes that read
+  `information_schema` (`store/src/search.rs`, `has_currency` and its twin) match on
+  `table_name` alone and must also match `table_schema = current_schema()`, or one
+  domain's probe sees another's table.
+- **One list configures both deployments**: `DOMAINS`, each entry a DSN and a schema,
+  validated at startup (§7.12). Separated is N DSNs with `public`; unified is one DSN with
+  N schemas; a mix is allowed. Unset, the engine serves the one database `DATABASE_URL`
+  names, exactly as today.
+- **Selection, fusion and factors are §4's**, unchanged: anchors per domain, the top D
+  that clear their floor, RRF across domains, each row scored with its own domain's
+  vocabulary and algorithm (`balanced` for Indonesia, `no_prior` where no prior is
+  declared).
+- **One embedding per vector space.** All six corpora Ravel has built declare the same
+  space (Qwen3-Embedding-0.6B, fingerprint `2231c38c768a08c7`), so a unified box embeds
+  each query once.
+- **Ravel writes the schema** (`ravel db prepare … --schema <name>`), into an existing
+  database: a new corpus or a new edition is a schema built beside the live one and
+  swapped by rename, the copy-on-write rule (§7.9) at domain scale.
+
+**What unified costs.** One Postgres holds every corpus: about 15 GB for Indonesia and
+1.5 GB for Canada today, and its shared buffers are shared by all domains. The engine's
+per-request cost stays flat (principle 4); its fixed cost is the sum of each domain's
+centroids.
+
 ## 5. Order of work
 
 | step | needs | proves |
@@ -149,6 +193,9 @@ A request still never names a domain (§7.13). It can only be narrowed by the ga
 | 1 | a real corpus of ≥5M rows (not a replica) | routing recall and BM25 at scale with real vocabulary |
 | 2 | ~~two-level routing (§2)~~ **built**: 184 MB -> 15 MB at 20.6M; recall loss measured at 846 leaves only | the loss at 10K+ leaves, on step 1's corpus |
 | 3 | a second database (any second corpus) | multi-database selection, cross-database fusion |
+| 3a | `DOMAINS`, one pool per `(database, schema)`; `ravel db prepare --schema` | one engine serving a corpus from a schema |
+| 3b | Indonesia served from a schema of a unified database | its fresh scores equal `vera-v6`'s, case by case |
+| 3c | Canada beside it in the same database | each corpus's own score unchanged; each refuses the other's questions |
 | 4 | §3 option 1, only if step 1 shows BM25 over budget | lexical arm past the cache |
 
 Step 1 is the gate on everything else: no design here should be built against a replica,
