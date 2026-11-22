@@ -79,10 +79,10 @@ def neighbours(conn, row, k: int = 8) -> list[tuple]:
     """The nearest chunks in other documents, with their cosine distance."""
     with conn.cursor() as cur:
         cur.execute(
-            f"SELECT {COLS}, v.dense <=> q.dense AS d FROM chunks c"
-            " JOIN chunk_vectors v ON v.id = c.id,"
-            " (SELECT dense FROM chunk_vectors WHERE id = %s) q"
-            " WHERE c.doc_id <> %s ORDER BY v.dense <=> q.dense LIMIT %s",
+            f"SELECT {', '.join('c.' + x.strip() for x in COLS.split(','))},"
+            " c.dense <=> q.dense AS d FROM chunks c,"
+            " (SELECT dense FROM chunks WHERE id = %s) q"
+            " WHERE c.doc_id <> %s ORDER BY c.dense <=> q.dense LIMIT %s",
             (row[0], row[1], k),
         )
         return cur.fetchall()

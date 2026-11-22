@@ -216,6 +216,47 @@ second train set.
 
 ! **Not reviewed by a domain expert**, like §2b and §2c.
 
+### 2e. Other sources · `queries_<corpus>.json` · Canada first
+
+Each source Ravel publishes gets its own set, scored by `EVAL_QUERIES=queries_<corpus>.json`
+against that corpus's database. These sets are the multi-source test: the same engine, the
+same rules, a corpus in another language with another citation scheme.
+
+* **Sample**: `draft/sample_corpus.py --config draft/corpus_<corpus>.json` takes one clause
+  per document, stratified by instrument type, with markers in the corpus's language.
+* **Draft**: the drafter writes only the question, keyed by the sampled clause
+  (`{"exact_ref:3": "..."}`), under the §2b rules.
+* **Check**: `draft/check_citation.py` reads the labels back from `chunks`. They are the
+  citation (`answer_identifiers`) and the instrument (`answer_documents`). It rejects 6+
+  copied words, an instrument number outside `exact_ref`, and a label that does not resolve
+  to its own clause. It warns on 4-5 copied words. Holdout is chosen by md5, as in `check.py`.
+
+**`queries_ca_laws.json`** was drafted on 2026-11-22. It has 114 in-domain and 16
+out-of-domain cases (8 general, 8 other jurisdictions). Every case was machine-checked; none
+has been reviewed by an expert. Nine drafts were reworded after copying 6+ words, and one
+was dropped.
+
+The gate was calibrated on the 76 train cases only. The command was `ravel db calibrate
+ca_laws --queries <train>`: floor 0.48, AUC 0.970, 10 of 12 off-topic refused.
+
+Scored through the engine on 2026-11-22: `TOP_K` 60, the question alone, **no metadata
+prior**. The corpus declares no authority or structural table, so the engine refuses
+`balanced` there (§7.12). The run used a prior-free `balanced`.
+
+| ca_laws, n=114 | @5 | @10 | @15 | @20 | @25 | MRR |
+|---|---|---|---|---|---|---|
+| question only, no prior | 71.9 | 81.6 | 84.2 | 85.1 | 88.6 | 0.575 |
+
+* The right instrument is in the top 5 for 93.9% of cases.
+* The gate refused 2 of the 114 real questions and 14 of the 16 off-topic ones.
+* The two off-topic questions it answered were both about other jurisdictions: the French
+  Civil Code, and German maternity leave. A gate on the domain cannot tell Canadian law
+  from law in general.
+* Weakest types at @5: conceptual 7/16 and definitional 5/11.
+
+Not yet done: a Canadian authority table in the Ravel profile (Act > regulation >
+instrument), the rewordings (A, question·A), and a review by a domain expert.
+
 ## 3. Metrics
 
 | Metric | Why |

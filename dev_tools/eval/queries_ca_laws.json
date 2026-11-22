@@ -1,0 +1,2063 @@
+{
+  "_README": [
+    "A citation-labelled set on ca_laws (EVAL_QUERIES), drafted from sample_corpus.py clauses and machine-checked by check_citation.py. Labels are citations read back from the database; NOT reviewed by a domain expert."
+  ],
+  "queries": [
+    {
+      "id": "ca001",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What does section 7 of the Sports Pool and Loto Canada Winding-Up Act say about suing over the Corporation's debts?",
+      "source": "S-15.8, s. 7 — Sports Pool and Loto Canada Winding-Up Act",
+      "answer_identifiers": [
+        "S-15.8, s. 7"
+      ],
+      "answer_documents": [
+        "S-15.8"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk c777bff7fcc4cc6b0304943019acf091 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca002",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Under section 522.34 of the Bank Act, when is a foreign bank's affiliate considered to operate a financial establishment here?",
+      "source": "B-1.01, s. 522.34 — Bank Act",
+      "answer_identifiers": [
+        "B-1.01, s. 522.34"
+      ],
+      "answer_documents": [
+        "B-1.01"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-22 from chunk ae6ff0c6ec3e1a35f832453d21d358b0 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca003",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What does section 17 of the Cribs, Cradles and Bassinets Regulations require of slots and openings above the mattress support?",
+      "source": "SOR/2016-152, s. 17 — Cribs, Cradles and Bassinets Regulations",
+      "answer_identifiers": [
+        "SOR/2016-152, s. 17"
+      ],
+      "answer_documents": [
+        "SOR/2016-152"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk e97fea8219d13de25af961081bbf96c1 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca004",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What does section 3 of the Security Offences Act preserve for a provincial Attorney General?",
+      "source": "S-7, s. 3 — Security Offences Act",
+      "answer_identifiers": [
+        "S-7, s. 3"
+      ],
+      "answer_documents": [
+        "S-7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 557b6f74713468e615f35cf83a6a1a55 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca005",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Section 110(2) of the Income Tax Act: what deduction is open to someone in a religious order who has vowed lifelong poverty?",
+      "source": "I-3.3, s. 110 — Income Tax Act",
+      "answer_identifiers": [
+        "I-3.3, s. 110"
+      ],
+      "answer_documents": [
+        "I-3.3"
+      ],
+      "label_chunks": 9,
+      "provenance": "drafted 2026-11-22 from chunk a2b57fb2be1e101aaa277229412db283 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca006",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "How many lifebuoys does section 27.2 of the Life Saving Equipment Regulations require on a ship under 30.5 m?",
+      "source": "C.R.C., c. 1436, s. 27.2 — Life Saving Equipment Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 1436, s. 27.2"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 1436"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-22 from chunk 1e73b70cd10a1f45bacf422ddcd7da14 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca007",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Under section 60 of the Vessel Pollution and Dangerous Chemicals Regulations, what is a chemical tanker's master responsible for?",
+      "source": "SOR/2012-69, s. 60 — Vessel Pollution and Dangerous Chemicals Regulations",
+      "answer_identifiers": [
+        "SOR/2012-69, s. 60"
+      ],
+      "answer_documents": [
+        "SOR/2012-69"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk a3d84c183afc1c862cff26377b97c517 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca008",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What payment to a province does section 18 of the Federal-Provincial Fiscal Arrangements Act, 1972 allow?",
+      "source": "F-8.2, s. 18 — Federal-Provincial Fiscal Arrangements Act, 1972",
+      "answer_identifiers": [
+        "F-8.2, s. 18"
+      ],
+      "answer_documents": [
+        "F-8.2"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 276986f261a7f3e5bd96a2569b23924f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca009",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What levy rates does section 3 of the Alberta Turkey Marketing Levies Order set?",
+      "source": "C.R.C., c. 135, s. 3 — Alberta Turkey Marketing Levies Order",
+      "answer_identifiers": [
+        "C.R.C., c. 135, s. 3"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 135"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 47bf229d6b93ed0cd255bfdfefb95b67 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca010",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Which places are registration centres under section 3 of the Canadian Forces sex offender registration regulations?",
+      "source": "SOR/2008-247, s. 3 — Sex Offender Information Registration Regulations (Canadian Forces)",
+      "answer_identifiers": [
+        "SOR/2008-247, s. 3"
+      ],
+      "answer_documents": [
+        "SOR/2008-247"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 626b7d7eff88d02a204eccf91083289e of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca011",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Under Canada's social security agreements, can contribution periods from a third country count toward benefit eligibility?",
+      "source": "SI/99-49 — Proclamation giving notice that the Agreement on Social Security between the Government of Canada and the Government of the Republic of Croatia is in Force as of May 1, 1999",
+      "answer_identifiers": [
+        "SI/99-49"
+      ],
+      "answer_documents": [
+        "SI/99-49"
+      ],
+      "label_chunks": 27,
+      "provenance": "drafted 2026-11-22 from chunk 774b57b0e475d570a9be77ee910e9933 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca012",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Who must a verifier under the clean fuel rules be independent from?",
+      "source": "SOR/2022-140, s. 145 — Clean Fuel Regulations",
+      "answer_identifiers": [
+        "SOR/2022-140, s. 145"
+      ],
+      "answer_documents": [
+        "SOR/2022-140"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk d76af46b56cda3753309662e2fc3b4f0 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca013",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What is the Royal Canadian Mint set up to do, and where is its head office?",
+      "source": "R-9, s. 3 — Royal Canadian Mint Act",
+      "answer_identifiers": [
+        "R-9, s. 3"
+      ],
+      "answer_documents": [
+        "R-9"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 7e62811798640c8c28030d2354e7d19e of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca014",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "How soon must a licensee tell the Minister after importing a drug under the urgent public health need provisions, and what details are needed?",
+      "source": "C.R.C., c. 870, s. C.10.003 — Food and Drug Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 870, s. C.10.003"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 870"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 45b47ecfdb0c13192cd076665d20a9e3 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca015",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What can the federal cabinet do to suspend trade benefits with Israel under the free trade agreement?",
+      "source": "C-6.4, s. 15 — Canada-Israel Free Trade Agreement Implementation Act",
+      "answer_identifiers": [
+        "C-6.4, s. 15"
+      ],
+      "answer_documents": [
+        "C-6.4"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 4147be2e3d337f81582151c163c71bb2 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca016",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Which amendments to a not-for-profit corporation's articles must members approve by special resolution?",
+      "source": "C-7.75, s. 197 — Canada Not-for-profit Corporations Act",
+      "answer_identifiers": [
+        "C-7.75, s. 197"
+      ],
+      "answer_documents": [
+        "C-7.75"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 22fb31fe1babe1f60d2a6c427bedc921 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca017",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "In the Ontario milk levies order, who counts as a producer?",
+      "source": "C.R.C., c. 217, s. 2 — Ontario Milk Marketing Levies Order",
+      "answer_identifiers": [
+        "C.R.C., c. 217, s. 2"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 217"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 01ec0dab42c3d22dac98159818322404 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca018",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "When can a victim exercise their rights under the military justice victims' provisions?",
+      "source": "N-5, s. 71.15 — National Defence Act",
+      "answer_identifiers": [
+        "N-5, s. 71.15"
+      ],
+      "answer_documents": [
+        "N-5"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk ae18907277ac4e7ecd3652a888f0f7ae of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca019",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Can a decision of the Conflict of Interest and Ethics Commissioner be challenged in court?",
+      "source": "C-36.65, s. 66 — Conflict of Interest Act",
+      "answer_identifiers": [
+        "C-36.65, s. 66"
+      ],
+      "answer_documents": [
+        "C-36.65"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk fd8a0ade26ecd45719fff345e67845b8 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca020",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "How does a contributor ask to see the unadjusted pensionable earnings recorded in their CPP account?",
+      "source": "C.R.C., c. 385, s. 39 — Canada Pension Plan Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 385, s. 39"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 385"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 5797cd388f36d6915e148700bf1f88f1 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca021",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "At what age may a British Columbia Supreme Court judge who previously sat on a County Court retire?",
+      "source": "J-1, s. 8 — Judges Act",
+      "answer_identifiers": [
+        "J-1, s. 8"
+      ],
+      "answer_documents": [
+        "J-1"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 31de258707daa3ecd5ab0236a93a44d6 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca022",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What is the longest flight duty period a private operator may assign a flight crew member in 24 hours?",
+      "source": "SOR/96-433, s. 604.99 — Canadian Aviation Regulations",
+      "answer_identifiers": [
+        "SOR/96-433, s. 604.99"
+      ],
+      "answer_documents": [
+        "SOR/96-433"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk acc5225b568340502181dce80c50449f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca023",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Where must a foreign fishing vessel keep its licence while in Canadian fisheries waters?",
+      "source": "C.R.C., c. 413, s. 9 — Coastal Fisheries Protection Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 413, s. 9"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 413"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 06afdd0364c0750942f1f2c80d322fd4 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca024",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Which payments count as wages for the Wage Earner Protection Program?",
+      "source": "SOR/2008-222, s. 2 — Wage Earner Protection Program Regulations",
+      "answer_identifiers": [
+        "SOR/2008-222, s. 2"
+      ],
+      "answer_documents": [
+        "SOR/2008-222"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 7d200baf934a0ef66114bce309165f50 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca025",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Can the Superintendent of Financial Institutions forgive an assessment or a penalty?",
+      "source": "O-2.7, s. 37.1 — Office of the Superintendent of Financial Institutions Act",
+      "answer_identifiers": [
+        "O-2.7, s. 37.1"
+      ],
+      "answer_documents": [
+        "O-2.7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 432552930e73f1ad40ccfdad263c5875 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca026",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "How are staff of the federal Translation Bureau appointed?",
+      "source": "T-16, s. 6 — Translation Bureau Act",
+      "answer_identifiers": [
+        "T-16, s. 6"
+      ],
+      "answer_documents": [
+        "T-16"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 050ae04480cfe424a60cc7a0e3032911 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca027",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "In competition proceedings, who counts as a participant's agent when records are admitted as evidence?",
+      "source": "C-34, s. 69 — Competition Act",
+      "answer_identifiers": [
+        "C-34, s. 69"
+      ],
+      "answer_documents": [
+        "C-34"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 05ee5f896272703fb1a21d9448a71e48 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca028",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What is a hard cover copy of the 1978 consolidated regulations required to look like?",
+      "source": "SOR/79-538, s. 2 — Consolidated Regulations Delivery Regulations",
+      "answer_identifiers": [
+        "SOR/79-538, s. 2"
+      ],
+      "answer_documents": [
+        "SOR/79-538"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk bca1efefb5f846b589a4ac2bdf38cf90 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca029",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "For marine liability, what counts as a foreign judgment in oil pollution matters?",
+      "source": "M-0.7, s. 80 — Marine Liability Act",
+      "answer_identifiers": [
+        "M-0.7, s. 80"
+      ],
+      "answer_documents": [
+        "M-0.7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 211c9c6a9795adad8447306cee9a94f4 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca030",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What lands fall within the area a First Nation manages under the First Nations oil, gas and moneys law?",
+      "source": "F-11.9, s. 25 — First Nations Oil and Gas and Moneys Management Act",
+      "answer_identifiers": [
+        "F-11.9, s. 25"
+      ],
+      "answer_documents": [
+        "F-11.9"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 162fb13958edb8c8210bd57e187e9ff0 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca031",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What powers does the national museum devoted to human rights have?",
+      "source": "M-13.4, s. 15.3 — Museums Act",
+      "answer_identifiers": [
+        "M-13.4, s. 15.3"
+      ],
+      "answer_documents": [
+        "M-13.4"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk d08ae50ad9f878573bdc6aeb85ffde4a of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca032",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "In the New Brunswick blueberry order, which blueberries are covered?",
+      "source": "SOR/2013-238, s. 1 — New Brunswick Blueberry Order",
+      "answer_identifiers": [
+        "SOR/2013-238, s. 1"
+      ],
+      "answer_documents": [
+        "SOR/2013-238"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 95a47b6a1f79653386380721617eac87 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca033",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "For the federal referendum rules, who is a public servant and who is a referendum officer?",
+      "source": "R-4.7, s. 32 — Referendum Act",
+      "answer_identifiers": [
+        "R-4.7, s. 32"
+      ],
+      "answer_documents": [
+        "R-4.7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 3a250c9bb9a9e2fd37cf75e0dd27bef4 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca034",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Who is the employer of parliamentary staff for labour relations purposes?",
+      "source": "P-1.3, s. 85 — Parliamentary Employment and Staff Relations Act",
+      "answer_identifiers": [
+        "P-1.3, s. 85"
+      ],
+      "answer_documents": [
+        "P-1.3"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk ca06f018ced9664ef781cfc17b2784fb of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca035",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What is an accredited ICAO mission for the excise tax remission order?",
+      "source": "SI/2003-164, s. 1 — Accredited ICAO Missions Remission Order (Part IX of the Excise Tax Act)",
+      "answer_identifiers": [
+        "SI/2003-164, s. 1"
+      ],
+      "answer_documents": [
+        "SI/2003-164"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 457e1887facc97509d0be4b44a5dd2d7 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca036",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "For money laundering reporting, who counts as a dealer in precious stones or metals?",
+      "source": "SOR/2002-184, s. 1 — Proceeds of Crime (Money Laundering) and Terrorist Financing Regulations",
+      "answer_identifiers": [
+        "SOR/2002-184, s. 1"
+      ],
+      "answer_documents": [
+        "SOR/2002-184"
+      ],
+      "label_chunks": 7,
+      "provenance": "drafted 2026-11-22 from chunk 9dfc3e4619bcb630a968d14f45405409 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca037",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What record must an aerodrome operator create when extra security safeguards are put in place?",
+      "source": "SOR/2011-318, s. 210 — Canadian Aviation Security Regulations, 2012",
+      "answer_identifiers": [
+        "SOR/2011-318, s. 210"
+      ],
+      "answer_documents": [
+        "SOR/2011-318"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 033f63cb9d8f7562c7b66a260a24cb01 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca038",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "What is the most the Board can allow for a prospector's travel costs when recommending assistance?",
+      "source": "SOR/81-145, s. 9 — Prospector’s Assistance Terms and Conditions Order",
+      "answer_identifiers": [
+        "SOR/81-145, s. 9"
+      ],
+      "answer_documents": [
+        "SOR/81-145"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 2b689ae32ec5e6d49b9cd63cef33389c of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca039",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Up to what amount of deposits does the Standard Trust tax remission apply?",
+      "source": "SI/91-66, s. 4 — Standard Trust Depositors Remission Order",
+      "answer_identifiers": [
+        "SI/91-66, s. 4"
+      ],
+      "answer_documents": [
+        "SI/91-66"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk c14dca1c300d2820c19b7625aee98a86 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca040",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "If a condition for holding delivery shares stops being met, how long does the corporation have to cancel them?",
+      "source": "SOR/2001-512, s. 38 — Canada Business Corporations Regulations, 2001",
+      "answer_identifiers": [
+        "SOR/2001-512, s. 38"
+      ],
+      "answer_documents": [
+        "SOR/2001-512"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 87e15e2066c488686b10022e84fc4d80 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca041",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "How long does a peace officer have to report to the Minister after disposing of a seized controlled substance?",
+      "source": "C-38.8, s. 29 — Controlled Drugs and Substances Act",
+      "answer_identifiers": [
+        "C-38.8, s. 29"
+      ],
+      "answer_documents": [
+        "C-38.8"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 91a8e1dd7c1c63b139fcc68ef4558971 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca042",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "What measurement error is tolerated for methane emission monitoring sensors at upstream oil and gas sites?",
+      "source": "SOR/2018-66 — Regulations Respecting Reduction in the Release of Methane and Certain Volatile Organic Compounds (Upstream Oil and Gas Sector)",
+      "answer_identifiers": [
+        "SOR/2018-66"
+      ],
+      "answer_documents": [
+        "SOR/2018-66"
+      ],
+      "label_chunks": 15,
+      "provenance": "drafted 2026-11-22 from chunk 287db4172f3efb72482d8fab84d727e2 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca043",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "For a claimant from a designated country who claims inside Canada, how soon after referral must the refugee hearing be held?",
+      "source": "SOR/2002-227, s. 159.9 — Immigration and Refugee Protection Regulations",
+      "answer_identifiers": [
+        "SOR/2002-227, s. 159.9"
+      ],
+      "answer_documents": [
+        "SOR/2002-227"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk e773942f46885154e30c61e5bfce266a of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca044",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "If an accused charged with an offence within a provincial court judge's absolute jurisdiction appears before another justice, what happens?",
+      "source": "C-46, s. 536 — Criminal Code",
+      "answer_identifiers": [
+        "C-46, s. 536"
+      ],
+      "answer_documents": [
+        "C-46"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-22 from chunk 73d9b67554c27c28f07bfdaca7123ebd of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca045",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Within how many days must the CPP Investment Board send new by-laws to the federal and provincial ministers?",
+      "source": "C-8.3, s. 28 — Canada Pension Plan Investment Board Act",
+      "answer_identifiers": [
+        "C-8.3, s. 28"
+      ],
+      "answer_documents": [
+        "C-8.3"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 71042207e453b8e416678e96e0709d65 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca046",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "What fee does a consumer proposal administrator get when the proposal is filed with the official receiver?",
+      "source": "C.R.C., c. 368, s. 129 — Bankruptcy and Insolvency General Rules",
+      "answer_identifiers": [
+        "C.R.C., c. 368, s. 129"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 368"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk e698400eed47681c2288b65d8f17ad15 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca047",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Can the Minister make information about orders under the consumer-driven banking framework confidential?",
+      "source": "C-36.78, s. 64 — Consumer-Driven Banking Act",
+      "answer_identifiers": [
+        "C-36.78, s. 64"
+      ],
+      "answer_documents": [
+        "C-36.78"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk b0fb8bb9cffdc60ee8e0ac167bc02b2f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca048",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Is it an offence for air navigation corporation staff or their union to hinder service to emergency flights?",
+      "source": "C-29.7, s. 92 — Civil Air Navigation Services Commercialization Act",
+      "answer_identifiers": [
+        "C-29.7, s. 92"
+      ],
+      "answer_documents": [
+        "C-29.7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 8b2791004a137713cea338b81772da5d of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca049",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "How much could be paid to CMHC under the energy cost assistance measures, and over what years?",
+      "source": "E-6.2, s. 8 — Energy Costs Assistance Measures Act",
+      "answer_identifiers": [
+        "E-6.2, s. 8"
+      ],
+      "answer_documents": [
+        "E-6.2"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk ca0201f6caf191383ef8aea6b7cda93d of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca050",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Who administers the Baie Verte Mines agreement on Canada's behalf?",
+      "source": "SOR/82-896 — Baie Verte Mines Inc. Regulations",
+      "answer_identifiers": [
+        "SOR/82-896"
+      ],
+      "answer_documents": [
+        "SOR/82-896"
+      ],
+      "label_chunks": 19,
+      "provenance": "drafted 2026-11-22 from chunk f6fbaec10d28f5ec392e4cb04af1e84c of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca051",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "How do I file an application with the CRTC?",
+      "source": "SOR/2010-277, s. 13 — Canadian Radio-television and Telecommunications Commission Rules of Practice and Procedure",
+      "answer_identifiers": [
+        "SOR/2010-277, s. 13"
+      ],
+      "answer_documents": [
+        "SOR/2010-277"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 0901d9a584e51108ef70b2cc6bdf318e of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca052",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Who has to approve an amalgamation agreement between cooperatives?",
+      "source": "C-1.7, s. 297 — Canada Cooperatives Act",
+      "answer_identifiers": [
+        "C-1.7, s. 297"
+      ],
+      "answer_documents": [
+        "C-1.7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 4787f86d2fdefc3bc53592ef6b3ac331 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca053",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Must a federally regulated entity have a way to take feedback on its accessibility plan?",
+      "source": "A-0.6, s. 43 — Accessible Canada Act",
+      "answer_identifiers": [
+        "A-0.6, s. 43"
+      ],
+      "answer_documents": [
+        "A-0.6"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 23c24e1d9383e020a80ca243a63237ba of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca054",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What does the Pay Equity Commissioner do once a complaint investigation is finished?",
+      "source": "P-4.2, s. 159 — Pay Equity Act",
+      "answer_identifiers": [
+        "P-4.2, s. 159"
+      ],
+      "answer_documents": [
+        "P-4.2"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk d81899c323133b3a499165a281ef6cc7 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca055",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "When a tagged cow dies at an abattoir, what must the operator report and by when?",
+      "source": "C.R.C., c. 296, s. 186 — Health of Animals Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 296, s. 186"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 296"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk f135df127eab0d85eea9f3b3e89b2fcd of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca056",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What must a pipeline company do to raise its maximum operating pressure?",
+      "source": "SOR/99-294, s. 43 — Canadian Energy Regulator Onshore Pipeline Regulations",
+      "answer_identifiers": [
+        "SOR/99-294, s. 43"
+      ],
+      "answer_documents": [
+        "SOR/99-294"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk f93f2f0f757dfd217ea790fef0155f0a of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca057",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "How long does a veteran have to ask for a review of an allowance decision?",
+      "source": "C.R.C., c. 1602, s. 17.1 — Veterans Allowance Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 1602, s. 17.1"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 1602"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 7ef689cb9862e365fe625ac3016350d4 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca058",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "When must a cooperative credit association send a new by-law to the Superintendent?",
+      "source": "C-41.01, s. 433 — Cooperative Credit Associations Act",
+      "answer_identifiers": [
+        "C-41.01, s. 433"
+      ],
+      "answer_documents": [
+        "C-41.01"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk abc633ba5a85cd110d8b577d1c714697 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca059",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What must the Superintendent do if a mortgage insurer is falling out of compliance?",
+      "source": "P-25.7, s. 30 — Protection of Residential Mortgage or Hypothecary Insurance Act",
+      "answer_identifiers": [
+        "P-25.7, s. 30"
+      ],
+      "answer_documents": [
+        "P-25.7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 98f18807e108027be261bef7cc48d37b of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca060",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Can the Minister hand off powers under the nuclear test-ban implementation law?",
+      "source": "C-36.5, s. 6 — Comprehensive Nuclear Test-Ban Treaty Implementation Act",
+      "answer_identifiers": [
+        "C-36.5, s. 6"
+      ],
+      "answer_documents": [
+        "C-36.5"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk f218654affc6114703151200c8dd2663 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca061",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Does a body corporate applying for insurance company letters patent need a special resolution?",
+      "source": "I-11.8, s. 720 — Insurance Companies Act",
+      "answer_identifiers": [
+        "I-11.8, s. 720"
+      ],
+      "answer_documents": [
+        "I-11.8"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 9d0a5fc5a9f58a2164e60d68d146717e of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca062",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Can a third party and a registered party coordinate their election advertising?",
+      "source": "E-2.01, s. 351.01 — Canada Elections Act",
+      "answer_identifiers": [
+        "E-2.01, s. 351.01"
+      ],
+      "answer_documents": [
+        "E-2.01"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 6a12016dedfb5a4753345b93ae095ced of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca063",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "How is the daily discharge of harmful substances from a meat processing plant expressed?",
+      "source": "C.R.C., c. 818, s. 11 — Meat and Poultry Products Plant Liquid Effluent Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 818, s. 11"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 818"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 54eade232590b075d4d109109e618331 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca064",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Who pays for removing timber a permit holder leaves behind in Gros Morne National Park?",
+      "source": "SOR/2005-204, s. 14 — Gros Morne National Park of Canada Timber Harvesting Regulations",
+      "answer_identifiers": [
+        "SOR/2005-204, s. 14"
+      ],
+      "answer_documents": [
+        "SOR/2005-204"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 4df7d062d57a03055185091af557bcfd of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca065",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Where may cargo for a vessel be stored on the Esquimalt dry dock property?",
+      "source": "SOR/89-332, s. 28 — Esquimalt Graving Dock Regulations",
+      "answer_identifiers": [
+        "SOR/89-332, s. 28"
+      ],
+      "answer_documents": [
+        "SOR/89-332"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk afea5181088aafd53e2bbfbdf0ef6a59 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca066",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Can the Minister of Health charge fees for regulatory approvals?",
+      "source": "H-3.2, s. 8 — Department of Health Act",
+      "answer_identifiers": [
+        "H-3.2, s. 8"
+      ],
+      "answer_documents": [
+        "H-3.2"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 2c0ef82ba2bd1cfe617608352ee23c89 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca067",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Must an airline carry a passenger's wheelchair free of charge?",
+      "source": "SOR/88-58, s. 148 — Air Transportation Regulations",
+      "answer_identifiers": [
+        "SOR/88-58, s. 148"
+      ],
+      "answer_documents": [
+        "SOR/88-58"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 5e6fbd8c82ccbafb3b76b6b56ca6b71f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca068",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Is there a limit on how many fish of one species I can keep across all Ontario zones on a sport fishing licence?",
+      "source": "SOR/2007-237, s. 17 — Ontario Fishery Regulations, 2007",
+      "answer_identifiers": [
+        "SOR/2007-237, s. 17"
+      ],
+      "answer_documents": [
+        "SOR/2007-237"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 04bf6835a323c26965cfa63eef9eb60d of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca069",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Can the Minister give the public copies of international industrial design registrations?",
+      "source": "SOR/2018-120, s. 46 — Industrial Design Regulations",
+      "answer_identifiers": [
+        "SOR/2018-120, s. 46"
+      ],
+      "answer_documents": [
+        "SOR/2018-120"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 0a319954c69f7297902bee3381152d44 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca070",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "If winding-up has started but no order has been made, up to what date is interest on an insured deposit counted?",
+      "source": "C-3, s. 14 — Canada Deposit Insurance Corporation Act",
+      "answer_identifiers": [
+        "C-3, s. 14"
+      ],
+      "answer_documents": [
+        "C-3"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-22 from chunk 240bded7c4147e10948aadea48b57705 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca071",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Who may sign an excise tax return made by a company?",
+      "source": "C.R.C., c. 594, s. 6 — General Excise and Sales Tax Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 594, s. 6"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 594"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-22 from chunk 55e31c11d1d3d1d396fbf3df41e36af2 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca072",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Do the cargo and fumigation regulations apply to pleasure craft or fishing vessels?",
+      "source": "SOR/2007-128, s. 2 — Cargo, Fumigation and Tackle Regulations",
+      "answer_identifiers": [
+        "SOR/2007-128, s. 2"
+      ],
+      "answer_documents": [
+        "SOR/2007-128"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 6c02dad0dbb861277f1948141b8e88d9 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca073",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Who can get a payment for converting a heating unit away from oil?",
+      "source": "O-8, s. 3 — Oil Substitution and Conservation Act",
+      "answer_identifiers": [
+        "O-8, s. 3"
+      ],
+      "answer_documents": [
+        "O-8"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 31f17e8efe044f40f4562fffdf450c32 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca074",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Can a province get fiscal arrangement payments without giving the Minister the information to calculate them?",
+      "source": "F-8, s. 12.01 — Federal-Provincial Fiscal Arrangements Act",
+      "answer_identifiers": [
+        "F-8, s. 12.01"
+      ],
+      "answer_documents": [
+        "F-8"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 2a89b6934f4747cb79bb84e306838ad1 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca075",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Must applications to the Court of Québec be in writing?",
+      "source": "SI/2015-114, s. 127 — Regulation of the Court of Québec",
+      "answer_identifiers": [
+        "SI/2015-114, s. 127"
+      ],
+      "answer_documents": [
+        "SI/2015-114"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk ed5380bee34defdaab32c0dd87a2de9c of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca076",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Can someone get back excise duty they paid to the Crown?",
+      "source": "E-14.1, s. 174 — Excise Act, 2001",
+      "answer_identifiers": [
+        "E-14.1, s. 174"
+      ],
+      "answer_documents": [
+        "E-14.1"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk dc7d9fcd161367647248ff08db4705c6 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca077",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Can a party ask another to produce a record before an RCMP External Review Committee hearing?",
+      "source": "SOR/88-313, s. 11 — RCMP External Review Committee Rules of Practice and Procedure",
+      "answer_identifiers": [
+        "SOR/88-313, s. 11"
+      ],
+      "answer_documents": [
+        "SOR/88-313"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk be2e43c63d30be8a128322a1e71cf6fd of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca078",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Is it an offence to refuse to help an excise officer, or not to stop a vehicle when told to?",
+      "source": "E-14, s. 97 — Excise Act",
+      "answer_identifiers": [
+        "E-14, s. 97"
+      ],
+      "answer_documents": [
+        "E-14"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk e5cf9d33575ba95c591856b61cebf774 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca079",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "What counts as a bank holding company's interests in real property for its investment limits?",
+      "source": "SOR/2001-392, s. 8 — Investment Limits (Bank Holding Companies) Regulations",
+      "answer_identifiers": [
+        "SOR/2001-392, s. 8"
+      ],
+      "answer_documents": [
+        "SOR/2001-392"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk d9de3daf859712e5dba4109c948a80b5 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca080",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "How must a gas pipeline company record securities it is jointly liable for with other parties?",
+      "source": "SOR/83-190, s. 79 — Gas Pipeline Uniform Accounting Regulations",
+      "answer_identifiers": [
+        "SOR/83-190, s. 79"
+      ],
+      "answer_documents": [
+        "SOR/83-190"
+      ],
+      "label_chunks": 1,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-22 from chunk f75d43c8fe109afc5d3cd459498fd2b6 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca081",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "What notice does a citizenship officer send someone they believe broke the rules?",
+      "source": "SOR/93-246, s. 39 — Citizenship Regulations",
+      "answer_identifiers": [
+        "SOR/93-246, s. 39"
+      ],
+      "answer_documents": [
+        "SOR/93-246"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk d7313b27375aaea04f215491d2a759e0 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca082",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Under the Canada–Chile social security agreement, how do members of a Chilean pension fund administrator finance their pensions?",
+      "source": "SI/98-62 — Proclamation Giving Notice that the Agreement on Social Security Between the Government of Canada and the Government of the Republic of Chile Comes into Force on June 1, 1998",
+      "answer_identifiers": [
+        "SI/98-62"
+      ],
+      "answer_documents": [
+        "SI/98-62"
+      ],
+      "label_chunks": 32,
+      "provenance": "drafted 2026-11-22 from chunk 89dc9a9446c3d9d6723b7b9c71969c13 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca083",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Under the Canada–Moldova tax treaty, how is a term the treaty does not define interpreted?",
+      "source": "C-6.9, Schedule 1 — Canada — Moldova Tax Convention Act, 2002",
+      "answer_identifiers": [
+        "C-6.9, Schedule 1"
+      ],
+      "answer_documents": [
+        "C-6.9"
+      ],
+      "label_chunks": 14,
+      "provenance": "drafted 2026-11-22 from chunk cad1f087d1f0315f92c62f27b4e1e577 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca084",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "What penalties can an individual face on indictment for breaching a designated environmental protection regulation?",
+      "source": "C-15.31, s. 272.2 — Canadian Environmental Protection Act, 1999",
+      "answer_identifiers": [
+        "C-15.31, s. 272.2"
+      ],
+      "answer_documents": [
+        "C-15.31"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 2998127897de1bd5a251e737d1857b6f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca085",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "What is an insured person's qualifying period for employment insurance benefits?",
+      "source": "E-5.6, s. 8 — Employment Insurance Act",
+      "answer_identifiers": [
+        "E-5.6, s. 8"
+      ],
+      "answer_documents": [
+        "E-5.6"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk e3504510cd595678d273ff56248a7723 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca086",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "In Manitoba, what is the fine for holding over 180 live bait fish when fishing recreationally?",
+      "source": "SOR/87-509, Schedule XVI — Manitoba Fishery Regulations, 1987",
+      "answer_identifiers": [
+        "SOR/87-509, Schedule XVI"
+      ],
+      "answer_documents": [
+        "SOR/87-509"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-22 from chunk 9c1d6ef55d6b5c9473a1f364246e6abe of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca087",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "What can the labour board order an employer to pay employees hurt by its failure to comply?",
+      "source": "L-2, s. 99 — Canada Labour Code",
+      "answer_identifiers": [
+        "L-2, s. 99"
+      ],
+      "answer_documents": [
+        "L-2"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-22 from chunk 721082a44dd592830bf4272a35d48b8a of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca088",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Can an Antarctic permit be made invalid if the application contained misleading information?",
+      "source": "SOR/2003-363, s. 10 — Antarctic Environmental Protection Regulations",
+      "answer_identifiers": [
+        "SOR/2003-363, s. 10"
+      ],
+      "answer_documents": [
+        "SOR/2003-363"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 99fb0f5ef41985bf7bd975ccc918985a of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca089",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Can a medical device establishment licence be suspended without a hearing?",
+      "source": "SOR/98-282, s. 50 — Medical Devices Regulations",
+      "answer_identifiers": [
+        "SOR/98-282, s. 50"
+      ],
+      "answer_documents": [
+        "SOR/98-282"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk c31b3a9ba4791089d218ce5fe4c15b45 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca090",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Who designates a heritage lighthouse, and can nearby buildings be included?",
+      "source": "H-3.4, s. 6 — Heritage Lighthouse Protection Act",
+      "answer_identifiers": [
+        "H-3.4, s. 6"
+      ],
+      "answer_documents": [
+        "H-3.4"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 71cc109458f655ca97502222436f4a7a of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca091",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "How can whoever is responsible for a corporate jet get a customs arrival authorization for someone aboard?",
+      "source": "SOR/2003-323, s. 8 — Presentation of Persons (2003) Regulations",
+      "answer_identifiers": [
+        "SOR/2003-323, s. 8"
+      ],
+      "answer_documents": [
+        "SOR/2003-323"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 65cf4d83b31d40ea4ba2eef6188d455c of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca092",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "When reviewing a fertilizer application, can the Minister rely on a foreign government's evaluation?",
+      "source": "F-10, s. 5.7 — Fertilizers Act",
+      "answer_identifiers": [
+        "F-10, s. 5.7"
+      ],
+      "answer_documents": [
+        "F-10"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 2f0722862a62b20f6d367b8aa0f28fc7 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca093",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Can the Minister amend a food licence when the holder cannot carry out an activity at one of its establishments?",
+      "source": "SOR/2018-108, s. 32 — Safe Food for Canadians Regulations",
+      "answer_identifiers": [
+        "SOR/2018-108, s. 32"
+      ],
+      "answer_documents": [
+        "SOR/2018-108"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 960412cbc584662fe1babfbf7230b75c of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca094",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Who decides which classes of Canadian datasets CSIS may collect?",
+      "source": "C-23, s. 11.03 — Canadian Security Intelligence Service Act",
+      "answer_identifiers": [
+        "C-23, s. 11.03"
+      ],
+      "answer_documents": [
+        "C-23"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 6f2b6d5787c7362d5cc6daea02ca1cd8 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca095",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Who can be named an inspector or analyst under the Hazardous Products Act?",
+      "source": "H-3, s. 21 — Hazardous Products Act",
+      "answer_identifiers": [
+        "H-3, s. 21"
+      ],
+      "answer_documents": [
+        "H-3"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 0488bbd79d173584e635b15c3987e060 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca096",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Under what authority was the general import permit for turkey products issued?",
+      "source": "SOR/81-122 — Import of Turkeys and Turkey Products Permit",
+      "answer_identifiers": [
+        "SOR/81-122"
+      ],
+      "answer_documents": [
+        "SOR/81-122"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 683d1976aef07e9b773ce3ea100b3bd7 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca097",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "In the employment and social development department's information part, what is a federal institution?",
+      "source": "H-5.7, s. 30 — Department of Employment and Social Development Act",
+      "answer_identifiers": [
+        "H-5.7, s. 30"
+      ],
+      "answer_documents": [
+        "H-5.7"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 76c1cf8bf4c8d795142ae1e3e66fe894 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca098",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "What must the Chief Electoral Officer calculate under the law preserving provincial seats in the House of Commons?",
+      "source": "C-36.71, s. 5 — Preserving Provincial Representation in the House of Commons Act",
+      "answer_identifiers": [
+        "C-36.71, s. 5"
+      ],
+      "answer_documents": [
+        "C-36.71"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-22 from chunk 236b39e925f8884f18d53e5dbaade0ff of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca099",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "What must Mackenzie Valley boards take into account when exercising their powers?",
+      "source": "M-0.2, s. 60.1 — Mackenzie Valley Resource Management Act",
+      "answer_identifiers": [
+        "M-0.2, s. 60.1"
+      ],
+      "answer_documents": [
+        "M-0.2"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk a619b064b6b25168097272e50c48d9da of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca100",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Are CATSA staff covered by government employees' compensation?",
+      "source": "C-11.2, s. 26 — Canadian Air Transport Security Authority Act",
+      "answer_identifiers": [
+        "C-11.2, s. 26"
+      ],
+      "answer_documents": [
+        "C-11.2"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk e4cde2a98965c4feb2a8bb394a5c60d0 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca101",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Which substantial investments are left out when applying the minority investment rules for insurance companies?",
+      "source": "SOR/2001-404, s. 5 — Minority Investment (Insurance Companies) Regulations",
+      "answer_identifiers": [
+        "SOR/2001-404, s. 5"
+      ],
+      "answer_documents": [
+        "SOR/2001-404"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 384b558a9805b8aa6100f3eb971bd563 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca102",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Under the older Canada Student Loans Regulations, what does a borrower need to keep full-time student status?",
+      "source": "SOR/93-392, s. 3 — Canada Student Loans Regulations",
+      "answer_identifiers": [
+        "SOR/93-392, s. 3"
+      ],
+      "answer_documents": [
+        "SOR/93-392"
+      ],
+      "must_not_rank_first": [
+        "98b8d1068829cd08ff12a35e4113aecc"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 8aade744fa3e14e04b4bf0ed2725067e of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca103",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "For banks, not bank holding companies, which sections define a bank's interests in real property?",
+      "source": "SOR/2001-393, s. 7 — Investment Limits (Banks) Regulations",
+      "answer_identifiers": [
+        "SOR/2001-393, s. 7"
+      ],
+      "answer_documents": [
+        "SOR/2001-393"
+      ],
+      "must_not_rank_first": [
+        "e0823087b19d2f4053ef85e9d082967d"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 1037702dd54a24412854ce95a0f6652c of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca104",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "In a general procedure Tax Court appeal, what must the Crown's reply state?",
+      "source": "SOR/90-688a, s. 49 — Tax Court of Canada Rules (General Procedure)",
+      "answer_identifiers": [
+        "SOR/90-688a, s. 49"
+      ],
+      "answer_documents": [
+        "SOR/90-688a"
+      ],
+      "must_not_rank_first": [
+        "e44e156b3d1668a212667ddd9b14a4a5"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 58f13a6e3313cea15dafc5e0aa8cef9f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca105",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Under the Canada–Grenada social security agreement, how is time in Grenada counted for Old Age Security?",
+      "source": "SI/99-11 — Proclamation Giving Notice that the Agreement on Social Security between Canada and Grenada is in Force as of February 1, 1999",
+      "answer_identifiers": [
+        "SI/99-11"
+      ],
+      "answer_documents": [
+        "SI/99-11"
+      ],
+      "must_not_rank_first": [
+        "f0e6bce3ce465558c1f7a55ed92ee0fc"
+      ],
+      "label_chunks": 27,
+      "provenance": "drafted 2026-11-22 from chunk d2cdd31bfc68df6be72eaa5f15fef84a of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca106",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "How long does the social security agreement with Saint Vincent and the Grenadines last, and how can it be ended?",
+      "source": "SI/98-120 — Proclamation Giving Notice that the Agreement between Canada and Saint Vincent and the Grenadines is in Force as of November 1, 1998",
+      "answer_identifiers": [
+        "SI/98-120"
+      ],
+      "answer_documents": [
+        "SI/98-120"
+      ],
+      "must_not_rank_first": [
+        "3b6bb92f29b2cced0ffcf7cfa436ef3e"
+      ],
+      "label_chunks": 32,
+      "provenance": "drafted 2026-11-22 from chunk 7638235bffa16fd2dd3e4160404a3729 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca107",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Near Montréal–Trudeau airport, can land be used for activities that attract birds?",
+      "source": "SOR/2017-201, s. 6 — Montréal–Pierre Elliott Trudeau International Airport Zoning Regulations",
+      "answer_identifiers": [
+        "SOR/2017-201, s. 6"
+      ],
+      "answer_documents": [
+        "SOR/2017-201"
+      ],
+      "must_not_rank_first": [
+        "08133610977d053fb1f37114351c2404"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 07a4bfb2e7946e1a1dc64afe06d8d651 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca108",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Where is the airport covered by the Port Hardy airport zoning rules?",
+      "source": "SOR/91-484, s. 2 — Port Hardy Airport Zoning Regulations",
+      "answer_identifiers": [
+        "SOR/91-484, s. 2"
+      ],
+      "answer_documents": [
+        "SOR/91-484"
+      ],
+      "must_not_rank_first": [
+        "6116d250964833b2fc0beb8d22a424ca"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk e827fcbdb52e8553f96d69bcaee2ab3f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca109",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "How can a former MP repay an unpaid amount for counted service?",
+      "source": "SOR/2016-76, s. 14 — Former Members of Parliament Counting of Service Regulations",
+      "answer_identifiers": [
+        "SOR/2016-76, s. 14"
+      ],
+      "answer_documents": [
+        "SOR/2016-76"
+      ],
+      "must_not_rank_first": [
+        "58efa56d0f25bf3c441c050af60d48ca"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 8fa73dc7c050d9fc85cb260ca5d1615b of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca110",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Who acts for the Chief Commissioner under the Polish foreign claims settlement rules?",
+      "source": "SOR/72-395, s. 12 — Foreign Claims (Poland) Settlement Regulations",
+      "answer_identifiers": [
+        "SOR/72-395, s. 12"
+      ],
+      "answer_documents": [
+        "SOR/72-395"
+      ],
+      "must_not_rank_first": [
+        "ecb5602bd53d758aa1e6e8f2f657d1dc"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-22 from chunk 0bbd223661c5638011059f929236eecc of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca111",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "What is an assembly yard in Saskatchewan hog marketing?",
+      "source": "C.R.C., c. 276, s. 2 — Saskatchewan Hog Information (Interprovincial and Export) Regulations",
+      "answer_identifiers": [
+        "C.R.C., c. 276, s. 2",
+        "C.R.C., c. 274, s. 2",
+        "C.R.C., c. 277, s. 2",
+        "C.R.C., c. 272, s. 2"
+      ],
+      "answer_documents": [
+        "C.R.C., c. 276",
+        "C.R.C., c. 274",
+        "C.R.C., c. 277",
+        "C.R.C., c. 272"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-22 from chunk 3bab2a1370de36577a42cc3ece4ade12 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca112",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "What are airborne asbestos fibres under federal workplace safety rules?",
+      "source": "SOR/87-184, s. 7.1 — On Board Trains Occupational Health and Safety Regulations",
+      "answer_identifiers": [
+        "SOR/87-184, s. 7.1",
+        "SOR/87-612, s. 11.1",
+        "SOR/2011-87, s. 5.1",
+        "SOR/86-304, s. 10.1",
+        "SOR/2010-120, s. 243"
+      ],
+      "answer_documents": [
+        "SOR/87-184",
+        "SOR/87-612",
+        "SOR/2011-87",
+        "SOR/86-304",
+        "SOR/2010-120"
+      ],
+      "label_chunks": 15,
+      "provenance": "drafted 2026-11-22 from chunk 0482d905e720f897b3abf7c2bc2e7e52 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "ca113",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "What must Foothills do if a survey monument is disturbed while building the northern pipeline?",
+      "source": "SI/80-127, s. 79 — Northern Pipeline Socio-Economic and Environmental Terms and Conditions for the Province of Alberta",
+      "answer_identifiers": [
+        "SI/80-127, s. 79",
+        "SI/81-22, s. 116",
+        "SI/81-23, s. 90",
+        "SI/80-128, s. 93"
+      ],
+      "answer_documents": [
+        "SI/80-127",
+        "SI/81-22",
+        "SI/81-23",
+        "SI/80-128"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-22 from chunk 64bfc705007b005fce5fe9e845e005e7 of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "ca114",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "How much notice is needed before a bond protecting a federal financial institution's assets can be cancelled?",
+      "source": "SOR/94-81, s. 11 — Protection of Assets (Fraternal Benefit Societies) Regulations",
+      "answer_identifiers": [
+        "SOR/94-81, s. 11",
+        "SOR/92-353, s. 11",
+        "SOR/92-352, s. 11",
+        "SOR/92-350, s. 11",
+        "SOR/92-354, s. 11"
+      ],
+      "answer_documents": [
+        "SOR/94-81",
+        "SOR/92-353",
+        "SOR/92-352",
+        "SOR/92-350",
+        "SOR/92-354"
+      ],
+      "label_chunks": 5,
+      "provenance": "drafted 2026-11-22 from chunk 757d49248b4b40a6ad7a329de244833f of ca_laws; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "cao01",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I make sourdough bread rise better?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": true
+    },
+    {
+      "id": "cao02",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "When is the best time to plant tomatoes outdoors?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao03",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I reset my home router password?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao04",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How many calories are in a medium banana?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao05",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "What is a good beginner running plan for a 5K?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao06",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Who painted the ceiling of the Sistine Chapel?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao07",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I remove a red wine stain from a carpet?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao08",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "What is the difference between a virus and a bacterium?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao09",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What is the regional minimum wage in Jakarta under Indonesian law?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao10",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Under California law, how much notice must a landlord give before entering a rental unit?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao11",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What does article 1240 of the French Civil Code say about liability for damage?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao12",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "How long is statutory maternity leave in Germany?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": true
+    },
+    {
+      "id": "cao13",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What is the penalty for jaywalking in New York City?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    },
+    {
+      "id": "cao14",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Apa syarat mendirikan perseroan terbatas di Indonesia?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": true
+    },
+    {
+      "id": "cao15",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "How do I apply for a US Social Security number?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": true
+    },
+    {
+      "id": "cao16",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What is the speed limit on motorways in the United Kingdom?",
+      "answer_chunks": [],
+      "source": "not answerable from ca_laws",
+      "provenance": "written 2026-11-22",
+      "holdout": false
+    }
+  ]
+}
