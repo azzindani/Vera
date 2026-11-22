@@ -10,6 +10,22 @@ query path.
 
 ## 1. Run it
 
+One corpus, served and scored in one command, from what git holds:
+
+```bash
+python dev_tools/eval/eval_corpus.py ca_laws                       # Canada, §2e
+python dev_tools/eval/eval_corpus.py id_reg_markdown --split fresh # Indonesia, §2d
+python dev_tools/eval/eval_corpus.py ca_laws --set DOMAIN_FLOOR=0.45
+```
+
+`dev_tools/eval/corpora.json` says, per corpus, which Ravel bundle the database was
+prepared from (its vocabulary is the engine's), which prepared volume and port serve it,
+which `config/` algorithms file ranks it, and which question set scores it. The overlay is
+`docker-compose.eval.yml`. A corpus that declares no authority or structural table
+(Canada, the CFR, Japan, Germany) is ranked by `config/algorithms.no_prior.json`: the
+engine refuses `balanced` there, since a prior it cannot evaluate would do nothing. Only the
+data is outside git, and `ravel build` and `ravel db prepare` make it again.
+
 Against the deployed server over HTTP:
 
 ```bash

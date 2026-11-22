@@ -1,0 +1,24 @@
+# Measurement overlay: serve a Ravel-prepared corpus through the engine and score it.
+# Driven by dev_tools/eval/eval_corpus.py, which reads dev_tools/eval/corpora.json; not
+# meant to be brought up by hand.
+#
+#   python dev_tools/eval/eval_corpus.py ca_laws
+#
+# ! The database is NOT a service here. Each corpus has its own prepared volume, served by
+# its own container on its own port (corpora.json), and the engine reaches it through the
+# host. Two Postgres servers on one data directory corrupt it, so the overlay never mounts
+# a corpus volume into the `db` service another container may already hold.
+#
+# The embed service is the reference implementation (dev_tools/pre_embed/server.py) run in
+# Ravel's job image, CPU only: the vera-embed:cpu build could not download torch. Ranking
+# does not depend on cores, so it runs unpinned.
+services:
+  embed:
+    image: ravel-job:gpu
+    build: !reset null
+    entrypoint: ["python", "/app/server.py"]
+    environment:
+      CUDA_VISIBLE_DEVICES: ""
+      TORCH_THREADS: "8"
+    volumes:
+      - ./dev_tools/pre_embed/server.py:/app/server.py:ro
