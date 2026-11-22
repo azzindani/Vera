@@ -38,6 +38,53 @@ pub fn tokenize(text: &str) -> Vec<String> {
     out
 }
 
+/// Kana, CJK ideographs and half-width katakana: the ranges Ravel's `_CJK` names.
+fn is_cjk(ch: char) -> bool {
+    matches!(ch,
+        '\u{3040}'..='\u{30ff}' | '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}'
+        | '\u{f900}'..='\u{faff}' | '\u{ff66}'..='\u{ff9f}')
+}
+
+/// `tokenize`, except that a run of CJK characters becomes its overlapping character
+/// bigrams, and a lone CJK character is kept as itself. Ravel's `WORDS_CJK`.
+///
+/// ! Japanese and Chinese are written without spaces: under `tokenize` a whole clause is
+/// one term no query repeats. Text with no CJK tokenises exactly as under `tokenize`.
+#[must_use]
+pub fn tokenize_cjk(text: &str) -> Vec<String> {
+    fn flush(out: &mut Vec<String>, cur: &mut Vec<char>, cjk: bool) {
+        if cjk {
+            if cur.len() == 1 {
+                out.push(cur.iter().collect());
+            } else {
+                out.extend(cur.windows(2).map(|w| w.iter().collect::<String>()));
+            }
+        } else if cur.len() >= 2 {
+            out.push(cur.iter().collect());
+        }
+        cur.clear();
+    }
+    let mut out = Vec::new();
+    let mut cur: Vec<char> = Vec::new();
+    let mut cur_cjk = false;
+    for ch in text.chars() {
+        if ch.is_alphanumeric() || ch == '_' {
+            let cjk = is_cjk(ch);
+            if !cur.is_empty() && cjk != cur_cjk {
+                flush(&mut out, &mut cur, cur_cjk);
+            }
+            cur_cjk = cjk;
+            cur.extend(ch.to_lowercase());
+        } else if !cur.is_empty() {
+            flush(&mut out, &mut cur, cur_cjk);
+        }
+    }
+    if !cur.is_empty() {
+        flush(&mut out, &mut cur, cur_cjk);
+    }
+    out
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Bm25Error {
     #[error("reading vocabulary: {0}")]
@@ -53,9 +100,11 @@ pub enum Bm25Error {
     TokenizerDrift { artifact: String, engine: String },
 }
 
-/// The token pattern this implementation reproduces. Compared against the
-/// artifact on load.
+/// The token patterns this implementation reproduces, by the name an artifact records.
+/// Compared against the artifact on load: `WORDS` is `tokenize`, `WORDS_CJK` is
+/// `tokenize_cjk` (Ravel's `enrich/sparse.py`).
 const ENGINE_TOKEN_PATTERN: &str = r"(?u)\b\w\w+\b";
+const ENGINE_TOKEN_PATTERN_CJK: &str = r"(?u)\b\w\w+\b|cjk-bigrams";
 
 #[derive(Debug, serde::Deserialize)]
 struct Artifact {
@@ -81,6 +130,8 @@ pub struct QueryVectorizer {
     /// question, so it is charged the most any known term could be worth.
     unknown_idf: f32,
     dim: u32,
+    /// The artifact was fitted with `tokenize_cjk`.
+    cjk: bool,
 }
 
 impl QueryVectorizer {
@@ -91,19 +142,34 @@ impl QueryVectorizer {
     pub fn load(path: &Path) -> Result<Self, Bm25Error> {
         let raw = std::fs::read_to_string(path)?;
         let art: Artifact = serde_json::from_str(&raw)?;
-        if art.token_pattern != ENGINE_TOKEN_PATTERN {
-            return Err(Bm25Error::TokenizerDrift {
-                artifact: art.token_pattern,
-                engine: ENGINE_TOKEN_PATTERN.to_owned(),
-            });
-        }
+        let cjk = match art.token_pattern.as_str() {
+            ENGINE_TOKEN_PATTERN => false,
+            ENGINE_TOKEN_PATTERN_CJK => true,
+            _ => {
+                return Err(Bm25Error::TokenizerDrift {
+                    artifact: art.token_pattern,
+                    engine: format!("{ENGINE_TOKEN_PATTERN} or {ENGINE_TOKEN_PATTERN_CJK}"),
+                });
+            }
+        };
         let unknown_idf = art.idf.values().copied().fold(0.0_f32, f32::max);
         Ok(Self {
             vocab: art.vocab,
             idf: art.idf,
             unknown_idf,
             dim: art.dim,
+            cjk,
         })
+    }
+
+    /// `text` tokenised as the corpus was.
+    #[must_use]
+    pub fn tokens(&self, text: &str) -> Vec<String> {
+        if self.cjk {
+            tokenize_cjk(text)
+        } else {
+            tokenize(text)
+        }
     }
 
     #[must_use]
@@ -124,7 +190,7 @@ impl QueryVectorizer {
     /// evidence" rather than "certainly out of domain".
     #[must_use]
     pub fn evidence(&self, query: &str, texts: &[String]) -> f32 {
-        let mut terms: Vec<String> = tokenize(query);
+        let mut terms: Vec<String> = self.tokens(query);
         terms.sort_unstable();
         terms.dedup();
         if terms.is_empty() {
@@ -137,7 +203,7 @@ impl QueryVectorizer {
             return 0.0;
         }
 
-        let mut pooled: Vec<String> = texts.iter().flat_map(|t| tokenize(t)).collect();
+        let mut pooled: Vec<String> = texts.iter().flat_map(|t| self.tokens(t)).collect();
         pooled.sort_unstable();
         pooled.dedup();
 
@@ -167,7 +233,7 @@ impl QueryVectorizer {
             return text.to_owned();
         }
         let mut seen: Vec<String> = Vec::new();
-        for t in tokenize(text) {
+        for t in self.tokens(text) {
             if self.idf.get(&t).is_none_or(|v| *v >= min_idf) && !seen.contains(&t) {
                 seen.push(t);
             }
@@ -187,7 +253,8 @@ impl QueryVectorizer {
     #[must_use]
     pub fn query(&self, text: &str) -> Vec<(u32, f32)> {
         let mut seen: Vec<(u32, f32)> = Vec::new();
-        let mut indices: Vec<u32> = tokenize(text)
+        let mut indices: Vec<u32> = self
+            .tokens(text)
             .iter()
             .filter_map(|t| self.vocab.get(t).copied())
             .collect();
@@ -248,6 +315,26 @@ mod tests {
             idf,
             unknown_idf: 9.0,
             dim: 20000,
+            cjk: false,
+        }
+    }
+
+    #[test]
+    fn cjk_runs_become_bigrams_as_ravel_tokenises_them() {
+        // ! Mirrors Ravel's `test_cjk_runs_become_bigrams...`: the two halves must agree.
+        assert_eq!(
+            tokenize_cjk("博物館法第二条"),
+            ["博物", "物館", "館法", "法第", "第二", "二条"]
+        );
+        assert_eq!(tokenize_cjk("法"), ["法"]);
+        assert_eq!(
+            tokenize_cjk("博物館法第二条 の定義 BGB § 7 Wohnsitz"),
+            [
+                "博物", "物館", "館法", "法第", "第二", "二条", "の定", "定義", "bgb", "wohnsitz"
+            ]
+        );
+        for text in ["Wajib Pajak a 28/2007", "C-46, s. 718.2 Purpose of Act"] {
+            assert_eq!(tokenize_cjk(text), tokenize(text));
         }
     }
 
