@@ -166,10 +166,19 @@ database. Its results are then the same by construction, and that is checked, �
   `information_schema` (`store/src/search.rs`, `has_currency` and its twin) match on
   `table_name` alone and must also match `table_schema = current_schema()`, or one
   domain's probe sees another's table.
-- **One list configures both deployments**: `DOMAINS`, each entry a DSN and a schema,
-  validated at startup (§7.12). Separated is N DSNs with `public`; unified is one DSN with
-  N schemas; a mix is allowed. Unset, the engine serves the one database `DATABASE_URL`
-  names, exactly as today.
+- **One list configures both deployments**: `DOMAINS_FILE`, a JSON file mounted read-only
+  beside `config/`, one entry per domain: its `schema`, its BM25 vocabulary file, its
+  algorithms file, and `dsn_env`, the name of the environment variable holding its
+  connection string (default `DATABASE_URL`). ! Names, ✗ connection strings: a DSN carries
+  a password (§7.14) and the file is in git. Separated is N entries with N `dsn_env`; unified
+  is N entries sharing `DATABASE_URL`, each with its schema; a mix is allowed. Validated at
+  startup (§7.12): an entry whose canary fails is not served, and the engine says so. Unset,
+  the engine serves the one database `DATABASE_URL` names, exactly as today.
+- **A `Pipeline` is already a domain**: its store, centroids, gate floors, scoring
+  vocabulary and BM25 vocabulary. The multi-domain engine holds one per entry and shares
+  the embedding provider between them; a chunk id is looked up in each domain in turn for
+  `read_chunk` and `get_provenance`, and one found in two domains is refused as ambiguous,
+  ✗ guessed (§7.8).
 - **Selection, fusion and factors are §4's**, unchanged: anchors per domain, the top D
   that clear their floor, RRF across domains, each row scored with its own domain's
   vocabulary and algorithm (`balanced` for Indonesia, `no_prior` where no prior is

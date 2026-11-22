@@ -139,10 +139,16 @@ def main() -> None:
     password = _password()
 
     _database(db)
+    # ! A domain is (database, schema) (`SCALING.md` §4a). Unified mode names a schema; the
+    # connection's search path reaches it, `public` after it for the extensions' types.
+    schema = db.get("schema")
+    engine_options = f"?options=-csearch_path%3D{schema},public" if schema else ""
+    harness_options = f" options='-c search_path={schema},public'" if schema else ""
     engine_env = dict(
         os.environ,
         DATABASE_URL=(
             f"postgres://{db['user']}:{password}@host.docker.internal:{db['port']}/{db['name']}"
+            f"{engine_options}"
         ),
         VOCAB_DIR=str(bundle),
         BM25_VOCAB="/vocab/corpus.bm25.json",
@@ -160,7 +166,7 @@ def main() -> None:
         VERA_HTTP="http://127.0.0.1:8081",
         DATABASE_URL=(
             f"host=127.0.0.1 port={db['port']} dbname={db['name']} user={db['user']} "
-            f"password={password}"
+            f"password={password}{harness_options}"
         ),
         # ! The fresh split is its own file (`e2e._queries_file`): read through `queries`,
         # `--split fresh` found no fresh case in it and scored nothing.

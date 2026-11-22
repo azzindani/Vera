@@ -1,5 +1,5 @@
 {
-  "_doc": "How each corpus is served and scored, so a measurement in docs/eval/EVAL.md is reproduced by one command: python dev_tools/eval/eval_corpus.py <corpus>. `bundle` is relative to $RAVEL_ROOT (default ../Ravel): the Ravel bundle the database was prepared from, whose corpus.bm25.json is the vocabulary the engine and harness read. `db` is the prepared Postgres volume and the container and host port that serve it; a missing volume is made with `ravel db prepare <bundle> --dsn ...` into a fresh vera-db:pg16-rum-bm25. `algorithms` is a file in config/. `engine` is environment the engine container is started with. Every other engine knob runs at its docker-compose.yml default: compose reads eval.env, never the operator's .env. The password is $EVAL_DB_PASSWORD, else POSTGRES_PASSWORD from .env; it is never printed.",
+  "_doc": "How each corpus is served and scored, so a measurement in docs/eval/EVAL.md is reproduced by one command: python dev_tools/eval/eval_corpus.py <corpus>. `bundle` is relative to $RAVEL_ROOT (default ../Ravel): the Ravel bundle the database was prepared from, whose corpus.bm25.json is the vocabulary the engine and harness read. `db` is the prepared Postgres volume and the container and host port that serve it; a missing volume is made with `ravel db prepare <bundle> --dsn ...` into a fresh vera-db:pg16-rum-bm25. `db.schema`, when set, is the schema the corpus lives in inside a database that holds several (unified mode, SCALING.md §4a); unset, it is the database's own `public`. `algorithms` is a file in config/. `engine` is environment the engine container is started with. Every other engine knob runs at its docker-compose.yml default: compose reads eval.env, never the operator's .env. The password is $EVAL_DB_PASSWORD, else POSTGRES_PASSWORD from .env; it is never printed.",
   "corpora": {
     "ca_laws": {
       "bundle": "work/bundle_ca_laws_v2",
@@ -17,6 +17,23 @@
       "algorithms": "algorithms.json",
       "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
       "measured": "docs/eval/EVAL.md; the fresh split is EVAL_SPLIT=fresh"
+    },
+    "id_reg_unified": {
+      "bundle": "work/bundle_id_reg_markdown_v6",
+      "db": {"container": "vera-db", "volume": "vera-v6", "port": 25432, "user": "vera", "name": "unified", "schema": "id_reg"},
+      "queries": "queries.json",
+      "fresh_queries": "queries_fresh.json",
+      "algorithms": "algorithms.json",
+      "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
+      "measured": "SCALING.md §5 step 3b: id_reg_markdown's tables, moved into schema id_reg of the unified database"
+    },
+    "ca_laws_unified": {
+      "bundle": "work/bundle_ca_laws_v2",
+      "db": {"container": "vera-db", "volume": "vera-v6", "port": 25432, "user": "vera", "name": "unified", "schema": "ca_laws"},
+      "queries": "queries_ca_laws.json",
+      "algorithms": "algorithms.no_prior.json",
+      "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
+      "measured": "SCALING.md §5 step 3c: ca_laws prepared by Ravel into schema ca_laws of the unified database"
     }
   }
 }

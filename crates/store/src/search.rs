@@ -206,7 +206,8 @@ impl SearchOps {
             .query_one(
                 "SELECT to_regclass('doc_status') IS NOT NULL
                     AND EXISTS (SELECT 1 FROM information_schema.columns
-                                WHERE table_name = 'chunks' AND column_name = 'doc_id')",
+                                WHERE table_schema = current_schema()
+                                  AND table_name = 'chunks' AND column_name = 'doc_id')",
                 &[],
             )
             .await?;
@@ -353,7 +354,8 @@ impl SearchOps {
             .query_one(
                 "SELECT to_regclass('cluster_parents') IS NOT NULL
                     AND EXISTS (SELECT 1 FROM information_schema.columns
-                                WHERE table_name = 'clusters' AND column_name = 'parent_id')",
+                                WHERE table_schema = current_schema()
+                                  AND table_name = 'clusters' AND column_name = 'parent_id')",
                 &[],
             )
             .await?;
@@ -620,6 +622,7 @@ impl SearchOps {
                 "SELECT to_regclass('corpus_regions') IS NOT NULL
                     AND EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_search')
                     AND EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'chunks_bm25'
+                                AND schemaname = current_schema()
                                 AND indexdef LIKE '%enacting_body%')",
                 &[],
             )
