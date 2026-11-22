@@ -1,0 +1,24 @@
+{
+  "_README": "Sampling config for a citation-labelled eval set on ca_laws (sample_corpus.py). Markers are English and case-insensitive (Postgres ~*). Strata follow the corpus: 973 Acts, 4,901 regulations.",
+  "corpus": "ca_laws",
+  "seed": 20261122,
+  "min_chars": 200,
+  "strata": [
+    {"types": ["Act"], "share": 0.45},
+    {"types": ["SOR"], "share": 0.45},
+    {"types": "*", "share": 0.10}
+  ],
+  "types": {
+    "exact_ref":    {"marker": ".", "n": 12},
+    "conceptual":   {"marker": ".", "n": 20},
+    "definitional": {"marker": "\\m(means|includes)\\M", "n": 14},
+    "numeric":      {"marker": "\\m[0-9]+ (days?|months?|years?|hours?)\\M|per cent|\\$ ?[0-9]", "n": 14},
+    "procedural":   {"marker": "\\m(must|shall) (apply|submit|file|notify|provide|send|keep)\\M", "n": 14},
+    "obligation":   {"marker": "\\m(must|shall)\\M", "n": 12},
+    "exception":    {"marker": "\\m(except|unless|does not apply|despite)\\M", "n": 12},
+    "sanction":     {"marker": "\\m(offence|liable|fine|imprisonment|penalty)\\M", "n": 12},
+    "authority":    {"marker": "may make regulations|Governor in Council may|Minister may", "n": 10},
+    "multi_tier":   {"marker": "section [0-9]+(\\.[0-9]+)? of the [A-Z][A-Za-z ]+ Act", "n": 8}
+  },
+  "pairs": {"hard_negative": 10, "underspecified": 6}
+}

@@ -50,6 +50,10 @@ def _queries_file() -> Path:
     # ! EVAL_SPLIT=fresh reads `queries_fresh.json`, a test set drafted after the engine's
     # levers were chosen. It is a separate file so that no other script (sims, fits,
     # sweeps, all of which read `queries.json`) can see it: never tuned on, by construction.
+    # ! EVAL_QUERIES names another source's set (`queries_ca_laws.json`): a corpus served by
+    # its own engine is scored on its own questions, labelled by citation.
+    if os.environ.get("EVAL_QUERIES"):
+        return Path(__file__).parent / os.environ["EVAL_QUERIES"]
     name = "queries_fresh.json" if os.environ.get("EVAL_SPLIT") == "fresh" else "queries.json"
     return Path(__file__).parent / name
 
@@ -85,6 +89,12 @@ def same_regulation(row, ref) -> bool:
 
 def regulation_hits(cur, q, ids) -> list[bool]:
     """Per returned id: does it belong to a labelled regulation?"""
+    # A citation-labelled set names its instruments by number (`answer_documents`:
+    # `SOR/2018-108`, `LEGITEXT000005634379`), what the profile writes to regulation_number.
+    if q.get("answer_documents") and ids:
+        cur.execute("SELECT id, regulation_number FROM chunks WHERE id = ANY(%s)", (ids,))
+        number = dict(cur.fetchall())
+        return [number.get(i) in q["answer_documents"] for i in ids]
     refs = list(q.get("answer_articles", []))
     if q.get("answer_regulation"):
         refs.append(q["answer_regulation"])

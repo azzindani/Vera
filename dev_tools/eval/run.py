@@ -172,6 +172,12 @@ def resolve_targets(cur, q):
     three are the answer.
     """
     ids = set(q.get("answer_chunks", []))
+    # ! A citation (`SOR/2018-108, s. 5`, `Code de commerce, art. L233-3`), for a corpus whose
+    # profile states one per chunk: every chunk of that section or article counts, as an
+    # article does below. Indonesian labels predate it and name the article's fields.
+    for ident in q.get("answer_identifiers", []):
+        cur.execute("SELECT id FROM chunks WHERE identifier = %s", (ident,))
+        ids |= {r[0] for r in cur.fetchall()}
     for ref in q.get("answer_articles", []):
         # ! `about` disambiguates regional regulations that share type, number and
         # year (PERDA KABUPATEN 1/2010 is 17 documents). It is matched as a PREFIX
