@@ -210,6 +210,9 @@ struct Settings {
     queue_wait: std::time::Duration,
     read_chunk_chars: usize,
     max_provenance_ids: usize,
+    /// `DOMAIN_SELECT_LEXICAL`: with several domains, the lexical evidence below which a
+    /// domain answers only if no other serves (`domains::gates`).
+    domain_select_lexical: f32,
     statement_timeout: u64,
     pipeline: Config,
 }
@@ -240,6 +243,7 @@ impl Settings {
             )?),
             read_chunk_chars: parsed("READ_CHUNK_CHARS", "positive integer", 4000usize)?,
             max_provenance_ids: parsed("MAX_PROVENANCE_IDS", "positive integer", 50usize)?,
+            domain_select_lexical: parsed("DOMAIN_SELECT_LEXICAL", "number", 0.2f32)?,
             // ! The third concurrency bound. The semaphore caps what runs and
             // QUEUE_WAIT_MS caps what waits; without this nothing caps how LONG
             // a request runs, and a slow query holds its permit for its whole
@@ -418,6 +422,15 @@ impl Settings {
                 kind: "non-negative number",
             });
         }
+        // ! A share of the query: above 1 no domain could hold a question, and every
+        // selection would fall back to similarity alone without saying so.
+        if !(0.0..=1.0).contains(&self.domain_select_lexical) {
+            return Err(ConfigError::Invalid {
+                key: "DOMAIN_SELECT_LEXICAL",
+                value: self.domain_select_lexical.to_string(),
+                kind: "number from 0 to 1",
+            });
+        }
         // ! `k` ≤ 0 divides by zero at rank 1 or inverts the fusion; NaN ranks nothing.
         if !(self.pipeline.rrf_k.is_finite() && self.pipeline.rrf_k > 0.0) {
             return Err(ConfigError::Invalid {
@@ -490,6 +503,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let limits = Limits {
         read_chunk_chars: s.read_chunk_chars,
         max_provenance_ids: s.max_provenance_ids,
+        domain_select_lexical: s.domain_select_lexical,
     };
 
     match s.transport {
@@ -699,6 +713,8 @@ pub(crate) struct Server {
 pub(crate) struct Limits {
     pub(crate) read_chunk_chars: usize,
     pub(crate) max_provenance_ids: usize,
+    /// `DOMAIN_SELECT_LEXICAL` (`domains::gates`).
+    pub(crate) domain_select_lexical: f32,
 }
 
 impl Server {
@@ -786,7 +802,7 @@ async fn dispatch(
             let Some(q) = args.get("query").and_then(Value::as_str) else {
                 return search_knowledge(&domains[0].pipe, &args).await;
             };
-            let verdicts = domains::gates(domains, q).await;
+            let verdicts = domains::gates(domains, q, limits.domain_select_lexical).await;
             let mut out = search_knowledge(&verdicts[0].domain.pipe, &args).await;
             note(&mut out, &verdicts);
             out
@@ -795,7 +811,7 @@ async fn dispatch(
             let Some(q) = args.get("query").and_then(Value::as_str) else {
                 return explain_routing(&domains[0].pipe, &args).await;
             };
-            let verdicts = domains::gates(domains, q).await;
+            let verdicts = domains::gates(domains, q, limits.domain_select_lexical).await;
             let mut out = explain_routing(&verdicts[0].domain.pipe, &args).await;
             note(&mut out, &verdicts);
             if let Some(obj) = out.as_object_mut() {
@@ -807,6 +823,8 @@ async fn dispatch(
                             json!({
                                 "domain": v.domain.name,
                                 "centroid_similarity": v.similarity,
+                                "lexical_evidence": v.lexical,
+                                "holds_query": v.holds,
                                 "would_serve": v.serves,
                                 "gate_failed": v.failed,
                             })
@@ -1221,6 +1239,7 @@ mod tests {
             queue_wait: std::time::Duration::from_secs(2),
             read_chunk_chars: 4000,
             max_provenance_ids: 50,
+            domain_select_lexical: 0.2,
             statement_timeout: 15_000,
             pipeline: Config::default(),
         }

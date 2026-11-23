@@ -25,7 +25,7 @@
       "fresh_queries": "queries_fresh.json",
       "algorithms": "algorithms.json",
       "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
-      "measured": "SCALING.md §5 step 3b: id_reg_markdown's tables, moved into schema id_reg of the unified database"
+      "measured": "SCALING.md §4a: 79.7 / 88.7 / 92.1 / 93.6 / 95.1 at 5/10/15/20/25, fresh with EVAL_REWRITES; id_reg_markdown's tables moved into schema id_reg"
     },
     "unified_id_reg": {
       "bundle": "work/bundle_id_reg_markdown_v6",
@@ -35,7 +35,7 @@
       "fresh_queries": "queries_fresh.json",
       "algorithms": "algorithms.json",
       "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
-      "measured": "SCALING.md §5 step 3c: the Indonesian questions through one engine serving every domain in config/domains.unified.json"
+      "measured": "SCALING.md §4a: 79.7 / 88.7 / 92.1 / 93.6 / 95.1, fresh with EVAL_REWRITES, through one engine serving every domain in config/domains.unified.json"
     },
     "unified_ca_laws": {
       "bundle": "work/bundle_ca_laws_v2",
@@ -44,7 +44,7 @@
       "queries": "queries_ca_laws.json",
       "algorithms": "algorithms.no_prior.json",
       "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
-      "measured": "SCALING.md §5 step 3c: the Canadian questions through one engine serving every domain in config/domains.unified.json"
+      "measured": "SCALING.md §4a: 71.9 / 81.6 / 84.2 / 85.1 / 88.6, all 114 equal to ca_laws case for case, through one engine serving every domain"
     },
     "ca_laws_unified": {
       "bundle": "work/bundle_ca_laws_v2",
@@ -52,7 +52,7 @@
       "queries": "queries_ca_laws.json",
       "algorithms": "algorithms.no_prior.json",
       "engine": {"TOP_K": "60", "CANDIDATE_POOL": "60", "MAX_CONCURRENCY": "6"},
-      "measured": "SCALING.md §5 step 3c: ca_laws prepared by Ravel into schema ca_laws of the unified database"
+      "measured": "SCALING.md §4a: 71.9 / 81.6 / 84.2 / 85.1 / 88.6, equal to ca_laws case for case; prepared by Ravel into schema ca_laws, then `ravel db calibrate`"
     }
   }
 }

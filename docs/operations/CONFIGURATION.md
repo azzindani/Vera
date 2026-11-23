@@ -28,6 +28,7 @@ operator knows, and each fails *silently* if guessed wrong rather than loudly.
 |---|---|---|
 | `DOMAINS_FILE` | *(unset)* | A JSON file of domains (`config/domains.unified.json`): each its `name`, `schema`, BM25 `vocab`, `algorithms` and `dsn_env`, the variable holding its connection string. Unset serves the one database `DATABASE_URL` names, by the same code as before. Set, each domain's own gate judges a query and the best one that would serve it answers; the reply's first `progress` line says how each domain judged it (`SCALING.md` §4a). |
 | `BUNDLES_DIR` | `./config/.bundles` (empty) | Host directory mounted read-only at `/bundles`, where each domain's `vocab` is read: Ravel's `work/`. |
+| `DOMAIN_SELECT_LEXICAL` | `0.2` | Of the domains that would serve, one whose own top documents hold less than this share of the question (lexical evidence) answers only if none holds it; the nearest centroid decides among the rest. Chosen on the training questions: every value from 0.20 to 0.30 selected all 670 correctly, and the lowest a right domain scored was 0.24 (`SCALING.md` §4a). 0 to 1, checked at startup. |
 
 ! The file names environment variables, never connection strings: a DSN carries a password
 (`CLAUDE.md` §7.14). Every domain must declare the same vector space; one that does not

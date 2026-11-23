@@ -221,6 +221,7 @@ services:
       # each domain's schema, vocabulary and algorithms (config/domains.*.json). Unset
       # serves the one database DATABASE_URL names, as always.
       DOMAINS_FILE: ${DOMAINS_FILE:-}
+      DOMAIN_SELECT_LEXICAL: ${DOMAIN_SELECT_LEXICAL:-}
     volumes:
       # ! Sparse vectors are indexed by vocabulary POSITION. Serving a corpus
       # against another run's vocabulary compares unrelated dimensions and

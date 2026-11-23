@@ -142,7 +142,7 @@ clusters. The engine:
 
 A request still never names a domain (§7.13). It can only be narrowed by the gate.
 
-### 4a. Separated and unified: a domain is a schema · built 2026-11-22, ✗ measured
+### 4a. Separated and unified: a domain is a schema · built 2026-11-22, measured 2026-11-23
 
 Two deployments, one engine:
 
@@ -151,7 +151,7 @@ Two deployments, one engine:
 | for | production: corpora on different machines, scaled and replaced apart | local and personal: every corpus on one box |
 | storage | one database per corpus, its tables in `public` | one database, one **schema** per corpus (`id_reg`, `ca_laws`, `fr_legi` …) |
 | containers | one Postgres per corpus, one engine over all | one Postgres, one volume, one engine |
-| today | ✓ what runs: `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | built (`DOMAINS_FILE`, `config/domains.unified.json`); steps 3b and 3c ✗ measured |
+| today | ✓ `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✓ database `unified`, schemas `id_reg` and `ca_laws`, one engine (`config/domains.unified.json`): each corpus scores as it does alone (below) |
 
 **A domain is `(database, schema)`.** Each domain keeps everything it has today, in its own
 schema: `chunks`, `corpus_meta`, centroids, the sparse vocabulary, the scoring vocabulary,
@@ -181,6 +181,16 @@ database. Its results are then the same by construction, and that is checked, �
   `progress` line says how every domain judged it. Fusing two domains' replies would
   rebuild their numbered citations and summary payload, and is left until a question set
   shows a question one domain cannot answer alone.
+- **"Best" is the nearest centroid among the domains whose documents hold the question.**
+  ! Similarity alone does not compare across corpora: by it, an Indonesian question on
+  marine pollution (s462) went to Canada (0.656 against 0.644), whose top documents held 9%
+  of it. ✗ similarity × lexical evidence: lexical evidence is lopsided across languages
+  (English Canadian questions score 0.4-0.7 against the Indonesian corpus), and the product
+  sent two Canadian questions (ca069, ca091) to Indonesia. The rule: of the domains that
+  would serve, one whose lexical evidence is below `DOMAIN_SELECT_LEXICAL` (0.2) answers
+  only if none reaches it. Chosen on the training questions (`queries.json`, Canada's
+  calibration set, 670): every floor from 0.20 to 0.30 selected all of them correctly, and
+  the lowest a right domain scored was 0.24; then scored once on the test sets (below).
 - **A `Pipeline` is already a domain**: its store, centroids, gate floors, scoring
   vocabulary and BM25 vocabulary. The multi-domain engine holds one per entry and shares
   the embedding provider between them; a chunk id is looked up in each domain in turn for
@@ -193,9 +203,38 @@ database. Its results are then the same by construction, and that is checked, �
 - **One embedding per vector space.** All six corpora Ravel has built declare the same
   space (Qwen3-Embedding-0.6B, fingerprint `2231c38c768a08c7`), so a unified box embeds
   each query once.
-- **Ravel writes the schema** (`ravel db prepare … --schema <name>`), into an existing
-  database: a new corpus or a new edition is a schema built beside the live one and
-  swapped by rename, the copy-on-write rule (§7.9) at domain scale.
+- **Ravel writes the schema** named by the DSN's `search_path`
+  (`ravel db prepare <bundle> --dsn "…/unified?options=-csearch_path%3Dca_laws,public"`),
+  into an existing database: a new corpus or a new edition is a schema built beside the
+  live one and swapped by rename, the copy-on-write rule (§7.9) at domain scale.
+  ! Then `ravel db calibrate` on that schema: the gate floor is measured on the schema's
+  own clusters and recorded in its `corpus_meta`. Unmeasured, Canada served from a schema
+  refused 5 real questions instead of 2 and lost 2.6 points at @25; calibrated (floor 0.48,
+  as in its own database) it matches case for case.
+
+**Measured** (2026-11-23, `python dev_tools/eval/eval_corpus.py <corpus>`; Indonesia on the
+fresh split with the query rewrites, `--split fresh`, `EVAL_REWRITES`). Recall
+@5/@10/@15/@20/@25:
+
+| corpus | served | Recall | cases that differ from separated |
+|---|---|---|---|
+| Indonesia, 468 | separated (`id_reg_markdown`) | 79.5 / 88.5 / 92.1 / 93.6 / 94.9 | (reference run: 79.7 / 88.7 / 92.3 / 93.8 / 95.1; 1 case, s838 refused once) |
+| | schema `id_reg` (`id_reg_unified`) | 79.7 / 88.7 / 92.1 / 93.6 / 95.1 | 7 rank shifts of 1-9 places, none across @5 or @25 |
+| | one engine, both domains (`unified_id_reg`) | 79.7 / 88.7 / 92.1 / 93.6 / 95.1 | 1 from the schema run (s873, 49 → 50) |
+| Canada, 114 | separated (`ca_laws`) | 71.9 / 81.6 / 84.2 / 85.1 / 88.6 | |
+| | schema `ca_laws` (`ca_laws_unified`) | 71.9 / 81.6 / 84.2 / 85.1 / 88.6 | 0 |
+| | one engine, both domains (`unified_ca_laws`) | 71.9 / 81.6 / 84.2 / 85.1 / 88.6 | 0 |
+
+! Open: the 7 Indonesian rank shifts between a separated and a schema run. The data is the
+same and the arms already break ties on id (`settle`); BM25 scores agree to 4 decimals on
+the queries checked. Two separated runs differ by 1 case, so some is run-to-run noise in
+the query embedding; the rest is not yet isolated.
+
+Selection on the test sets: one engine picks Indonesia for every Indonesian question and
+Canada for every Canadian one it serves. Off-topic questions refused: 30 of 55 on the
+Indonesian set (33 by Indonesia alone): the 3 more answered are foreign-law questions in
+English (US bankruptcy, UK inheritance tax, Sarbanes-Oxley) that Canada's gate serves, as it
+does when alone, since Canada declares no foreign jurisdictions.
 
 **What unified costs.** One Postgres holds every corpus: about 15 GB for Indonesia and
 1.5 GB for Canada today, and its shared buffers are shared by all domains. The engine's
@@ -210,8 +249,8 @@ centroids.
 | 2 | ~~two-level routing (§2)~~ **built**: 184 MB -> 15 MB at 20.6M; recall loss measured at 846 leaves only | the loss at 10K+ leaves, on step 1's corpus |
 | 3 | a second database (any second corpus) | multi-database selection, cross-database fusion |
 | 3a | ~~`DOMAINS`, one pool per `(database, schema)`; `ravel db prepare --schema`~~ **built**: `DOMAINS_FILE`, Ravel's schema from the DSN's `search_path` | one engine serving a corpus from a schema |
-| 3b | Indonesia served from a schema of a unified database | its fresh scores equal `vera-v6`'s, case by case |
-| 3c | Canada beside it in the same database | each corpus's own score unchanged; each refuses the other's questions |
+| 3b | ~~Indonesia served from a schema of a unified database~~ **measured** (§4a): same Recall at every cut; 7 rank shifts, open | its fresh scores equal `vera-v6`'s, case by case |
+| 3c | ~~Canada beside it in the same database~~ **measured** (§4a): both unchanged through one engine; Canada case for case | each corpus's own score unchanged; each refuses the other's questions |
 | 4 | §3 option 1, only if step 1 shows BM25 over budget | lexical arm past the cache |
 
 Step 1 is the gate on everything else: no design here should be built against a replica,

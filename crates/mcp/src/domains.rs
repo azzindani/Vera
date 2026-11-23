@@ -7,7 +7,7 @@
 //! before: one domain, no selection.
 //!
 //! ! The agent still never names a domain (`CLAUDE.md` §7.13). Each domain's own gate
-//! judges the query, and the best domain that would serve it answers.
+//! judges the query, and the best domain that would serve it answers ([`gates`]).
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -84,17 +84,38 @@ pub(crate) struct Verdict<'a> {
     pub(crate) domain: &'a Domain,
     pub(crate) serves: bool,
     pub(crate) similarity: f32,
+    /// The share of the query, by IDF mass, this corpus's own top documents hold (the
+    /// gate's lexical half, `bm25::Vectorizer::evidence`).
+    pub(crate) lexical: f32,
+    /// `lexical` reaches `DOMAIN_SELECT_LEXICAL`: this corpus's documents hold the question.
+    pub(crate) holds: bool,
     /// The gate could not be asked (the embedder or the database failed).
     pub(crate) failed: bool,
 }
 
-/// Every domain's gate on `query`, best first: the domains that would serve, then by
-/// centroid similarity.
+/// Every domain's gate on `query`, best first: the domains that would serve; of those, the
+/// ones whose documents hold the question (`lexical >= min_lexical`); then the nearest
+/// centroid.
+///
+/// ! Similarity alone does not compare across corpora: each is a cosine to that corpus's
+/// own centroids. Measured on the Indonesian fresh set, an Indonesian question on marine
+/// pollution (s462) lay nearer a Canadian centroid (0.656) than an Indonesian one (0.644),
+/// and Canada answered it, though only 9% of the question's IDF mass was in Canada's own
+/// top documents. ✗ similarity × lexical evidence: lexical evidence is lopsided across
+/// languages (English Canadian questions score 0.4-0.7 against the Indonesian corpus, which
+/// holds English words), and the product sent two Canadian questions to Indonesia. As a
+/// floor it only demotes a corpus that plainly does not hold the question. The floor was
+/// chosen on the training questions (`queries.json`, Canada's calibration set): 0.20-0.30
+/// all selected every one of 670 correctly, and the lowest a right domain scored was 0.24.
 ///
 /// ! One after another, ✗ concurrently: each asks the embedder for the same text, and
 /// after the first the embedder's query cache answers (`ROADMAP.md` Stage 4,
 /// `QUERY_CACHE`), so what is left per domain is its centroids and one lexical probe.
-pub(crate) async fn gates<'a>(domains: &'a [Domain], query: &str) -> Vec<Verdict<'a>> {
+pub(crate) async fn gates<'a>(
+    domains: &'a [Domain],
+    query: &str,
+    min_lexical: f32,
+) -> Vec<Verdict<'a>> {
     let mut out = Vec::with_capacity(domains.len());
     for domain in domains {
         let verdict = match domain.pipe.explain(query).await {
@@ -102,12 +123,16 @@ pub(crate) async fn gates<'a>(domains: &'a [Domain], query: &str) -> Vec<Verdict
                 domain,
                 serves: !r.would_refuse,
                 similarity: r.centroid_similarity,
+                lexical: r.lexical_evidence,
+                holds: r.lexical_evidence >= min_lexical,
                 failed: false,
             },
             Err(_) => Verdict {
                 domain,
                 serves: false,
                 similarity: f32::NEG_INFINITY,
+                lexical: 0.0,
+                holds: false,
                 failed: true,
             },
         };
@@ -119,10 +144,16 @@ pub(crate) async fn gates<'a>(domains: &'a [Domain], query: &str) -> Vec<Verdict
 
 fn rank(verdicts: &mut [Verdict<'_>]) {
     verdicts.sort_by(|a, b| {
-        b.serves
-            .cmp(&a.serves)
-            .then(b.similarity.total_cmp(&a.similarity))
+        order(
+            (a.serves, a.holds, a.similarity),
+            (b.serves, b.holds, b.similarity),
+        )
     });
+}
+
+/// `(serves, holds, similarity)`, best first.
+fn order(a: (bool, bool, f32), b: (bool, bool, f32)) -> std::cmp::Ordering {
+    b.0.cmp(&a.0).then(b.1.cmp(&a.1)).then(b.2.total_cmp(&a.2))
 }
 
 /// The progress line that says which domain answered and why the others did not.
@@ -134,7 +165,10 @@ pub(crate) fn describe(verdicts: &[Verdict<'_>]) -> String {
                 format!("{} gate failed", v.domain.name)
             } else {
                 let verdict = if v.serves { "serves" } else { "refuses" };
-                format!("{} {:.3} {verdict}", v.domain.name, v.similarity)
+                format!(
+                    "{} {:.3} lexical {:.2} {verdict}",
+                    v.domain.name, v.similarity, v.lexical
+                )
             }
         })
         .collect();
@@ -162,6 +196,18 @@ pub(crate) fn merged_registry(domains: &[Domain]) -> contract::Registry {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_corpus_that_holds_the_question_answers_it_over_a_nearer_centroid() {
+        use std::cmp::Ordering::{Greater, Less};
+        // s462, measured: Canada's centroid is nearer (0.656 vs 0.644), but its documents
+        // hold 9% of the question (below the floor); Indonesia's hold it.
+        assert_eq!(order((true, true, 0.644), (true, false, 0.656)), Less);
+        // ca091, measured: both hold it (0.45, 0.38), so the nearer centroid decides.
+        assert_eq!(order((true, true, 0.604), (true, true, 0.535)), Less);
+        // A domain that would refuse never outranks one that serves.
+        assert_eq!(order((false, true, 0.9), (true, false, 0.5)), Greater);
+    }
 
     #[test]
     fn a_file_lists_domains_by_the_variable_that_holds_their_dsn() {
