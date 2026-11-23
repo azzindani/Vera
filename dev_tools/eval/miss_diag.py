@@ -45,7 +45,7 @@ def main() -> None:
     vecs = json.loads(Path(os.environ["VECS"]).read_text("utf-8"))
     spec = {q["id"]: q for q in json.loads((Path(__file__).parent / "queries.json")
                                            .read_text("utf-8"))["queries"]}
-    missed = [c for c in cases if c["id"] in pools and not (c["rank"] and c["rank"] <= 25)]
+    missed = [c for c in cases if c["id"] in pools and not (c.get("rank") and c["rank"] <= 25)]
     print(f"missed at 25: {len(missed)} of {len(cases)} "
           f"(holdout {sum(c['holdout'] for c in missed)})")
 

@@ -1,0 +1,22 @@
+{
+  "_README": "Sampling config for a citation-labelled eval set on us_cfr (sample_corpus.py). Markers are English and case-insensitive (Postgres ~*). Every document is one CFR title volume (246), so there is one stratum.",
+  "corpus": "us_cfr",
+  "seed": 20261123,
+  "min_chars": 200,
+  "strata": [
+    {"types": "*", "share": 1.0}
+  ],
+  "types": {
+    "exact_ref":    {"marker": ".", "n": 12},
+    "conceptual":   {"marker": ".", "n": 20},
+    "definitional": {"marker": "\\m(means|includes)\\M", "n": 14},
+    "numeric":      {"marker": "\\m[0-9]+ (calendar |business )?(days?|months?|years?|hours?)\\M|percent|\\$ ?[0-9]", "n": 14},
+    "procedural":   {"marker": "\\m(must|shall) (apply|submit|file|notify|provide|send|keep|maintain|report)\\M", "n": 14},
+    "obligation":   {"marker": "\\m(must|shall)\\M", "n": 12},
+    "exception":    {"marker": "\\m(except|unless|does not apply|notwithstanding)\\M", "n": 12},
+    "sanction":     {"marker": "\\m(civil penalty|penalty|violation|fine|imprisonment|debar|suspen)", "n": 12},
+    "authority":    {"marker": "\\m(Secretary|Administrator|Commissioner|Director|Assistant Secretary) (may|will) (issue|prescribe|approve|determine|waive|require)\\M", "n": 10},
+    "multi_tier":   {"marker": "[0-9]+ U\\.S\\.C\\. [0-9]+|section [0-9]+ of the [A-Z][A-Za-z ]+ Act", "n": 8}
+  },
+  "pairs": {"hard_negative": 10, "underspecified": 6}
+}

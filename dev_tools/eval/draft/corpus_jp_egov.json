@@ -1,0 +1,25 @@
+{
+  "_README": "Sampling config for a citation-labelled eval set on jp_egov (sample_corpus.py). Markers are Japanese: no word boundaries, plain phrases (Postgres ~*). Strata follow the corpus: 2,103 Acts, 2,314 Cabinet Orders, 4,101 Ministerial Ordinances, 476 others.",
+  "corpus": "jp_egov",
+  "seed": 20261123,
+  "min_chars": 80,
+  "strata": [
+    {"types": ["Act"], "share": 0.40},
+    {"types": ["CabinetOrder"], "share": 0.20},
+    {"types": ["MinisterialOrdinance"], "share": 0.30},
+    {"types": "*", "share": 0.10}
+  ],
+  "types": {
+    "exact_ref":    {"marker": ".", "n": 12},
+    "conceptual":   {"marker": ".", "n": 20},
+    "definitional": {"marker": "をいう", "n": 14},
+    "numeric":      {"marker": "[0-9０-９一二三四五六七八九十百千]+(日|月|年|時間)以内|円以下|円以上|百分の|パーセント", "n": 14},
+    "procedural":   {"marker": "(届け出|申請|提出|通知|報告)(し|を)", "n": 14},
+    "obligation":   {"marker": "しなければならない", "n": 12},
+    "exception":    {"marker": "この限りでない|を除く|にかかわらず", "n": 12},
+    "sanction":     {"marker": "罰金|懲役|拘禁刑|過料|科料", "n": 12},
+    "authority":    {"marker": "政令で定める|省令で定める|命令で定める|内閣府令で定める", "n": 10},
+    "multi_tier":   {"marker": "法律第[一二三四五六七八九十百千]+号|法（[^）]+）第", "n": 8}
+  },
+  "pairs": {"hard_negative": 10, "underspecified": 6}
+}

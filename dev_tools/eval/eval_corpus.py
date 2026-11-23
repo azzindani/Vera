@@ -3,6 +3,7 @@
     python dev_tools/eval/eval_corpus.py ca_laws
     python dev_tools/eval/eval_corpus.py id_reg_markdown --split fresh --label v6
     python dev_tools/eval/eval_corpus.py ca_laws --set DOMAIN_FLOOR=0.45   # sweep a knob
+    python dev_tools/eval/eval_corpus.py unified_all                       # every corpus, one engine
 
 Everything a run depends on is in git: how the corpus is served (`corpora.json`), the
 algorithms (`config/`), the overlay (`docker-compose.eval.yml`) and the question set. The
@@ -117,6 +118,64 @@ def _engine(env: dict[str, str]) -> None:
             print("  engine:", line[-160:], file=sys.stderr)
 
 
+def _score(stem: Path, set_corpus: dict, split: str, harness_base: dict[str, str],
+           ravel: Path, password: str) -> int:
+    """Run `e2e.py` on one question set through the running engine; its exit code."""
+    db = set_corpus["db"]
+    schema = db.get("schema")
+    options = f" options='-c search_path={schema},public'" if schema else ""
+    env = dict(
+        harness_base,
+        BM25_VOCAB=str(ravel / set_corpus["bundle"] / "corpus.bm25.json"),
+        DATABASE_URL=(
+            f"host=127.0.0.1 port={db['port']} dbname={db['name']} user={db['user']} "
+            f"password={password}{options}"
+        ),
+        EVAL_QUERIES=(
+            set_corpus["fresh_queries"] if split == "fresh" else set_corpus["queries"]
+        ),
+        EVAL_SPLIT=split,
+        EVAL_CASES_OUT=f"{stem}.cases.json",
+    )
+    with open(f"{stem}.txt", "w", encoding="utf-8") as summary:
+        done = subprocess.run(
+            [sys.executable, "-X", "utf8", str(HERE / "e2e.py")],
+            cwd=ROOT, env=env, stdout=summary, stderr=subprocess.STDOUT, check=False,
+        )
+    return done.returncode
+
+
+def _aggregate(parts: list[tuple[str, Path]]) -> str:
+    """One report over every question set: each set's Recall, the total, and how often the
+    right domain answered. Read from the per-case files, so it is the sets' own numbers."""
+    cuts = (5, 10, 15, 20, 25)
+    lines, total = [], []
+    for name, stem in parts:
+        cases = json.loads(Path(f"{stem}.cases.json").read_text("utf-8"))
+        real = [c for c in cases if c["type"] != "out_of_domain"]
+        ood = [c for c in cases if c["type"] == "out_of_domain"]
+        total += [(name, c) for c in cases]
+        lines.append(_row(name, real, ood, cuts))
+    real = [c for _, c in total if c["type"] != "out_of_domain"]
+    ood = [c for _, c in total if c["type"] == "out_of_domain"]
+    head = f"{'set':22} {'n':>5}  " + "  ".join(f"@{k:<4}" for k in cuts) + \
+        "   MRR    right domain   off-topic refused"
+    return "\n".join([head, *lines, _row("ALL", real, ood, cuts)])
+
+
+def _row(name: str, real: list[dict], ood: list[dict], cuts: tuple[int, ...]) -> str:
+    n = max(len(real), 1)
+    recall = "  ".join(
+        f"{100 * sum(1 for c in real if c['rank'] and c['rank'] <= k) / n:5.1f}" for k in cuts
+    )
+    mrr = sum(c["rr"] for c in real) / n
+    answered = [c for c in real if c.get("domain")]
+    right = sum(1 for c in answered if c["domain"] == c["own"])
+    refused = sum(1 for c in ood if c["refused"])
+    return (f"{name:22} {len(real):5}  {recall}   {mrr:.3f}  {right:4}/{len(answered):<4}"
+            f"       {refused}/{len(ood)}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("corpus")
@@ -164,6 +223,22 @@ def main() -> None:
 
     args.out.mkdir(parents=True, exist_ok=True)
     stem = args.out / f"{args.corpus}_{args.label}"
+    # ! `sets`: every corpus's questions through this ONE engine (`DOMAINS_FILE`), each
+    # scored against its own schema, then reported together. Vera is one engine over many
+    # corpora in many languages; this is the measurement of that, ✗ of each alone.
+    if corpus.get("sets"):
+        base = dict(os.environ, VERA_HTTP="http://127.0.0.1:8081")
+        parts, failed = [], 0
+        for entry in corpus["sets"]:
+            part = registry[entry["corpus"]]
+            part_stem = args.out / f"{args.corpus}_{args.label}.{entry['corpus']}"
+            code = _score(part_stem, part, entry.get("split", "all"), base, ravel, password)
+            failed += 1 if code and not Path(f"{part_stem}.cases.json").is_file() else 0
+            parts.append((entry["corpus"], part_stem))
+        report = _aggregate(parts)
+        Path(f"{stem}.txt").write_text(report + "\n", "utf-8")
+        print(report)
+        sys.exit(1 if failed else 0)
     harness_env = dict(
         os.environ,
         BM25_VOCAB=str(vocab),

@@ -76,7 +76,8 @@ def first(ids: list[str], targets: set[str]) -> int | None:
 def main() -> None:
     per_case = {c["id"]: c for c in json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))}
     spec = json.loads((ROOT / "dev_tools/eval/queries.json").read_text(encoding="utf-8"))
-    cases = [q for q in spec["queries"] if q["id"] in per_case and q["type"] != "exact_ref"]
+    cases = [q for q in spec["queries"] if q["id"] in per_case
+             and q["type"] not in ("exact_ref", "out_of_domain")]
 
     with psycopg.connect(PG) as pg, pg.cursor() as cur:
         prefix = query_prefix(cur)

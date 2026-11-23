@@ -1,0 +1,22 @@
+{
+  "_README": "Sampling config for a citation-labelled eval set on de_gii (sample_corpus.py). Markers are German, case-insensitive (Postgres ~*). The corpus states no instrument type (regulation_type is NULL), so there is one stratum.",
+  "corpus": "de_gii",
+  "seed": 20261123,
+  "min_chars": 200,
+  "strata": [
+    {"types": "*", "share": 1.0}
+  ],
+  "types": {
+    "exact_ref":    {"marker": ".", "n": 12},
+    "conceptual":   {"marker": ".", "n": 20},
+    "definitional": {"marker": "im Sinne (dieses|dieser|des)|\\mbezeichnet\\M|\\mgilt als\\M|\\msind .{0,30}\\malle\\M", "n": 14},
+    "numeric":      {"marker": "\\m[0-9]+ (Tage|Tagen|Wochen|Monate|Monaten|Jahre|Jahren|Stunden)\\M|Prozent|vom Hundert|[0-9] Euro", "n": 14},
+    "procedural":   {"marker": "anzuzeigen|einzureichen|mitzuteilen|zu beantragen|vorzulegen|zu melden", "n": 14},
+    "obligation":   {"marker": "(ist|sind) verpflichtet|\\mmuss\\M|\\mmüssen\\M|\\mhaben .{0,40} zu ", "n": 12},
+    "exception":    {"marker": "es sei denn|gilt nicht|abweichend von|ausgenommen|unbeschadet", "n": 12},
+    "sanction":     {"marker": "Ordnungswidrigkeit|Geldbuße|Freiheitsstrafe|Geldstrafe|wird bestraft", "n": 12},
+    "authority":    {"marker": "wird ermächtigt|durch Rechtsverordnung|Rechtsverordnung mit Zustimmung", "n": 10},
+    "multi_tier":   {"marker": "§ [0-9]+[a-z]? (Abs\\. [0-9]+ )?(des|der) [A-ZÄÖÜ][a-zäöüß]+(gesetz|gesetzes|ordnung|verordnung)", "n": 8}
+  },
+  "pairs": {"hard_negative": 10, "underspecified": 6}
+}

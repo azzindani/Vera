@@ -12,6 +12,30 @@
       "schema": "ca_laws",
       "vocab": "/bundles/bundle_ca_laws_v2/corpus.bm25.json",
       "algorithms": "/cfg/algorithms.no_prior.json"
+    },
+    {
+      "name": "us_cfr",
+      "schema": "us_cfr",
+      "vocab": "/bundles/bundle_us_cfr_v1/corpus.bm25.json",
+      "algorithms": "/cfg/algorithms.no_prior.json"
+    },
+    {
+      "name": "jp_egov",
+      "schema": "jp_egov",
+      "vocab": "/bundles/bundle_jp_egov_v1/corpus.bm25.json",
+      "algorithms": "/cfg/algorithms.no_prior.json"
+    },
+    {
+      "name": "de_gii",
+      "schema": "de_gii",
+      "vocab": "/bundles/bundle_de_gii_v1/corpus.bm25.json",
+      "algorithms": "/cfg/algorithms.no_prior.json"
+    },
+    {
+      "name": "fr_legi",
+      "schema": "fr_legi",
+      "vocab": "/bundles/bundle_fr_legi_v1/corpus.bm25.json",
+      "algorithms": "/cfg/algorithms.no_prior.json"
     }
   ]
 }

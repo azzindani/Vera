@@ -1,0 +1,26 @@
+{
+  "_README": "Sampling config for a citation-labelled eval set on fr_legi (sample_corpus.py). Markers are French, case-insensitive (Postgres ~*). Strata follow the corpus: 71,204 arrêtés, 45,859 décrets, 2,751 lois, 78 codes (one document each, holding most articles), others.",
+  "corpus": "fr_legi",
+  "seed": 20261123,
+  "min_chars": 200,
+  "strata": [
+    {"types": ["CODE"], "share": 0.25},
+    {"types": ["LOI", "ORDONNANCE", "LOI_ORGANIQUE"], "share": 0.15},
+    {"types": ["DECRET"], "share": 0.30},
+    {"types": ["ARRETE"], "share": 0.25},
+    {"types": "*", "share": 0.05}
+  ],
+  "types": {
+    "exact_ref":    {"marker": ".", "n": 12},
+    "conceptual":   {"marker": ".", "n": 20},
+    "definitional": {"marker": "on entend par|au sens du présent|est considérée? comme|\\mdésigne\\M", "n": 14},
+    "numeric":      {"marker": "\\m[0-9]+ (jours?|mois|ans|années|heures)\\M|pour cent|[0-9] ?%|[0-9] euros?", "n": 14},
+    "procedural":   {"marker": "\\m(est|sont) (adressée?s?|transmise?s?|déposée?s?|notifiée?s?|déclarée?s?)\\M|\\mla demande\\M", "n": 14},
+    "obligation":   {"marker": "\\m(doit|doivent|est tenue?|sont tenue?s)\\M", "n": 12},
+    "exception":    {"marker": "\\msauf\\M|à l'exception|par dérogation|ne s'applique pas|nonobstant", "n": 12},
+    "sanction":     {"marker": "\\mamende\\M|emprisonnement|\\mpunie?s?\\M|contravention", "n": 12},
+    "authority":    {"marker": "décret en Conseil d'État|arrêté du ministre|fixée?s? par décret|par arrêté", "n": 10},
+    "multi_tier":   {"marker": "article L\\.? ?[0-9]+(-[0-9]+)* du code|loi n° ?[0-9]+-[0-9]+", "n": 8}
+  },
+  "pairs": {"hard_negative": 10, "underspecified": 6}
+}

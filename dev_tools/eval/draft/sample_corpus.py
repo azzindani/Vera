@@ -54,7 +54,9 @@ def candidates(conn, types, marker: str, limit: int, seed: int, min_chars: int) 
         where.append("regulation_type = ANY(%s)")
         params.append(types)
     elif isinstance(types, dict):  # {"not": [...]}
-        where.append("NOT (regulation_type = ANY(%s))")
+        # ! `IS NULL OR`: a corpus that states no instrument type (de_gii) has NULL for
+        # every row, and `NOT (NULL = ANY(...))` is NULL, which would sample nothing.
+        where.append("(regulation_type IS NULL OR NOT (regulation_type = ANY(%s)))")
         params.append(types["not"])
     sql = (f"SELECT {COLS} FROM chunks WHERE {' AND '.join(where)}"
            f" ORDER BY md5(id || %s) LIMIT %s")

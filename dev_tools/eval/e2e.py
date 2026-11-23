@@ -226,6 +226,10 @@ def main():
     srv = HttpServer(http) if http else Server()
     cur = psycopg.connect(PG).cursor()
     spec = json.loads(_queries_file().read_text(encoding="utf-8"))
+    # ! The corpus these labels live in. Through an engine serving several domains a case
+    # is also scored on WHICH domain answered (`detected_domain`), against this.
+    cur.execute("SELECT id FROM corpus_meta ORDER BY created_at DESC LIMIT 1")
+    own = cur.fetchone()[0]
 
     n = hit5 = hit10 = hitall = refused_real = reg5 = 0
     deep = {15: 0, 20: 0, 25: 0}   # Recall@k past 10, read only when the reply is that deep
@@ -258,12 +262,15 @@ def main():
             continue
         d = srv.search(q["query"])
         ids = [r.get("id") for r in d.get("results", [])]
+        answered_by = d.get("detected_domain") if ids else None
 
         if q["type"] == "out_of_domain":
             ood_n += 1
             ood_refused += 1 if not ids else 0
             if ids:
                 misses.append(f"  ! {q['id']} answered an out-of-domain query")
+            per_case.append({"id": q["id"], "type": q["type"], "refused": not ids,
+                             "domain": answered_by, "own": own})
             continue
 
         targets = resolve_targets(cur, q)
@@ -307,7 +314,8 @@ def main():
         per_case.append({"id": q["id"], "type": q["type"], "hit5": h5, "reg5": r5,
                          "rr": rr[-1], "pool": hall, "holdout": held,
                          "rank": next((i + 1 for i, x in enumerate(ids) if x in targets), None),
-                         "near_duplicates": q.get("near_duplicates", 0)})
+                         "near_duplicates": q.get("near_duplicates", 0),
+                         "domain": answered_by, "own": own})
 
     srv.close()
     if os.environ.get("EVAL_CASES_OUT"):
