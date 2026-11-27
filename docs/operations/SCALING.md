@@ -151,7 +151,7 @@ Two deployments, one engine:
 | for | production: corpora on different machines, scaled and replaced apart | local and personal: every corpus on one box |
 | storage | one database per corpus, its tables in `public` | one database, one **schema** per corpus (`id_reg`, `ca_laws`, `fr_legi` …) |
 | containers | one Postgres per corpus, one engine over all | one Postgres, one volume, one engine |
-| today | ✓ `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✓ database `unified`, schemas `id_reg` and `ca_laws`, one engine (`config/domains.unified.json`): each corpus scores as it does alone (below) |
+| today | ✓ `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✓ database `unified`, six schemas (`id_reg`, `ca_laws`, `us_cfr`, `jp_egov`, `de_gii`, `fr_legi`), one engine (`config/domains.unified.json`): with two, each corpus scores as it does alone; with six, 86.6% at @25 over all (below) |
 
 **A domain is `(database, schema)`.** Each domain keeps everything it has today, in its own
 schema: `chunks`, `corpus_meta`, centroids, the sparse vocabulary, the scoring vocabulary,
@@ -235,6 +235,28 @@ Canada for every Canadian one it serves. Off-topic questions refused: 30 of 55 o
 Indonesian set (33 by Indonesia alone): the 3 more answered are foreign-law questions in
 English (US bankruptcy, UK inheritance tax, Sarbanes-Oxley) that Canada's gate serves, as it
 does when alone, since Canada declares no foreign jurisdictions.
+
+**Six corpora, one engine** (2026-11-28, `python dev_tools/eval/eval_corpus.py unified_all`,
+Indonesia fresh with `EVAL_REWRITES=.test/keep/rw_fresh_AQ.json`): schemas `id_reg`,
+`ca_laws`, `us_cfr`, `jp_egov`, `de_gii`, `fr_legi`, each gate calibrated on its own training
+split, every set run against the same six-domain engine. Recall @5/@10/@15/@20/@25:
+
+| set | n | Recall | MRR | right domain | off-topic refused | served elsewhere |
+|---|---|---|---|---|---|---|
+| Indonesia (fresh) | 468 | 79.7 / 88.7 / 92.1 / 93.6 / 95.1 | 0.670 | 468/468 | 24/49 | 1/6 |
+| Canada | 114 | 51.8 / 57.9 / 60.5 / 61.4 / 64.0 | 0.416 | 77/114 | 9/11 | 5/5 |
+| US CFR | 115 | 74.8 / 80.0 / 81.7 / 82.6 / 87.0 | 0.595 | 106/115 | 11/16 | 0/0 |
+| Japan | 135 | 57.8 / 72.6 / 75.6 / 77.8 / 87.4 | 0.474 | 133/135 | 7/16 | 0/0 |
+| Germany | 121 | 71.1 / 80.2 / 81.0 / 82.6 / 87.6 | 0.558 | 113/121 | 8/16 | 0/0 |
+| France | 125 | 52.0 / 61.6 / 61.6 / 62.4 / 73.6 | 0.409 | 123/125 | 8/16 | 0/0 |
+| **all** | **1078** | **69.3 / 78.4 / 80.8 / 82.2 / 86.6** | **0.567** | 1020/1078 | 67/124 | 6/11 |
+
+"Served elsewhere": an off-topic question another loaded corpus holds (`served_by`), right
+when that domain answers it. ! Open: Canada loses 24.6 points at @25 against its two-domain
+run (88.6), and 37 of its 114 questions are answered by another domain, which is selection,
+✗ retrieval: a second English corpus (US CFR) now competes for the same questions under the
+lexical floor that was chosen with one English corpus loaded. Japan and France have no
+separated run yet to compare against.
 
 **What unified costs.** One Postgres holds every corpus: about 15 GB for Indonesia and
 1.5 GB for Canada today, and its shared buffers are shared by all domains. The engine's
