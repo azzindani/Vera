@@ -84,6 +84,8 @@ pub(crate) struct Verdict<'a> {
     pub(crate) domain: &'a Domain,
     pub(crate) serves: bool,
     pub(crate) similarity: f32,
+    /// The cosine of the nearest chunk in the probed clusters: what selection ranks by.
+    pub(crate) nearest_chunk: f32,
     /// The share of the query, by IDF mass, this corpus's own top documents hold (the
     /// gate's lexical half, `bm25::Vectorizer::evidence`).
     pub(crate) lexical: f32,
@@ -95,12 +97,21 @@ pub(crate) struct Verdict<'a> {
 
 /// Every domain's gate on `query`, best first: the domains that would serve; of those, the
 /// ones whose documents hold the question (`lexical >= min_lexical`); then the nearest
-/// centroid.
+/// chunk in each one's probed clusters.
 ///
-/// ! Similarity alone does not compare across corpora: each is a cosine to that corpus's
-/// own centroids. Measured on the Indonesian fresh set, an Indonesian question on marine
-/// pollution (s462) lay nearer a Canadian centroid (0.656) than an Indonesian one (0.644),
-/// and Canada answered it, though only 9% of the question's IDF mass was in Canada's own
+/// ! The nearest chunk, ✗ the nearest centroid. Both are cosines in the one vector space
+/// every domain declares, but a centroid is an average whose height depends on how its
+/// corpus was clustered, and it does not compare across corpora. Measured with six domains
+/// loaded (`unified_all`, 2026-11-28, `SCALING.md` §4a): by centroid, 37 of 114 Canadian
+/// questions went to another domain, 26 of them to US CFR, whose centroids lay nearer
+/// though its passages did not (ca024: US 0.657 against Canada 0.573 by centroid, Canada
+/// 0.707 against US 0.669 by chunk). Chosen on the training questions of all six sets
+/// (1297): by centroid 1259 selected correctly, by nearest chunk 1291, Canada 49 → 66 of
+/// 66; checked once on the holdout (398): 372 → 394, Canada 33 → 51 of 53.
+///
+/// ! The lexical floor came first, with two domains. Measured on the Indonesian fresh set,
+/// an Indonesian question on marine pollution (s462) lay nearer a Canadian centroid
+/// (0.656) than an Indonesian one (0.644), and Canada answered it, though only 9% of the question's IDF mass was in Canada's own
 /// top documents. ✗ similarity × lexical evidence: lexical evidence is lopsided across
 /// languages (English Canadian questions score 0.4-0.7 against the Indonesian corpus, which
 /// holds English words), and the product sent two Canadian questions to Indonesia. As a
@@ -110,7 +121,8 @@ pub(crate) struct Verdict<'a> {
 ///
 /// ! One after another, ✗ concurrently: each asks the embedder for the same text, and
 /// after the first the embedder's query cache answers (`ROADMAP.md` Stage 4,
-/// `QUERY_CACHE`), so what is left per domain is its centroids and one lexical probe.
+/// `QUERY_CACHE`), so what is left per domain is its centroids, one lexical probe and one
+/// dense probe of the probed clusters, `LIMIT 1`.
 pub(crate) async fn gates<'a>(
     domains: &'a [Domain],
     query: &str,
@@ -123,6 +135,7 @@ pub(crate) async fn gates<'a>(
                 domain,
                 serves: !r.would_refuse,
                 similarity: r.centroid_similarity,
+                nearest_chunk: r.nearest_chunk,
                 lexical: r.lexical_evidence,
                 holds: r.lexical_evidence >= min_lexical,
                 failed: false,
@@ -131,6 +144,7 @@ pub(crate) async fn gates<'a>(
                 domain,
                 serves: false,
                 similarity: f32::NEG_INFINITY,
+                nearest_chunk: f32::NEG_INFINITY,
                 lexical: 0.0,
                 holds: false,
                 failed: true,
@@ -145,13 +159,13 @@ pub(crate) async fn gates<'a>(
 fn rank(verdicts: &mut [Verdict<'_>]) {
     verdicts.sort_by(|a, b| {
         order(
-            (a.serves, a.holds, a.similarity),
-            (b.serves, b.holds, b.similarity),
+            (a.serves, a.holds, a.nearest_chunk),
+            (b.serves, b.holds, b.nearest_chunk),
         )
     });
 }
 
-/// `(serves, holds, similarity)`, best first.
+/// `(serves, holds, nearest_chunk)`, best first.
 fn order(a: (bool, bool, f32), b: (bool, bool, f32)) -> std::cmp::Ordering {
     b.0.cmp(&a.0).then(b.1.cmp(&a.1)).then(b.2.total_cmp(&a.2))
 }
@@ -166,8 +180,8 @@ pub(crate) fn describe(verdicts: &[Verdict<'_>]) -> String {
             } else {
                 let verdict = if v.serves { "serves" } else { "refuses" };
                 format!(
-                    "{} {:.3} lexical {:.2} {verdict}",
-                    v.domain.name, v.similarity, v.lexical
+                    "{} {:.3} lexical {:.2} chunk {:.3} {verdict}",
+                    v.domain.name, v.similarity, v.lexical, v.nearest_chunk
                 )
             }
         })
@@ -200,11 +214,12 @@ mod tests {
     #[test]
     fn the_corpus_that_holds_the_question_answers_it_over_a_nearer_centroid() {
         use std::cmp::Ordering::{Greater, Less};
-        // s462, measured: Canada's centroid is nearer (0.656 vs 0.644), but its documents
-        // hold 9% of the question (below the floor); Indonesia's hold it.
-        assert_eq!(order((true, true, 0.644), (true, false, 0.656)), Less);
-        // ca091, measured: both hold it (0.45, 0.38), so the nearer centroid decides.
-        assert_eq!(order((true, true, 0.604), (true, true, 0.535)), Less);
+        // s462, measured: Canada's documents hold 9% of the question (below the floor);
+        // Indonesia's hold it, so Indonesia answers whatever the cosines.
+        assert_eq!(order((true, true, 0.60), (true, false, 0.80)), Less);
+        // ca024, measured: both hold it (0.86, 0.91), so the nearer chunk decides: Canada's
+        // 0.707 over US CFR's 0.669, though US CFR's centroid was nearer.
+        assert_eq!(order((true, true, 0.707), (true, true, 0.669)), Less);
         // A domain that would refuse never outranks one that serves.
         assert_eq!(order((false, true, 0.9), (true, false, 0.5)), Greater);
     }

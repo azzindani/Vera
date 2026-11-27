@@ -823,6 +823,7 @@ async fn dispatch(
                             json!({
                                 "domain": v.domain.name,
                                 "centroid_similarity": v.similarity,
+                                "nearest_chunk": v.nearest_chunk,
                                 "lexical_evidence": v.lexical,
                                 "holds_query": v.holds,
                                 "would_serve": v.serves,

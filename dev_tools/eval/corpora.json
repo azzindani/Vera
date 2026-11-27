@@ -97,7 +97,7 @@
         "CANDIDATE_POOL": "60",
         "MAX_CONCURRENCY": "6"
       },
-      "measured": "SCALING.md §4a: 71.9 / 81.6 / 84.2 / 85.1 / 88.6, all 114 equal to ca_laws case for case, through one engine serving every domain"
+      "measured": "2026-11-28 in unified_all (six domains): 71.9/81.6/84.2/85.1/88.6, right domain 112/114, equal to separated"
     },
     "ca_laws_unified": {
       "bundle": "work/bundle_ca_laws_v2",
@@ -136,7 +136,7 @@
         "MAX_CONCURRENCY": "6"
       },
       "algorithms": "algorithms.no_prior.json",
-      "measured": "2026-11-28 in unified_all: 74.8/80.0/81.7/82.6/87.0, right domain 106/115"
+      "measured": "2026-11-28 in unified_all: 80.9/87.0/88.7/89.6/93.9, right domain 114/115"
     },
     "unified_jp_egov": {
       "bundle": "work/bundle_jp_egov_v1",
@@ -176,7 +176,7 @@
         "MAX_CONCURRENCY": "6"
       },
       "algorithms": "algorithms.no_prior.json",
-      "measured": "2026-11-28 in unified_all: 71.1/80.2/81.0/82.6/87.6, right domain 113/121"
+      "measured": "2026-11-28 in unified_all: 77.7/86.8/87.6/89.3/94.2, right domain 121/121"
     },
     "unified_fr_legi": {
       "bundle": "work/bundle_fr_legi_v1",
@@ -196,7 +196,7 @@
         "MAX_CONCURRENCY": "6"
       },
       "algorithms": "algorithms.no_prior.json",
-      "measured": "2026-11-28 in unified_all: 52.0/61.6/61.6/62.4/73.6, right domain 123/125"
+      "measured": "2026-11-28 in unified_all: 53.6/63.2/63.2/64.0/75.2, right domain 125/125"
     },
     "unified_all": {
       "bundle": "work/bundle_id_reg_markdown_v6",
@@ -235,7 +235,7 @@
           "corpus": "unified_fr_legi"
         }
       ],
-      "measured": "2026-11-28, six schemas, one engine: ALL 1078, Recall 69.3/78.4/80.8/82.2/86.6, MRR 0.567, right domain 1020/1078, off-topic refused 67/124, served elsewhere 6/11 (SCALING.md §4a)"
+      "measured": "2026-11-28, six schemas, one engine, domains selected by nearest chunk: ALL 1078, Recall 73.0/82.6/85.0/86.4/90.9, MRR 0.599, right domain 1073/1078, off-topic refused 67/124, served elsewhere 6/11 (SCALING.md §4a)"
     }
   }
 }

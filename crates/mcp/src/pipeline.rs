@@ -871,6 +871,18 @@ impl Pipeline {
         };
         let passes = exempt
             || (lexical >= self.cfg.domain_lexical_floor && top_cluster >= self.cfg.domain_floor);
+        // ! The nearest chunk in the probed clusters: the dense arm's own top row, one row
+        // under a `LIMIT` (§7.5). It compares across corpora where the centroid does not:
+        // both are cosines in the one vector space every domain declares, but a centroid
+        // is an average whose height depends on how its corpus was clustered, and a chunk
+        // is a passage that could answer. Domain selection ranks by it (`domains::gates`).
+        let probed: Vec<i32> = scores.iter().map(|(id, _)| *id).collect();
+        let nearest_chunk = self
+            .ops
+            .dense_in_clusters(&probed, &q, 1)
+            .await?
+            .first()
+            .map_or(0.0, |s| s.score);
 
         Ok(RouteExplain {
             // ! `None` when the gate would refuse, matching what
@@ -881,6 +893,7 @@ impl Pipeline {
             total_clusters: self.leaves,
             lexical_evidence: lexical,
             centroid_similarity: top_cluster,
+            nearest_chunk,
             lexical_floor: self.cfg.domain_lexical_floor,
             centroid_floor: self.cfg.domain_floor,
             would_refuse: !passes,
@@ -2395,6 +2408,9 @@ pub struct RouteExplain {
     /// a refusal can be attributed to one of them rather than guessed at.
     pub lexical_evidence: f32,
     pub centroid_similarity: f32,
+    /// The cosine of the nearest chunk in the probed clusters: what domain selection
+    /// compares across corpora (`domains::gates`).
+    pub nearest_chunk: f32,
     pub lexical_floor: f32,
     pub centroid_floor: f32,
     pub would_refuse: bool,
