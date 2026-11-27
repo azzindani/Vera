@@ -28,6 +28,7 @@ that is not listed.
 | `queries_us_cfr.json` | the US CFR, citation-labelled; 115 + 16, gate calibrated on its training split (floor 0.48) |
 | `queries_de_gii.json` | Germany (gesetze-im-internet), citation-labelled; 121 + 16, gate calibrated on its training split (floor 0.45) |
 | `queries_jp_egov.json` | Japan (e-Gov), citation-labelled, drafted in Japanese; 135 + 16, gate calibrated on its training split (floor 0.60). ! The leakage check splits on spaces, so it cannot see copied Japanese: the drafts were paraphrased by hand |
+| `queries_fr_legi.json` | France (Légifrance LEGI), citation-labelled, drafted in French; 125 + 16, gate calibrated on its training split (floor 0.54) |
 | `review/` | the legal reviewers' sheets and their instructions (`review/README.md`) |
 | `draft/` | drafting a set: `sample.py` / `sample_corpus.py` (+ `corpus_*.json`, one per corpus) sample clauses, `check.py` / `check_citation.py` label and merge, `review.py` and `alternatives.py` export and import domain review |
 

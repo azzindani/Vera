@@ -1,0 +1,2252 @@
+{
+  "_README": [
+    "A citation-labelled set on fr_legi (EVAL_QUERIES), drafted from sample_corpus.py clauses and machine-checked by check_citation.py. Labels are citations read back from the database; NOT reviewed by a domain expert."
+  ],
+  "queries": [
+    {
+      "id": "fr001",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Combien est payée une astreinte d'un agent DGFiP de l'unité d'enquêtes judiciaires fiscales selon l'article 3 de l'arrêté du 18 décembre 2020 ?",
+      "source": "Arrêté du 18 décembre 2020, art. 3 — Arrêté du 18 décembre 2020",
+      "answer_identifiers": [
+        "Arrêté du 18 décembre 2020, art. 3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000042744100"
+      ],
+      "label_chunks": 22,
+      "provenance": "drafted 2026-11-28 from chunk a2cc6971c9c13f9261629c3a9d33f139 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr002",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Dans quel délai le CNC peut-il auditer le compte de production d'une œuvre audiovisuelle selon l'article L251-4 du code du cinéma ?",
+      "source": "Code du cinéma et de l'image animée, art. L251-4 — Code du cinéma et de l'image animée",
+      "answer_identifiers": [
+        "Code du cinéma et de l'image animée, art. L251-4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000020908868"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 3c858a1d0d27fbee33684336b3263cfc of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr003",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Quelle amende l'article 32 de la loi du 29 juillet 1881 prévoit-il pour la diffamation envers des particuliers ?",
+      "source": "Loi du 29 juillet 1881, art. 32 — Loi du 29 juillet 1881",
+      "answer_identifiers": [
+        "Loi du 29 juillet 1881, art. 32"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070722"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 37c86444b603639118886fec39217f62 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr004",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Selon l'article D731-1 du code de la sécurité sociale, quelles clauses une institution de prévoyance gérant un plan d'épargne retraite doit-elle inscrire dans son règlement ?",
+      "source": "Code de la sécurité sociale., art. D731-1 — Code de la sécurité sociale.",
+      "answer_identifiers": [
+        "Code de la sécurité sociale., art. D731-1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006073189"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk a26254c3fe9cad0203c369a0496c19bf of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr005",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "L'article 83 de la loi n° 86-845 du 17 juillet 1986 permet-il aux inspecteurs du travail d'entrer dans le logement d'un travailleur à domicile ?",
+      "source": "Loi n° 86-845 du 17 juillet 1986, art. 83 — Loi n° 86-845 du 17 juillet 1986",
+      "answer_identifiers": [
+        "Loi n° 86-845 du 17 juillet 1986, art. 83"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006068975"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 42d451b436b0c7241b68e427c5cb7c0a of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr006",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Selon l'article 24 du décret n°93-1337 du 20 décembre 1993, les attachés promus principaux entre 1991 et 1993 peuvent-ils reporter leur date de nomination ?",
+      "source": "Décret n°93-1337 du 20 décembre 1993, art. 24 — Décret n°93-1337 du 20 décembre 1993",
+      "answer_identifiers": [
+        "Décret n°93-1337 du 20 décembre 1993, art. 24"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070993"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 0ddd580d5386e1a81915413f3346d1d6 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr007",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Que doit préciser l'arrêté ministériel accordant un permis exclusif de recherches selon l'article 26 du décret n°2025-851 du 27 août 2025 ?",
+      "source": "Décret n°2025-851 du 27 août 2025, art. 26 — Décret n°2025-851 du 27 août 2025",
+      "answer_identifiers": [
+        "Décret n°2025-851 du 27 août 2025, art. 26"
+      ],
+      "answer_documents": [
+        "LEGITEXT000052144524"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 74ea32d65b21c8e93220845b4d84e0b5 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr008",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Selon l'article D615-28 du code rural, jusqu'à quand l'exploitant doit-il disposer des surfaces qu'il déclare pour le paiement de base ?",
+      "source": "Code rural et de la pêche maritime, art. D615-28 — Code rural et de la pêche maritime",
+      "answer_identifiers": [
+        "Code rural et de la pêche maritime, art. D615-28"
+      ],
+      "answer_documents": [
+        "LEGITEXT000022197698"
+      ],
+      "label_chunks": 2,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 36334fcebf898913c429400291d42d26 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr009",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Selon l'article 3 du décret n°2013-987 du 5 novembre 2013, quelle obligation de partage d'informations pèse sur l'office envers les autres offices centraux ?",
+      "source": "Décret n°2013-987 du 5 novembre 2013, art. 3 — Décret n°2013-987 du 5 novembre 2013",
+      "answer_identifiers": [
+        "Décret n°2013-987 du 5 novembre 2013, art. 3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000044617725"
+      ],
+      "label_chunks": 2,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 525ad882fd4cf30c016ab660815574a8 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr010",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Comment l'annexe 2 de l'arrêté du 24 mars 1969 reclasse-t-elle les infirmiers diplômés d'État recrutés en 1968 ?",
+      "source": "Arrêté du 24 mars 1969, art. Annexe 2 — Arrêté du 24 mars 1969",
+      "answer_identifiers": [
+        "Arrêté du 24 mars 1969, art. Annexe 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006072917"
+      ],
+      "label_chunks": 6,
+      "provenance": "drafted 2026-11-28 from chunk acdbb9e4648c52e67029d4b08857efc4 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr011",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quels syndicats peuvent désigner des représentants au CHSCT ministériel créé en décembre 2014 ?",
+      "source": "ARRÊTÉ du 15 décembre 2014, art. 1 — ARRÊTÉ du 15 décembre 2014",
+      "answer_identifiers": [
+        "ARRÊTÉ du 15 décembre 2014, art. 1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000030134102"
+      ],
+      "label_chunks": 20,
+      "provenance": "drafted 2026-11-28 from chunk adee74e768cd9b9fb06e74c62df7a3be of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr012",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quand faut-il saisir l'instance de réforme militaire en cas d'inaptitude médicale définitive d'un soldat ?",
+      "source": "Arrêté du 20 septembre 2006, art. 5 — Arrêté du 20 septembre 2006",
+      "answer_identifiers": [
+        "Arrêté du 20 septembre 2006, art. 5"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006054439"
+      ],
+      "label_chunks": 2,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk c8b27f47d285b9a2f544aad9183f2d80 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr013",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quel est le programme de l'examen sur le radar et le SMDSM pour naviguer en Manche et aux bouches de Bonifacio ?",
+      "source": "Arrêté du 27 décembre 1979, art. Annexe II — Arrêté du 27 décembre 1979",
+      "answer_identifiers": [
+        "Arrêté du 27 décembre 1979, art. Annexe II"
+      ],
+      "answer_documents": [
+        "LEGITEXT000029339992"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-28 from chunk 785d61c9fb42bdf02d93fb2d865c8bf7 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr014",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quelles règles du notariat français ont été introduites en Alsace-Moselle en 1925, et avec quelles exceptions ?",
+      "source": "Loi du 17 juillet 1925, art. 1 — Loi du 17 juillet 1925",
+      "answer_identifiers": [
+        "Loi du 17 juillet 1925, art. 1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006075127"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk cec3320ddb4623bfa248f26649355aba of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr015",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quelle prolongation a été accordée en 2008 au texte de septembre 2003 sur l'emploi et la formation professionnelle ?",
+      "source": "Arrêté du 11 septembre 2003, art. 5 — Arrêté du 11 septembre 2003",
+      "answer_identifiers": [
+        "Arrêté du 11 septembre 2003, art. 5"
+      ],
+      "answer_documents": [
+        "LEGITEXT000019112653"
+      ],
+      "label_chunks": 17,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk ccee39b26dd49eda44f1bf4a906449ac of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr016",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quel rôle joue la direction de la jeunesse dans la gestion de la réserve civique ?",
+      "source": "Décret n°2014-133 du 17 février 2014, art. 10-2 — Décret n°2014-133 du 17 février 2014",
+      "answer_identifiers": [
+        "Décret n°2014-133 du 17 février 2014, art. 10-2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000028615128"
+      ],
+      "label_chunks": 4,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk e058e4dce0b9bfa415df4ee58bfdc9b6 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr017",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Sur quelles années le prélèvement social de 1987 a-t-il été prolongé par la loi de finances pour 1994 ?",
+      "source": "Loi n° 93-1352 du 30 décembre 1993, art. 24 — Loi n° 93-1352 du 30 décembre 1993",
+      "answer_identifiers": [
+        "Loi n° 93-1352 du 30 décembre 1993, art. 24"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006069145"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 70f6e1f7047a5c91b74ea9293677ec96 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr018",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Comment est constatée la comparution d'un détenu par visioconférence depuis la prison ?",
+      "source": "Code pénitentiaire, art. D315-1 — Code pénitentiaire",
+      "answer_identifiers": [
+        "Code pénitentiaire, art. D315-1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000045476241"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk dcf9bf124de0e7454b0fe6b9055de131 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr019",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Comment fonctionne la question prioritaire de constitutionnalité devant le Conseil constitutionnel ?",
+      "source": "Constitution du 4 octobre 1958, art. 61-1 — Constitution du 4 octobre 1958",
+      "answer_identifiers": [
+        "Constitution du 4 octobre 1958, art. 61-1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006071194"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 456db14cb3796a12b57472be622fe586 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr020",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Sur quels éléments la commission a-t-elle sélectionné les candidats au DNMA pour la rentrée 2020 ?",
+      "source": "Décret n°2020-763 du 22 juin 2020, art. 2 — Décret n°2020-763 du 22 juin 2020",
+      "answer_identifiers": [
+        "Décret n°2020-763 du 22 juin 2020, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000042026340"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 948864695dd2720ebfccabce8f044f83 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr021",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Qui peut signaler un effet indésirable d'un produit cosmétique, et à quelle agence ?",
+      "source": "Code de la santé publique, art. R5131-11 — Code de la santé publique",
+      "answer_identifiers": [
+        "Code de la santé publique, art. R5131-11"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006072665"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk a5441cd3dbf64bfe0097591ce82dde46 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr022",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quand est entré en vigueur l'arrêté dérogatoire sur les gels hydro-alcooliques de mars 2020 ?",
+      "source": "Décret n°2020-340 du 27 mars 2020, art. 1 — Décret n°2020-340 du 27 mars 2020",
+      "answer_identifiers": [
+        "Décret n°2020-340 du 27 mars 2020, art. 1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000041767775"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 16b958c45d8703276005928edaab6f32 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr023",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Depuis quand les honoraires encadrés des avocats pour la vente forcée d'un bien immobilier sont-ils applicables ?",
+      "source": "Code de commerce, art. R444-20 — Code de commerce",
+      "answer_identifiers": [
+        "Code de commerce, art. R444-20"
+      ],
+      "answer_documents": [
+        "LEGITEXT000005634379"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 5f576b37ff610134e3b0970f08809cf4 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr024",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "À quelle fréquence l'exploitant d'un site Seveso doit-il recenser ses substances dangereuses ?",
+      "source": "Code de l'environnement, art. R515-86 — Code de l'environnement",
+      "answer_identifiers": [
+        "Code de l'environnement, art. R515-86"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006074220"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk f504ba5de599808d587d61506068629d of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr025",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Quelles activités les établissements d'enseignement supérieur agricole peuvent-ils mener pour valoriser leur recherche ?",
+      "source": "Code rural et de la pêche maritime, art. R812-5 — Code rural et de la pêche maritime",
+      "answer_identifiers": [
+        "Code rural et de la pêche maritime, art. R812-5"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006071367"
+      ],
+      "label_chunks": 2,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 5f7b215aadb4c91905ae62fc8f3f0e3c of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr026",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Comment le contrat type de transport routier d'animaux vivants définit-il l'envoi ?",
+      "source": "Décret du 7 avril 1988, art. ANNEXE art. 2 — Décret du 7 avril 1988",
+      "answer_identifiers": [
+        "Décret du 7 avril 1988, art. ANNEXE art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006066279"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 356d9ed9b7e1eab7588150754a3231dd of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr027",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Qui est soumis à l'obligation d'assurance automobile, et qu'est-ce qu'un véhicule au sens du code des assurances ?",
+      "source": "Code des assurances, art. L211-1 — Code des assurances",
+      "answer_identifiers": [
+        "Code des assurances, art. L211-1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006073984"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 561e964fe49faf992347e8568d54aeeb of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr028",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Quelles capacités l'évaluation de mathématiques en série technologique cherche-t-elle à mesurer ?",
+      "source": "Arrêté du 11 décembre 2020, Annexe — Arrêté du 11 décembre 2020",
+      "answer_identifiers": [
+        "Arrêté du 11 décembre 2020, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000043084271"
+      ],
+      "label_chunks": 435,
+      "near_duplicates": 3,
+      "provenance": "drafted 2026-11-28 from chunk 79d778fe81e22bf85da8ead74aaff7d6 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr029",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Quelles qualifications doivent avoir les formateurs des stages de recyclage en spéléologie ?",
+      "source": "Arrêté du 9 novembre 2016, art. 4 — Arrêté du 9 novembre 2016",
+      "answer_identifiers": [
+        "Arrêté du 9 novembre 2016, art. 4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000033441768"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-28 from chunk fb2636c6227a812aa0808b017a0b929f of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr030",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Que fait le juge administratif lorsqu'un requérant isolé pourrait relever d'une action de groupe en cours ?",
+      "source": "Code de justice administrative, art. R77-10-3 — Code de justice administrative",
+      "answer_identifiers": [
+        "Code de justice administrative, art. R77-10-3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070933"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 0232d8d58e9d26669055ee3506e5f1ab of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr031",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "La donation de titres d'un plan d'épargne retraite est-elle traitée comme un retrait imposable ?",
+      "source": "Loi n° 87-416 du 17 juin 1987, art. 6 — Loi n° 87-416 du 17 juin 1987",
+      "answer_identifiers": [
+        "Loi n° 87-416 du 17 juin 1987, art. 6"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006068996"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk be95bb66fc025314a31231bdd960a642 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr032",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Qu'entend-on par domicile pour le télétravail des agents publics ?",
+      "source": "Accord collectif du 19 février 2024 — Accord collectif du 19 février 2024",
+      "answer_identifiers": [
+        "Accord collectif du 19 février 2024"
+      ],
+      "answer_documents": [
+        "LEGITEXT000049353401"
+      ],
+      "label_chunks": 70,
+      "provenance": "drafted 2026-11-28 from chunk b4cd1caa508aa9d0d82b7b575bff63a7 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr033",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Sur quels textes faut-il recueillir l'avis de l'assemblée polynésienne ?",
+      "source": "Loi organique n° 2004-192 du 27 février 2004, art. 9 — Loi organique n° 2004-192 du 27 février 2004",
+      "answer_identifiers": [
+        "Loi organique n° 2004-192 du 27 février 2004, art. 9"
+      ],
+      "answer_documents": [
+        "LEGITEXT000005765456"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 50506a0607dde1be80a9f02045557b1c of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr034",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Qui est considéré comme stagiaire pour obtenir une carte de séjour temporaire mention stagiaire ?",
+      "source": "Code de l'entrée et du séjour des étrangers et du droit d'asile., art. R426-16 — Code de l'entrée et du séjour des étrangers et du droit d'asile.",
+      "answer_identifiers": [
+        "Code de l'entrée et du séjour des étrangers et du droit d'asile., art. R426-16"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070158"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk b61c910cf23db5b2574685957c56d851 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr035",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Comment est composé le jury d'un examen professionnel de la fonction publique territoriale ?",
+      "source": "Décret n° 2007-115 du 29 janvier 2007, art. 4 — Décret n° 2007-115 du 29 janvier 2007",
+      "answer_identifiers": [
+        "Décret n° 2007-115 du 29 janvier 2007, art. 4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006055349"
+      ],
+      "label_chunks": 1,
+      "near_duplicates": 3,
+      "provenance": "drafted 2026-11-28 from chunk 26c3422146bf8f38821bab93acb5b1cd of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr036",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Sur quelles questions délibère le conseil d'administration de l'école selon le décret du 26 octobre 1984 ?",
+      "source": "Décret n°84-968 du 26 octobre 1984, art. 9 — Décret n°84-968 du 26 octobre 1984",
+      "answer_identifiers": [
+        "Décret n°84-968 du 26 octobre 1984, art. 9"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006064654"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 7b7ba67aa76a88df3939ca2b31034344 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr037",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Qui est le bénéficiaire de l'aide aux armateurs prévue par l'arrêté du 1er décembre 2020 ?",
+      "source": "Arrêté du 1er décembre 2020, art. 3 — Arrêté du 1er décembre 2020",
+      "answer_identifiers": [
+        "Arrêté du 1er décembre 2020, art. 3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000042609930"
+      ],
+      "label_chunks": 9,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk fb307a4d9be946a72703dc746bc37172 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr038",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Quels bâtiments occupés par l'administration et ouverts au public doivent afficher leur DPE, et à partir de quelle surface ?",
+      "source": "Arrêté du 7 décembre 2007, art. 1 — Arrêté du 7 décembre 2007",
+      "answer_identifiers": [
+        "Arrêté du 7 décembre 2007, art. 1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000042529904"
+      ],
+      "label_chunks": 6,
+      "provenance": "drafted 2026-11-28 from chunk a29887db6cfa9865fb9589eeadc43ca1 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr039",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quel taux forfaitaire d'impôt sur le revenu s'applique aux revenus de capitaux mobiliers et aux plus-values de cession ?",
+      "source": "Code général des impôts, CGI., art. 200 A — Code général des impôts, CGI.",
+      "answer_identifiers": [
+        "Code général des impôts, CGI., art. 200 A"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006069577"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-28 from chunk 7c809a5d65aed9012b2650c2fc1bde1f of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr040",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Comment les cadres de second niveau de France Télécom au 15e échelon ont-ils été reclassés en 2020 ?",
+      "source": "Décret n°2020-1430 du 24 novembre 2020, art. 27 — Décret n°2020-1430 du 24 novembre 2020",
+      "answer_identifiers": [
+        "Décret n°2020-1430 du 24 novembre 2020, art. 27"
+      ],
+      "answer_documents": [
+        "LEGITEXT000042559513"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-28 from chunk 8bc2842f260a840cf35b2307861206ac of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr041",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quel bilan la loi de 2015 sur le vieillissement dresse-t-elle de l'allocation personnalisée d'autonomie ?",
+      "source": "LOI n°2015-1776 du 28 décembre 2015, Annexe — LOI n°2015-1776 du 28 décembre 2015",
+      "answer_identifiers": [
+        "LOI n°2015-1776 du 28 décembre 2015, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000031706275"
+      ],
+      "label_chunks": 42,
+      "provenance": "drafted 2026-11-28 from chunk e37d2dbfc4e6ef1ee4bbcdecc70447ab of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr042",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quelle méthode d'analyse s'applique aux Cryptosporidium et Giardia dans les eaux destinées à la consommation ?",
+      "source": "Arrêté du 19 octobre 2017, art. Annexe I — Arrêté du 19 octobre 2017",
+      "answer_identifiers": [
+        "Arrêté du 19 octobre 2017, art. Annexe I"
+      ],
+      "answer_documents": [
+        "LEGITEXT000035881369"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-28 from chunk a63371e4268c022a6b81888a51e49ce5 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr043",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quelle consommation maximale d'énergie primaire est fixée pour les restaurants scolaires servant un repas par jour ?",
+      "source": "Code de la construction et de l'habitation., art. Annexe à l'article R172-4 — Code de la construction et de l'habitation.",
+      "answer_identifiers": [
+        "Code de la construction et de l'habitation., art. Annexe à l'article R172-4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006074096"
+      ],
+      "label_chunks": 231,
+      "provenance": "drafted 2026-11-28 from chunk 6d0c5e2e2dc310db92a2a6e36a92892d of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr044",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quelles conditions faut-il remplir pour l'aide aux exploitations agricoles touchées par le gel de 2021 ?",
+      "source": "Décret n°2022-366 du 15 mars 2022, art. 2 — Décret n°2022-366 du 15 mars 2022",
+      "answer_identifiers": [
+        "Décret n°2022-366 du 15 mars 2022, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000045360343"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 6f1cc6fa6c3685070fd5f7e1094b56fa of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr045",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Combien coûte à un dirigeant d'une caution mutuelle l'absence de dépôt des documents obligatoires ?",
+      "source": "Code monétaire et financier, art. R571-2 — Code monétaire et financier",
+      "answer_identifiers": [
+        "Code monétaire et financier, art. R571-2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006072026"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 698f898e313a25128515c76a488ce585 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr046",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quelle part du compte d'investissement forestier peut financer un document de gestion durable ?",
+      "source": "Code forestier (nouveau), art. L352-3 — Code forestier (nouveau)",
+      "answer_identifiers": [
+        "Code forestier (nouveau), art. L352-3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000025244092"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk ecd62f1394b1475580a932d88954a398 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr047",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Combien de temps faut-il garder à bord les justificatifs d'achat de gazole sur la Moselle ?",
+      "source": "Décret n° 2009-507 du 4 mai 2009, art. Annexe 13 — Décret n° 2009-507 du 4 mai 2009",
+      "answer_identifiers": [
+        "Décret n° 2009-507 du 4 mai 2009, art. Annexe 13"
+      ],
+      "answer_documents": [
+        "LEGITEXT000054697109"
+      ],
+      "label_chunks": 5,
+      "provenance": "drafted 2026-11-28 from chunk 690205cd06d03266caa97d97c9356e89 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr048",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "De combien l'indemnité de repas en mission est-elle réduite quand l'agent mange dans un restaurant administratif ?",
+      "source": "Arrêté du 1 novembre 2006, art. 6 — Arrêté du 1 novembre 2006",
+      "answer_identifiers": [
+        "Arrêté du 1 novembre 2006, art. 6"
+      ],
+      "answer_documents": [
+        "LEGITEXT000030934371"
+      ],
+      "label_chunks": 5,
+      "near_duplicates": 4,
+      "provenance": "drafted 2026-11-28 from chunk 43e2183a7952ec137ef6d39e3ed8566c of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr049",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Combien l'État verse-t-il en 2025 aux départements pour compenser la suppression de la TP ?",
+      "source": "LOI n°2025-127 du 14 février 2025, ÉTATS LÉGISLATIFS ANNEXÉS — LOI n°2025-127 du 14 février 2025",
+      "answer_identifiers": [
+        "LOI n°2025-127 du 14 février 2025, ÉTATS LÉGISLATIFS ANNEXÉS"
+      ],
+      "answer_documents": [
+        "LEGITEXT000051172988"
+      ],
+      "label_chunks": 65,
+      "provenance": "drafted 2026-11-28 from chunk 9043cfb96a83b52f4be55cfa1448e2d0 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr050",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quelle majoration de repos compensateur s'applique à une permanence effectuée un dimanche ?",
+      "source": "Arrêté du 26 janvier 2022, art. 2 — Arrêté du 26 janvier 2022",
+      "answer_identifiers": [
+        "Arrêté du 26 janvier 2022, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000047960021"
+      ],
+      "label_chunks": 7,
+      "provenance": "drafted 2026-11-28 from chunk f2b51590e6d5d362fcafab975ec73256 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr051",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Quel remboursement de la chambre particulière en court séjour prévoit la complémentaire santé des agents ?",
+      "source": "Accord collectif du 8 avril 2024, Annexe — Accord collectif du 8 avril 2024",
+      "answer_identifiers": [
+        "Accord collectif du 8 avril 2024, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000049488705"
+      ],
+      "label_chunks": 10,
+      "provenance": "drafted 2026-11-28 from chunk 8aafae26bc4afd9315bb56fd6c64e1b1 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr052",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Dans quel délai la commission d'examen des règlements fédéraux sur les équipements sportifs rend-elle son avis ?",
+      "source": "Code du sport., art. R142-10 — Code du sport.",
+      "answer_identifiers": [
+        "Code du sport., art. R142-10"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006071318"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 3d202c7998b86c42f2d5aa9934c41a3f of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr053",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Comment la commission d'évaluation propose-t-elle une note à partir du livret de suivi des compétences ?",
+      "source": "Arrêté du 28 juillet 2026, Annexe — Arrêté du 28 juillet 2026",
+      "answer_identifiers": [
+        "Arrêté du 28 juillet 2026, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000054711588"
+      ],
+      "label_chunks": 90,
+      "provenance": "drafted 2026-11-28 from chunk 3174273e61518df73bca0b8c13770b07 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr054",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Comment les candidats consultent-ils leurs résultats et leur relevé de notes du concours ?",
+      "source": "Arrêté du 8 septembre 2025, art. 8 — Arrêté du 8 septembre 2025",
+      "answer_identifiers": [
+        "Arrêté du 8 septembre 2025, art. 8"
+      ],
+      "answer_documents": [
+        "LEGITEXT000052251919"
+      ],
+      "label_chunks": 37,
+      "near_duplicates": 19,
+      "provenance": "drafted 2026-11-28 from chunk b02083e8721f4ffbe412e022963e0a87 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr055",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Comment une commune peut-elle quitter une communauté de communes pour rejoindre un autre EPCI ?",
+      "source": "Code général des collectivités territoriales, art. L5214-26 — Code général des collectivités territoriales",
+      "answer_identifiers": [
+        "Code général des collectivités territoriales, art. L5214-26"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070633"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 34932d6ceb2e12cbf315c9a32099d200 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr056",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Qui évalue les fonctionnaires détachés à la fin de leur formation d'officier de police ?",
+      "source": "Arrêté du 8 septembre 2022, art. 6 — Arrêté du 8 septembre 2022",
+      "answer_identifiers": [
+        "Arrêté du 8 septembre 2022, art. 6"
+      ],
+      "answer_documents": [
+        "LEGITEXT000052173932"
+      ],
+      "label_chunks": 4,
+      "near_duplicates": 3,
+      "provenance": "drafted 2026-11-28 from chunk cb142ea1f0702b0f60bfb4c79c4080f6 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr057",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Combien de temps l'ANSSI peut-elle conserver les données servant à caractériser les menaces ?",
+      "source": "Code de la défense., art. L2321-2-3 — Code de la défense.",
+      "answer_identifiers": [
+        "Code de la défense., art. L2321-2-3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006071307"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-28 from chunk 35495ceff3807030535c85e57d19393e of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr058",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Dans quel délai le Gouvernement pouvait-il adapter par ordonnance la loi sur les influenceurs au droit européen ?",
+      "source": "LOI n°2024-364 du 22 avril 2024, art. 3 — LOI n°2024-364 du 22 avril 2024",
+      "answer_identifiers": [
+        "LOI n°2024-364 du 22 avril 2024, art. 3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000049454290"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 25f8ebb1f2c181d0de1bddde83a217ea of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr059",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "À partir de quand la délibération du CNC de juin 2025 s'applique-t-elle aux demandes d'aides ?",
+      "source": "Délibération n°2025/CA/16 du 26 juin 2025, art. 34 — Délibération n°2025/CA/16 du 26 juin 2025",
+      "answer_identifiers": [
+        "Délibération n°2025/CA/16 du 26 juin 2025, art. 34"
+      ],
+      "answer_documents": [
+        "LEGITEXT000051888867"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 16da3aff08904ba5c29a432970d1cc34 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr060",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Comment le personnel des juridictions prud'homales a-t-il rejoint les nouveaux corps de fonctionnaires en 1980 ?",
+      "source": "Décret n°80-426 du 9 juin 1980, art. 2 — Décret n°80-426 du 9 juin 1980",
+      "answer_identifiers": [
+        "Décret n°80-426 du 9 juin 1980, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006063253"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 9743f30151113c283cef5602fc4f7947 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr061",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Dans quel délai les fonctionnaires peuvent-ils demander leur détachement selon le décret du 9 mars 2022 ?",
+      "source": "Décret n°2022-335 du 9 mars 2022, art. 42 — Décret n°2022-335 du 9 mars 2022",
+      "answer_identifiers": [
+        "Décret n°2022-335 du 9 mars 2022, art. 42"
+      ],
+      "answer_documents": [
+        "LEGITEXT000045328098"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk ba65f50437b1484bd87667a89ae16880 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr062",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Dans quels cas l'État peut-il infliger des pénalités contractuelles au concessionnaire hydroélectrique ?",
+      "source": "Décret n°2016-530 du 27 avril 2016, Annexe — Décret n°2016-530 du 27 avril 2016",
+      "answer_identifiers": [
+        "Décret n°2016-530 du 27 avril 2016, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000032473302"
+      ],
+      "label_chunks": 30,
+      "provenance": "drafted 2026-11-28 from chunk a5dc89ff852caecc241773b405a63905 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr063",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Comment renouveler un congé de longue maladie pour un fonctionnaire en Polynésie française ?",
+      "source": "Décret n°2011-1040 du 29 août 2011, art. 95 — Décret n°2011-1040 du 29 août 2011",
+      "answer_identifiers": [
+        "Décret n°2011-1040 du 29 août 2011, art. 95"
+      ],
+      "answer_documents": [
+        "LEGITEXT000024528603"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk fcc8f824ff007d3ff192441d179c7a66 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr064",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Comment demander l'inscription d'une société de géomètres experts au tableau de l'ordre ?",
+      "source": "Arrêté du 12 novembre 2009, art. 2 — Arrêté du 12 novembre 2009",
+      "answer_identifiers": [
+        "Arrêté du 12 novembre 2009, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000021310169"
+      ],
+      "label_chunks": 7,
+      "provenance": "drafted 2026-11-28 from chunk aa240a7f495e53b84f4fd3ac759bdc5c of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr065",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Comment est publiée la décision de rétablissement personnel sans liquidation judiciaire ?",
+      "source": "Code de la consommation, art. R741-3 — Code de la consommation",
+      "answer_identifiers": [
+        "Code de la consommation, art. R741-3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006069565"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 56d99f2f465b3ae60d78a68cec260ce3 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr066",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Que doit contenir le diagnostic de performance énergétique d'un lot dans un bâtiment non résidentiel ?",
+      "source": "Arrêté du 15 septembre 2006, art. 18 — Arrêté du 15 septembre 2006",
+      "answer_identifiers": [
+        "Arrêté du 15 septembre 2006, art. 18"
+      ],
+      "answer_documents": [
+        "LEGITEXT000020491551"
+      ],
+      "label_chunks": 4,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 6758fba512bf3ded848fe7539384d4d6 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr067",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Quelles règles particulières s'appliquent à la série STHR au lycée ?",
+      "source": "Arrêté du 16 juillet 2018, art. 12 — Arrêté du 16 juillet 2018",
+      "answer_identifiers": [
+        "Arrêté du 16 juillet 2018, art. 12"
+      ],
+      "answer_documents": [
+        "LEGITEXT000038883488"
+      ],
+      "label_chunks": 3,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 1b204389985ce59d174203ef4fa38dc7 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr068",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Quel est l'objet de l'accord de novembre 2025 sur la protection sociale complémentaire au ministère de l'intérieur ?",
+      "source": "Accord collectif du 14 novembre 2025 — Accord collectif du 14 novembre 2025",
+      "answer_identifiers": [
+        "Accord collectif du 14 novembre 2025"
+      ],
+      "answer_documents": [
+        "LEGITEXT000053011845"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk b69b6c91e21b87554f0ce0fd613ba4ee of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr069",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Comment les anciens contractuels sont-ils classés lors de leur nomination en catégorie C territoriale ?",
+      "source": "Décret n°2016-596 du 12 mai 2016, art. 5 — Décret n°2016-596 du 12 mai 2016",
+      "answer_identifiers": [
+        "Décret n°2016-596 du 12 mai 2016, art. 5"
+      ],
+      "answer_documents": [
+        "LEGITEXT000032540869"
+      ],
+      "label_chunks": 2,
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-28 from chunk cbce85602082ad34d0880accfb0bbb59 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr070",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Quels diplômes faut-il pour se présenter au concours d'entrée à l'école des officiers prévu par le décret de décembre 2014 ?",
+      "source": "DÉCRET n°2014-1455 du 5 décembre 2014, art. 4 — DÉCRET n°2014-1455 du 5 décembre 2014",
+      "answer_identifiers": [
+        "DÉCRET n°2014-1455 du 5 décembre 2014, art. 4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000029852631"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 09dc8eb00a8fda44fa1d47390776c32c of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr071",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Quelle retenue de garantie peut être appliquée sur les acomptes des marchés de travaux privés ?",
+      "source": "Loi n° 71-584 du 16 juillet 1971, art. 1 — Loi n° 71-584 du 16 juillet 1971",
+      "answer_identifiers": [
+        "Loi n° 71-584 du 16 juillet 1971, art. 1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006068417"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 9acc4e3dff841e65a6d789d86aa7ba41 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr072",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Les services de l'État doivent-ils fournir leurs données et analyses au COE ?",
+      "source": "Décret n°2005-326 du 7 avril 2005, art. 5 — Décret n°2005-326 du 7 avril 2005",
+      "answer_identifiers": [
+        "Décret n°2005-326 du 7 avril 2005, art. 5"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006051502"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 5755f928ab2478e0d17d51deaca8b7d3 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr073",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Comment sont consignées les dépositions des témoins lors d'une enquête civile ?",
+      "source": "Code de procédure civile, art. 219 — Code de procédure civile",
+      "answer_identifiers": [
+        "Code de procédure civile, art. 219"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070716"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 6c7d4cbfb7f2f42508e8b3a35b04cdb5 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr074",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Quelles entreprises de Mayotte devaient déclarer leur valeur ajoutée en 2014 ?",
+      "source": "Ordonnance n°2013-837 du 19 septembre 2013, art. 21 — Ordonnance n°2013-837 du 19 septembre 2013",
+      "answer_identifiers": [
+        "Ordonnance n°2013-837 du 19 septembre 2013, art. 21"
+      ],
+      "answer_documents": [
+        "LEGITEXT000027975630"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 3d6000b4e96d230986fd524bfc5cb061 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr075",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Dans quel délai former un recours contre un contrôle à bord d'un navire protégé par une société privée ?",
+      "source": "Code de la sécurité intérieure, art. L616-4 — Code de la sécurité intérieure",
+      "answer_identifiers": [
+        "Code de la sécurité intérieure, art. L616-4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000025503132"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-28 from chunk 9c30b502ce24f1016e92ae789c482007 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr076",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Comment sont évaluées les ressources familiales pour la dispense de service national à caractère social ?",
+      "source": "Code du service national, art. R*57 — Code du service national",
+      "answer_identifiers": [
+        "Code du service national, art. R*57"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006071335"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 8e76d30505f18bfe3103bbaf6afbff78 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr077",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Pour quelle indication le WILFACTIN est-il pris en charge par l'assurance maladie ?",
+      "source": "Arrêté du 21 octobre 2026, Annexe — Arrêté du 21 octobre 2026",
+      "answer_identifiers": [
+        "Arrêté du 21 octobre 2026, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000055010238"
+      ],
+      "label_chunks": 9,
+      "provenance": "drafted 2026-11-28 from chunk c7771ba2cf9b9c2c82f24a4798f0e69f of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr078",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Si les associés acceptent qu'un associé nantisse ses parts, l'acheteur lors d'une saisie est-il automatiquement agréé ?",
+      "source": "Code civil, art. 1867 — Code civil",
+      "answer_identifiers": [
+        "Code civil, art. 1867"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070721"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 14eb53adab2fd787bcc7f4824eb10a96 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr079",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Les concessions d'hydrocarbures peuvent-elles durer au-delà de 2040 ?",
+      "source": "Code minier (nouveau), art. L111-12 — Code minier (nouveau)",
+      "answer_identifiers": [
+        "Code minier (nouveau), art. L111-12"
+      ],
+      "answer_documents": [
+        "LEGITEXT000023501962"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk bc6904852d29f28575dae07e2ed0c023 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr080",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Quel comité d'hygiène reste compétent pour l'administration centrale du ministère de l'écologie en 2013 ?",
+      "source": "Décret n°2013-454 du 3 juin 2013, art. 2 — Décret n°2013-454 du 3 juin 2013",
+      "answer_identifiers": [
+        "Décret n°2013-454 du 3 juin 2013, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000027499157"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk be3e5dd83e077c62d17b9003d9dfab13 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr081",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Pour quelles infractions l'office central de lutte contre le crime organisé est-il compétent ?",
+      "source": "Décret n°2006-518 du 6 mai 2006, art. 2 — Décret n°2006-518 du 6 mai 2006",
+      "answer_identifiers": [
+        "Décret n°2006-518 du 6 mai 2006, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006053665"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 5886d3069414dfd75a3fb51fc0a6041b of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr082",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Peut-on introduire des végétaux dans la réserve naturelle créée par le décret de septembre 1998 ?",
+      "source": "Décret n°98-802 du 3 septembre 1998, art. 6 — Décret n°98-802 du 3 septembre 1998",
+      "answer_identifiers": [
+        "Décret n°98-802 du 3 septembre 1998, art. 6"
+      ],
+      "answer_documents": [
+        "LEGITEXT000005626548"
+      ],
+      "label_chunks": 1,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 003cadf0c80bd81a76d2419bbe22b2fb of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr083",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Un fonctionnaire en disponibilité pour élever un enfant garde-t-il ses droits à l'avancement ?",
+      "source": "Code général de la fonction publique, art. L514-2 — Code général de la fonction publique",
+      "answer_identifiers": [
+        "Code général de la fonction publique, art. L514-2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000044416551"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 2409938697d9027746c1280a8d4e3678 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr084",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Quelles dispositions de la loi du 13 décembre 2011 sont étendues aux collectivités du Pacifique ?",
+      "source": "LOI n°2011-1862 du 13 décembre 2011, art. 72 — LOI n°2011-1862 du 13 décembre 2011",
+      "answer_identifiers": [
+        "LOI n°2011-1862 du 13 décembre 2011, art. 72"
+      ],
+      "answer_documents": [
+        "LEGITEXT000024961879"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 214e4b64b2143339a58be946e85d6f19 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr085",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Quand un fournisseur de charbon aux ménages peut-il déclarer l'accise une fois par an ?",
+      "source": "Décret n°2021-1914 du 30 décembre 2021, art. 31-3 — Décret n°2021-1914 du 30 décembre 2021",
+      "answer_identifiers": [
+        "Décret n°2021-1914 du 30 décembre 2021, art. 31-3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000044939060"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 331a4abf8588c470eb04b4ed5b0e40c0 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr086",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Combien de points rapporte une offre diversifiée de soins spécialisés pour une structure de santé pluriprofessionnelle ?",
+      "source": "ARRÊTÉ du 23 février 2015, art. Annexe 1 — ARRÊTÉ du 23 février 2015",
+      "answer_identifiers": [
+        "ARRÊTÉ du 23 février 2015, art. Annexe 1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000030292136"
+      ],
+      "label_chunks": 12,
+      "provenance": "drafted 2026-11-28 from chunk 5d7357bb850bc4f50f1b16a3b96b64d4 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr087",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "La réforme des tarifs des professions juridiques de 2015 s'applique-t-elle en Alsace-Moselle ?",
+      "source": "LOI n°2015-990 du 6 août 2015, art. 52 — LOI n°2015-990 du 6 août 2015",
+      "answer_identifiers": [
+        "LOI n°2015-990 du 6 août 2015, art. 52"
+      ],
+      "answer_documents": [
+        "LEGITEXT000030981713"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-28 from chunk dc29ba540ed954b88d9cb59772826356 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr088",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Quelles exigences s'appliquent au sol des locaux de stockage de matières dangereuses dans une installation classée ?",
+      "source": "Arrêté du 13 octobre 2004, art. Annexe I — Arrêté du 13 octobre 2004",
+      "answer_identifiers": [
+        "Arrêté du 13 octobre 2004, art. Annexe I"
+      ],
+      "answer_documents": [
+        "LEGITEXT000021522252"
+      ],
+      "label_chunks": 17,
+      "provenance": "drafted 2026-11-28 from chunk b3ecefceca8753e578670ae99bb94323 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr089",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Que signifient les mentions BR, BRR et FR dans les garanties de complémentaire santé des agents ?",
+      "source": "Accord collectif du 25 juin 2024, Annexe — Accord collectif du 25 juin 2024",
+      "answer_identifiers": [
+        "Accord collectif du 25 juin 2024, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000050125258"
+      ],
+      "label_chunks": 45,
+      "provenance": "drafted 2026-11-28 from chunk 2731d6e3c6de7c083730a7bde9fa21b1 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr090",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Comment la France est-elle désignée pour exécuter une peine prononcée par la Cour pénale internationale ?",
+      "source": "Décret n°2023-923 du 5 octobre 2023, Annexe — Décret n°2023-923 du 5 octobre 2023",
+      "answer_identifiers": [
+        "Décret n°2023-923 du 5 octobre 2023, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000048175083"
+      ],
+      "label_chunks": 6,
+      "provenance": "drafted 2026-11-28 from chunk 052a4f4d965676cb54e2d3e04a730db6 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr091",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quelle peine encourt celui qui enfreint l'interdiction de divulguer une invention intéressant la défense nationale ?",
+      "source": "Code de la propriété intellectuelle, art. L615-13 — Code de la propriété intellectuelle",
+      "answer_identifiers": [
+        "Code de la propriété intellectuelle, art. L615-13"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006069414"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 0685af161ff5b1bd57d04f6ab77e6674 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr092",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quelles mesures disciplinaires l'ANJ peut-elle prendre contre un site de paris en ligne agréé ?",
+      "source": "LOI n° 2010-476 du 12 mai 2010, art. 43 — LOI n° 2010-476 du 12 mai 2010",
+      "answer_identifiers": [
+        "LOI n° 2010-476 du 12 mai 2010, art. 43"
+      ],
+      "answer_documents": [
+        "LEGITEXT000022206487"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-28 from chunk 2bbe136bd84521fefd59f6f2b5ae1d96 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr093",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Devant qui les agents qui constatent les contraventions routières prêtent-ils serment ?",
+      "source": "Code de la route., art. L130-7 — Code de la route.",
+      "answer_identifiers": [
+        "Code de la route., art. L130-7"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006074228"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 09b6baf8316acc130b1f3ca86e3df167 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr094",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quelle amende pour détenir sans autorisation un artifice de divertissement lancé par mortier ?",
+      "source": "Décret n°2010-580 du 31 mai 2010, art. 10 — Décret n°2010-580 du 31 mai 2010",
+      "answer_identifiers": [
+        "Décret n°2010-580 du 31 mai 2010, art. 10"
+      ],
+      "answer_documents": [
+        "LEGITEXT000022290704"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 63087ac61d307b4c99f4d90c74d7216e of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr095",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Le concessionnaire d'un aéroport peut-il faire constater les infractions de stationnement ?",
+      "source": "Décret n°2025-968 du 23 septembre 2025, Annexe, Titre 4, Chapitre 4 — Décret n°2025-968 du 23 septembre 2025",
+      "answer_identifiers": [
+        "Décret n°2025-968 du 23 septembre 2025, Annexe, Titre 4, Chapitre 4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000052281815"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-28 from chunk 6a8c933b90c8e612abdfc88e631443b5 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr096",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quel est le programme de droit pénal et de procédure pénale fixé par l'arrêté du 31 décembre 2008 ?",
+      "source": "Arrêté du 31 décembre 2008, Annexe — Arrêté du 31 décembre 2008",
+      "answer_identifiers": [
+        "Arrêté du 31 décembre 2008, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000020083722"
+      ],
+      "label_chunks": 14,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 38979469c43d279954ce5a09b7fd9c9d of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr097",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Que dit la Déclaration des droits de l'homme sur l'arrestation et la détention arbitraires ?",
+      "source": "Déclaration du 26 août 1789, art. 7 — Déclaration du 26 août 1789",
+      "answer_identifiers": [
+        "Déclaration du 26 août 1789, art. 7"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006071192"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 784d2c5b2873d9449038d09c2368eedf of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr098",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quelles infractions punies avec sursis probatoire ont été amnistiées en 1966 ?",
+      "source": "Loi n° 66-409 du 18 juin 1966, art. 10 — Loi n° 66-409 du 18 juin 1966",
+      "answer_identifiers": [
+        "Loi n° 66-409 du 18 juin 1966, art. 10"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006068278"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 307c98b215362f4b58d371293daf54dd of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr099",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quelle sanction pour un armateur qui embarque un visiteur sans certificat médical ?",
+      "source": "Décret n°2021-933 du 12 juillet 2021, art. 23 — Décret n°2021-933 du 12 juillet 2021",
+      "answer_identifiers": [
+        "Décret n°2021-933 du 12 juillet 2021, art. 23"
+      ],
+      "answer_documents": [
+        "LEGITEXT000043790529"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 3cce2356625f63a20ce36e400a10771e of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr100",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quelle peine pour avoir blessé un animal domestique par imprudence ?",
+      "source": "Code pénal, art. R653-1 — Code pénal",
+      "answer_identifiers": [
+        "Code pénal, art. R653-1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070719"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk a12bcacb07f7295aebf356e4d88096c5 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr101",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Quel est le programme du concours d'intégration des officiers de sapeurs-pompiers professionnels ?",
+      "source": "Arrêté du 8 mars 1993, art. ANNEXE — Arrêté du 8 mars 1993",
+      "answer_identifiers": [
+        "Arrêté du 8 mars 1993, art. ANNEXE"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006081508"
+      ],
+      "label_chunks": 5,
+      "provenance": "drafted 2026-11-28 from chunk a41af0282d299e3f5adecac7f41af56a of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr102",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Quel quorum la commission de contrôle des films exige-t-elle en assemblée plénière ?",
+      "source": "Décret n°61-62 du 18 janvier 1961, art. 2 — Décret n°61-62 du 18 janvier 1961",
+      "answer_identifiers": [
+        "Décret n°61-62 du 18 janvier 1961, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006070759"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 6a2579db212269b14bd49992e68fa57f of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr103",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Comment s'appelle aujourd'hui le PEIR créé par la réforme des retraites de 2003 ?",
+      "source": "Loi n° 2003-775 du 21 août 2003, art. 114 — Loi n° 2003-775 du 21 août 2003",
+      "answer_identifiers": [
+        "Loi n° 2003-775 du 21 août 2003, art. 114"
+      ],
+      "answer_documents": [
+        "LEGITEXT000005635050"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 216784fa666fa4040d0a96811ae351d9 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr104",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Quelles exonérations de cotisation vieillesse ont les officiers ministériels en début d'activité ?",
+      "source": "Arrêté du 29 juillet 1993, art. Annexe I — Arrêté du 29 juillet 1993",
+      "answer_identifiers": [
+        "Arrêté du 29 juillet 1993, art. Annexe I"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006082624"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 68257fd274d33f5abac6983a01aa4cba of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr105",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Quelles conditions doivent réunir les dégâts pour être indemnisés après la reconnaissance d'une catastrophe naturelle ?",
+      "source": "Arrêté du 8 juin 2016, art. 2 — Arrêté du 8 juin 2016",
+      "answer_identifiers": [
+        "Arrêté du 8 juin 2016, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000032713235"
+      ],
+      "label_chunks": 8,
+      "near_duplicates": 106,
+      "provenance": "drafted 2026-11-28 from chunk 6a15cae167bb179f8705a74f14afb68c of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr106",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Comment est mise en place la complémentaire santé obligatoire au ministère de l'agriculture ?",
+      "source": "Accord collectif — Accord collectif",
+      "answer_identifiers": [
+        "Accord collectif"
+      ],
+      "answer_documents": [
+        "LEGITEXT000051150769"
+      ],
+      "label_chunks": 62,
+      "provenance": "drafted 2026-11-28 from chunk 10ecac415777f56c4e776354027dd477 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr107",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Qui nomme l'agent comptable d'un port autonome ?",
+      "source": "Code des transports, art. R5313-29 — Code des transports",
+      "answer_identifiers": [
+        "Code des transports, art. R5313-29"
+      ],
+      "answer_documents": [
+        "LEGITEXT000023086525"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk de53c98f008ba3739da4739a5afa1c55 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr108",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Quand sont entrées en vigueur les règles de la loi de juillet 1985 sur les publications périodiques ?",
+      "source": "Loi n° 85-706 du 12 juillet 1985, art. 8 — Loi n° 85-706 du 12 juillet 1985",
+      "answer_identifiers": [
+        "Loi n° 85-706 du 12 juillet 1985, art. 8"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006068915"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 68887d76977e48b0c65b065b024c2112 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr109",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Pour combien de temps et par quel acte est désigné le directeur général de l'établissement rattaché à PSL ?",
+      "source": "Décret n°91-1033 du 8 octobre 1991, art. 14 — Décret n°91-1033 du 8 octobre 1991",
+      "answer_identifiers": [
+        "Décret n°91-1033 du 8 octobre 1991, art. 14"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006078137"
+      ],
+      "label_chunks": 3,
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-28 from chunk b5dbfa0d671b95e98f7aa38cd2513c84 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr110",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Qui fixe la valeur du point des pensions militaires d'invalidité ?",
+      "source": "Code des pensions militaires d'invalidité et des victimes de guerre., art. R125-1 — Code des pensions militaires d'invalidité et des victimes de guerre.",
+      "answer_identifiers": [
+        "Code des pensions militaires d'invalidité et des victimes de guerre., art. R125-1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006074068"
+      ],
+      "label_chunks": 2,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 58582f58a03dbdf6d9e8fdd940eec45a of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr111",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Quelle autorité est chargée du recrutement et de la gestion du corps des agents de constatation douaniers ?",
+      "source": "Décret n°79-88 du 25 janvier 1979, art. 1 — Décret n°79-88 du 25 janvier 1979",
+      "answer_identifiers": [
+        "Décret n°79-88 du 25 janvier 1979, art. 1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006063130"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk ccd3a32ff8bfad1037833225e9ad38fc of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr112",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Par quel acte est octroyée une concession de mines ou de stockage souterrain ?",
+      "source": "Décret n°97-1198 du 19 décembre 1997, art. Annexe — Décret n°97-1198 du 19 décembre 1997",
+      "answer_identifiers": [
+        "Décret n°97-1198 du 19 décembre 1997, art. Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000042024181"
+      ],
+      "label_chunks": 108,
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-28 from chunk 249264f9ad6e5a8fcef0fcb114062af1 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr113",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Jusqu'à quand l'administration peut-elle reprendre le crédit d'impôt recherche ?",
+      "source": "Livre des procédures fiscales, art. L172 G — Livre des procédures fiscales",
+      "answer_identifiers": [
+        "Livre des procédures fiscales, art. L172 G"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006069583"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 8556cfecafbf71bc5c5fe0d6f6b57b41 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr114",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Quelles compétences la Corse exerce-t-elle en matière de tourisme ?",
+      "source": "Code du tourisme., art. L151-1 — Code du tourisme.",
+      "answer_identifiers": [
+        "Code du tourisme., art. L151-1"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006074073"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 1ba51226bea199f8ef4dff41e45e3bb2 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr115",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "À quoi sert une EITI et quelles personnes accompagne-t-elle ?",
+      "source": "Arrêté du 2 janvier 2025, Annexe — Arrêté du 2 janvier 2025",
+      "answer_identifiers": [
+        "Arrêté du 2 janvier 2025, Annexe"
+      ],
+      "answer_documents": [
+        "LEGITEXT000050954864"
+      ],
+      "label_chunks": 5,
+      "provenance": "drafted 2026-11-28 from chunk 7284f5b3c79c3e12eb8abe1cb7245e01 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr116",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Quels agents de l'État relèvent obligatoirement de la complémentaire santé interministérielle ?",
+      "source": "Accord collectif du 20 octobre 2023, art. 3 — Accord collectif du 20 octobre 2023",
+      "answer_identifiers": [
+        "Accord collectif du 20 octobre 2023, art. 3"
+      ],
+      "answer_documents": [
+        "LEGITEXT000049518509"
+      ],
+      "label_chunks": 3,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk b63a3d22d153ce2e3e2b072baa3a48f4 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr117",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Comment un interne en médecine peut-il changer de spécialité ?",
+      "source": "Arrêté du 12 avril 2017, art. 7 — Arrêté du 12 avril 2017",
+      "answer_identifiers": [
+        "Arrêté du 12 avril 2017, art. 7"
+      ],
+      "answer_documents": [
+        "LEGITEXT000034425356"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-28 from chunk c152aa6c18bdaed69930514b64ce91cc of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fr118",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Quelle hauteur minimale au-dessus du sol pour les conducteurs isolés d'une ligne électrique aérienne selon l'arrêté de 2001 ?",
+      "source": "Arrêté du 17 mai 2001, art. 24 — Arrêté du 17 mai 2001",
+      "answer_identifiers": [
+        "Arrêté du 17 mai 2001, art. 24"
+      ],
+      "answer_documents": [
+        "LEGITEXT000005631045"
+      ],
+      "must_not_rank_first": [
+        "f03a7bfc899dd3e56119a2bc7573c860"
+      ],
+      "label_chunks": 2,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-28 from chunk 64005b576db9df3125ba7729c9900820 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr119",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "À partir de quel montant en euros le régisseur doit-il verser ses recettes en espèces au comptable ?",
+      "source": "Arrêté du 28 novembre 1996, art. 4 — Arrêté du 28 novembre 1996",
+      "answer_identifiers": [
+        "Arrêté du 28 novembre 1996, art. 4"
+      ],
+      "answer_documents": [
+        "LEGITEXT000030368804"
+      ],
+      "must_not_rank_first": [
+        "aee16e66750fc985385db088efefb1a4"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-28 from chunk 382ccbf14e239c168dae9ead26e098a8 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr120",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Quelles modifications des statuts de la Semmaris ont été approuvées en 1995 ?",
+      "source": "Décret n°95-389 du 7 avril 1995, art. 2 — Décret n°95-389 du 7 avril 1995",
+      "answer_identifiers": [
+        "Décret n°95-389 du 7 avril 1995, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000005618293"
+      ],
+      "must_not_rank_first": [
+        "6d8029bf167bcc9c01361f231d4af615"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-28 from chunk 6e7e90d5ba085820df77611d7a207153 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr121",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Quelle note éliminatoire de 5 sur 20 empêche l'admission au concours selon l'arrêté de 2007 ?",
+      "source": "Arrêté du 23 mars 2007, art. 5 — Arrêté du 23 mars 2007",
+      "answer_identifiers": [
+        "Arrêté du 23 mars 2007, art. 5"
+      ],
+      "answer_documents": [
+        "LEGITEXT000024686992"
+      ],
+      "must_not_rank_first": [
+        "931186d8b3bb821aea47384010b9c493"
+      ],
+      "label_chunks": 4,
+      "near_duplicates": 2,
+      "provenance": "drafted 2026-11-28 from chunk 0fd198783a10bd2f2c9b7d046c5b8e37 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr122",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Quand l'état de catastrophe naturelle ouvre-t-il droit à indemnisation par l'assurance ?",
+      "source": "Arrêté du 25 septembre 2023, art. 2 — Arrêté du 25 septembre 2023",
+      "answer_identifiers": [
+        "Arrêté du 25 septembre 2023, art. 2",
+        "Arrêté du 19 septembre 2023, art. 2",
+        "Arrêté du 25 juillet 2023, art. 2",
+        "Arrêté du 18 septembre 2023, art. 2",
+        "Arrêté du 19 juin 2023, art. 2",
+        "Arrêté du 23 juillet 2023, art. 2",
+        "Arrêté du 22 juillet 2023, art. 2",
+        "Arrêté du 30 juin 2023, art. 2",
+        "Arrêté du 22 décembre 2023, art. 2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000048148949",
+        "LEGITEXT000048228596",
+        "LEGITEXT000048148922",
+        "LEGITEXT000048228550",
+        "LEGITEXT000047794036",
+        "LEGITEXT000048105216",
+        "LEGITEXT000048069251",
+        "LEGITEXT000047794208",
+        "LEGITEXT000049056642"
+      ],
+      "label_chunks": 79,
+      "provenance": "drafted 2026-11-28 from chunk a270af7b47a7b0bbf0634be3ac217afd of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr123",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "En quoi consiste l'épreuve de l'examen réservé pour devenir adjoint technique principal dans la recherche ?",
+      "source": "Arrêté du 23 juillet 2013, art. 7 — Arrêté du 23 juillet 2013",
+      "answer_identifiers": [
+        "Arrêté du 23 juillet 2013, art. 7",
+        "Arrêté du 23 juillet 2013, art. 8",
+        "Arrêté du 11 juin 2013, art. 8"
+      ],
+      "answer_documents": [
+        "LEGITEXT000027788995",
+        "LEGITEXT000027791483",
+        "LEGITEXT000039233702",
+        "LEGITEXT000027790186",
+        "LEGITEXT000027791690",
+        "LEGITEXT000027543264",
+        "LEGITEXT000027789830"
+      ],
+      "label_chunks": 19,
+      "provenance": "drafted 2026-11-28 from chunk 59dcd7dfb629b66ca45f93e0e0f09ad2 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr124",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Quelle part de ses investissements un opérateur télécoms doit-il consacrer à la recherche et à la formation ?",
+      "source": "Arrêté du 18 décembre 1997, art. ANNEXE — Arrêté du 18 décembre 1997",
+      "answer_identifiers": [
+        "Arrêté du 18 décembre 1997, art. ANNEXE",
+        "Arrêté du 6 octobre 1998, art. ANNEXE",
+        "Arrêté du 16 avril 1998, art. ANNEXE",
+        "Arrêté du 19 octobre 1998, art. ANNEXE"
+      ],
+      "answer_documents": [
+        "LEGITEXT000005624937",
+        "LEGITEXT000005626813",
+        "LEGITEXT000005625747",
+        "LEGITEXT000005626895"
+      ],
+      "label_chunks": 99,
+      "provenance": "drafted 2026-11-28 from chunk cba6a42d6dca64eb7338f682323424c9 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "fr125",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Comment est rémunéré un fonctionnaire en recherche d'affectation au Centre national de gestion ?",
+      "source": "Décret n°2005-921 du 2 août 2005, art. 25-2 — Décret n°2005-921 du 2 août 2005",
+      "answer_identifiers": [
+        "Décret n°2005-921 du 2 août 2005, art. 25-2"
+      ],
+      "answer_documents": [
+        "LEGITEXT000006052142",
+        "LEGITEXT000036885083",
+        "LEGITEXT000050595987",
+        "LEGITEXT000017882110"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-28 from chunk 794c00d988300a19fcec888d5f296001 of fr_legi; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "fro01",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Comment réussir une pâte à crêpes sans grumeaux ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro02",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Quelle est la meilleure période pour tailler les rosiers ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro03",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Comment détartrer une cafetière ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro04",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Pourquoi le ciel est-il bleu ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro05",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Comment apprendre le piano à l'âge adulte ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro06",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Qui a gagné le Tour de France 2019 ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro07",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I fix a leaking faucet?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro08",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Combien de temps faut-il cuire un œuf mollet ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro09",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Quel est le salaire minimum en Belgique ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": true
+    },
+    {
+      "id": "fro10",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Comment créer une société anonyme en Suisse ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro11",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Quelle est la durée du congé de paternité en Espagne ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro12",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Quelles sont les règles de succession au Luxembourg ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro13",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Quelle est la peine pour conduite en état d'ivresse en Italie ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro14",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Comment divorcer au Maroc selon la Moudawana ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro15",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Quel est le taux de TVA au Portugal ?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    },
+    {
+      "id": "fro16",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What are the gun ownership rules in Brazil?",
+      "answer_chunks": [],
+      "source": "not answerable from fr_legi",
+      "provenance": "written 2026-11-28",
+      "holdout": false
+    }
+  ]
+}
