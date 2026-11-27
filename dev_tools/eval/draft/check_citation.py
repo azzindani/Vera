@@ -58,6 +58,9 @@ def near_twins(conn, chunk_id: str, exclude_docs: set[str]) -> int:
 
 
 def main() -> None:
+    # ! `python -I` ignores PYTHONIOENCODING, and a Windows console is cp1252: the report
+    # below prints ✗ and crashed there before the rejections it exists to list.
+    sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--dsn", required=True)
     ap.add_argument("--corpus", required=True)
@@ -101,7 +104,7 @@ def main() -> None:
             if main_row is None:
                 rejected.append((key, "chunk id not in corpus"))
                 continue
-            run = longest_run(query, main_row["body"])
+            run = longest_run(query, main_row["body"], main_row["about"] or "")
             if run >= 6:
                 rejected.append((key, f"copies {run} words of its clause"))
                 continue

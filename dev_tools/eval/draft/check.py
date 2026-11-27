@@ -49,17 +49,47 @@ META = ("SELECT id, doc_id, regulation_type, regulation_number, year, about, art
 TODAY = __import__("datetime").date.today().isoformat()
 
 
-def longest_run(a: str, b: str) -> int:
-    x, y = WORD.findall(a.lower()), WORD.findall(b.lower())
-    best, prev = 0, [0] * (len(y) + 1)
+# Han, hiragana, katakana: scripts written without spaces between words.
+CJK_RANGES = ((0x3040, 0x30FF), (0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xF900, 0xFAFF))
+CJK = re.compile("[" + "".join(f"{chr(a)}-{chr(b)}" for a, b in CJK_RANGES) + "]")
+# ! Assumed, ✗ measured: about 2 characters per Japanese word, so the 6-word rule rejects
+# 12 copied characters. Without it `\w+` reads a whole unpunctuated Japanese phrase as one
+# "word", and the check could not see a copied Japanese clause at all (`queries_jp_egov.json`
+# was paraphrased by hand for that reason).
+CJK_CHARS_PER_WORD = 2
+
+
+def _units(text: str) -> list[str]:
+    """Words, with a run of CJK characters split into its characters."""
+    out: list[str] = []
+    for w in WORD.findall(text.lower()):
+        if CJK.search(w):
+            out.extend(w)
+        else:
+            out.append(w)
+    return out
+
+
+def longest_run(a: str, b: str, title: str = "") -> int:
+    """The longest run `a` shares with `b`, in words; a CJK character counts as half a word.
+
+    ! `title`, the instrument's own name, is struck from both first: naming the law a
+    question is about is not copying what it says (a Japanese law's name alone runs to 20
+    characters).
+    """
+    if title.strip():
+        a, b = a.replace(title, " "), b.replace(title, " ")
+    x, y = _units(a), _units(b)
+    weight = [1.0 / CJK_CHARS_PER_WORD if CJK.match(t) else 1.0 for t in x]
+    best, prev = 0.0, [0.0] * (len(y) + 1)
     for i in range(1, len(x) + 1):
-        cur = [0] * (len(y) + 1)
+        cur = [0.0] * (len(y) + 1)
         for j in range(1, len(y) + 1):
             if x[i - 1] == y[j - 1]:
-                cur[j] = prev[j - 1] + 1
+                cur[j] = prev[j - 1] + weight[i - 1]
                 best = max(best, cur[j])
         prev = cur
-    return best
+    return int(best)
 
 
 def held(qid: str, per100: int) -> bool:
