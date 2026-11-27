@@ -159,7 +159,7 @@ def _aggregate(parts: list[tuple[str, Path]]) -> str:
     real = [c for _, c in total if c["type"] != "out_of_domain"]
     ood = [c for _, c in total if c["type"] == "out_of_domain"]
     head = f"{'set':22} {'n':>5}  " + "  ".join(f"@{k:<4}" for k in cuts) + \
-        "   MRR    right domain   off-topic refused"
+        "   MRR    right domain   off-topic refused   served elsewhere"
     return "\n".join([head, *lines, _row("ALL", real, ood, cuts)])
 
 
@@ -171,9 +171,14 @@ def _row(name: str, real: list[dict], ood: list[dict], cuts: tuple[int, ...]) ->
     mrr = sum(c["rr"] for c in real) / n
     answered = [c for c in real if c.get("domain")]
     right = sum(1 for c in answered if c["domain"] == c["own"])
-    refused = sum(1 for c in ood if c["refused"])
+    # ! An off-topic question another corpus holds (`served_by`) is right when that
+    # domain answers it: refusing it would be the wrong answer in unified mode.
+    strict = [c for c in ood if not c.get("served_by")]
+    elsewhere = [c for c in ood if c.get("served_by")]
+    refused = sum(1 for c in strict if c["refused"])
+    served = sum(1 for c in elsewhere if c.get("domain") in c["served_by"])
     return (f"{name:22} {len(real):5}  {recall}   {mrr:.3f}  {right:4}/{len(answered):<4}"
-            f"       {refused}/{len(ood)}")
+            f"       {refused}/{len(strict):<14}{served}/{len(elsewhere)}")
 
 
 def main() -> None:

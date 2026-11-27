@@ -1,0 +1,2103 @@
+{
+  "_README": [
+    "A citation-labelled set on us_cfr (EVAL_QUERIES), drafted from sample_corpus.py clauses and machine-checked by check_citation.py. Labels are citations read back from the database; NOT reviewed by a domain expert."
+  ],
+  "queries": [
+    {
+      "id": "us001",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Under 7 CFR 2620.5, where does a person send an appeal after USDA's Office of Inspector General refuses to release a record?",
+      "source": "7 CFR 2620.5 — AVAILABILITY OF INFORMATION TO THE PUBLIC",
+      "answer_identifiers": [
+        "7 CFR 2620.5"
+      ],
+      "answer_documents": [
+        "7 CFR Part 2620"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e5e1643b365bc3092b6a0a5703404936 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us002",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What does 17 CFR 230.171 say about classified national defense information in a securities registration statement?",
+      "source": "17 CFR 230.171 — GENERAL RULES AND REGULATIONS, SECURITIES ACT OF 1933",
+      "answer_identifiers": [
+        "17 CFR 230.171"
+      ],
+      "answer_documents": [
+        "17 CFR Part 230"
+      ],
+      "label_chunks": 1,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2ead7df5d8de90f9d1e1b2f6b6315dc3 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us003",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Under 40 CFR 86.528-78, which transmission configuration is used when testing motorcycles for emissions?",
+      "source": "40 CFR 86.528-78 — CONTROL OF EMISSIONS FROM NEW AND IN-USE HIGHWAY VEHICLES AND ENGINES",
+      "answer_identifiers": [
+        "40 CFR 86.528-78"
+      ],
+      "answer_documents": [
+        "40 CFR Part 86"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk fc6ced779f367585268ed0d589fd63ce of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us004",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What pretreatment standards does 40 CFR 420.135 set for existing iron and steel sources in the other operations subcategory?",
+      "source": "40 CFR 420.135 — IRON AND STEEL MANUFACTURING POINT SOURCE CATEGORY",
+      "answer_identifiers": [
+        "40 CFR 420.135"
+      ],
+      "answer_documents": [
+        "40 CFR Part 420"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4794b27c587e29a48b7c308327b3fb79 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us005",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "How does a vessel operator apply for a conditional permit under 33 CFR 151.1012 to carry municipal or commercial waste?",
+      "source": "33 CFR 151.1012 — VESSELS CARRYING OIL, NOXIOUS LIQUID SUBSTANCES, GARBAGE, MUNICIPAL OR COMMERCIAL WASTE, AND BALLAST WATER",
+      "answer_identifiers": [
+        "33 CFR 151.1012"
+      ],
+      "answer_documents": [
+        "33 CFR Part 151"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a51103dd2b8826b910a183800a15cda1 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us006",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Who counts as an affected individual for financial disclosure under 50 CFR 600.235?",
+      "source": "50 CFR 600.235 — MAGNUSON-STEVENS ACT PROVISIONS",
+      "answer_identifiers": [
+        "50 CFR 600.235"
+      ],
+      "answer_documents": [
+        "50 CFR Part 600"
+      ],
+      "label_chunks": 7,
+      "provenance": "drafted 2026-11-27 from chunk 6cb8215ed1c0d4160ae17625d0b9a0b1 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us007",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Under 8 CFR 208.9, who arranges an interpreter when an asylum applicant cannot proceed in English, and how old must the interpreter be?",
+      "source": "8 CFR 208.9 — PROCEDURES FOR ASYLUM AND WITHHOLDING OF REMOVAL",
+      "answer_identifiers": [
+        "8 CFR 208.9"
+      ],
+      "answer_documents": [
+        "8 CFR Part 208"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk 0e646c9a82e4d574207627e5eaf688a8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us008",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What does 47 CFR 80.1111 say a distress alert indicates and how it must be sent?",
+      "source": "47 CFR 80.1111 — STATIONS IN THE MARITIME SERVICES",
+      "answer_identifiers": [
+        "47 CFR 80.1111"
+      ],
+      "answer_documents": [
+        "47 CFR Part 80"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 14b0c52cbd86a1dc7356428ec0820c56 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us009",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What is the quarantine policy for cattle scabies set out in 9 CFR 73.1b?",
+      "source": "9 CFR 73.1b — SCABIES IN CATTLE",
+      "answer_identifiers": [
+        "9 CFR 73.1b"
+      ],
+      "answer_documents": [
+        "9 CFR Part 73"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk ddc3f6b84b326ab38b7a179ce6687f85 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us010",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "What may the ALJ consider at a prehearing conference under 15 CFR 719.13?",
+      "source": "15 CFR 719.13 — ENFORCEMENT",
+      "answer_identifiers": [
+        "15 CFR 719.13"
+      ],
+      "answer_documents": [
+        "15 CFR Part 719"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk b9858a1445f7291fe88e22eb54430014 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us011",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "How does 21 CFR 886.4350 identify a manual ophthalmic surgical instrument?",
+      "source": "21 CFR 886.4350 — OPHTHALMIC DEVICES",
+      "answer_identifiers": [
+        "21 CFR 886.4350"
+      ],
+      "answer_documents": [
+        "21 CFR Part 886"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2756d51b7561ad273df031efac41b8d1 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us012",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Under 14 CFR 47.33, how does an owner register an aircraft that was never registered anywhere before?",
+      "source": "14 CFR 47.33 — AIRCRAFT REGISTRATION",
+      "answer_identifiers": [
+        "14 CFR 47.33"
+      ],
+      "answer_documents": [
+        "14 CFR Part 47"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk eb125b28bcaabc3369749ed8425011dc of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us013",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "How is tobacco removed in bond for shipment abroad or to Puerto Rico handled for excise tax purposes?",
+      "source": "27 CFR 40.235 — MANUFACTURE OF TOBACCO PRODUCTS, CIGARETTE PAPERS AND TUBES, AND PROCESSED TOBACCO",
+      "answer_identifiers": [
+        "27 CFR 40.235"
+      ],
+      "answer_documents": [
+        "27 CFR Part 40"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2d67605bb1d9f29ab2b0f02efe3c63d2 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us014",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Can an applicant and agency counsel settle an Equal Access to Justice Act fee award before the Labor Department acts on the application?",
+      "source": "29 CFR 16.303 — EQUAL ACCESS TO JUSTICE ACT",
+      "answer_identifiers": [
+        "29 CFR 16.303"
+      ],
+      "answer_documents": [
+        "29 CFR Part 16"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk c28f8d110917524f0117c32118d24714 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us015",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "When is it appropriate to file material with the Postal Regulatory Commission as a library reference?",
+      "source": "39 CFR 3010.125 — RULES OF PRACTICE AND PROCEDURE",
+      "answer_identifiers": [
+        "39 CFR 3010.125"
+      ],
+      "answer_documents": [
+        "39 CFR Part 3010"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 1fc0a4303b8eb0f305914fa04c1e4b29 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us016",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "When may a Selective Service registrant submit a written claim to be classified as a conscientious objector?",
+      "source": "Defense CFR 1636.2 — CLASSIFICATION OF CONSCIENTIOUS OBJECTORS",
+      "answer_identifiers": [
+        "Defense CFR 1636.2"
+      ],
+      "answer_documents": [
+        "Defense CFR Part 1636"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 3ae8b332d674e572f8a4bc05549428a3 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us017",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What must a clearing agency offering central matching do to support straight-through processing of securities trades?",
+      "source": "17 CFR 240.17Ad-27 — GENERAL RULES AND REGULATIONS, SECURITIES EXCHANGE ACT OF 1934",
+      "answer_identifiers": [
+        "17 CFR 240.17Ad-27"
+      ],
+      "answer_documents": [
+        "17 CFR Part 240"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2dbe3a7e39fe6448115ce234a0b7aaa1 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us018",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What is an otherwise protected area for purposes of flood insurance under the coastal barrier legislation?",
+      "source": "44 CFR 71.2 — IMPLEMENTATION OF COASTAL BARRIER LEGISLATION",
+      "answer_identifiers": [
+        "44 CFR 71.2"
+      ],
+      "answer_documents": [
+        "44 CFR Part 71"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 9e39f712be5e39430883188b089df411 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us019",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "How do broadband PCS licensees request approval to partition or disaggregate their licensed spectrum?",
+      "source": "47 CFR 24.714 — PERSONAL COMMUNICATIONS SERVICES",
+      "answer_identifiers": [
+        "47 CFR 24.714"
+      ],
+      "answer_documents": [
+        "47 CFR Part 24"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 01cd181885709e62e40006fb20a76568 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us020",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Can a State have the Social Security Administration pay its mandatory minimum SSI supplementary payments on its behalf?",
+      "source": "20 CFR 416.2005 — SUPPLEMENTAL SECURITY INCOME FOR THE AGED, BLIND, AND DISABLED",
+      "answer_identifiers": [
+        "20 CFR 416.2005"
+      ],
+      "answer_documents": [
+        "20 CFR Part 416"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a56be1cd5aa7b9acabbf659f89e17b7d of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us021",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What special features must a rail contract summary for agricultural commodities disclose?",
+      "source": "49 CFR 1313.6 — RAILROAD CONTRACTS FOR THE TRANSPORTATION OF AGRICULTURAL PRODUCTS",
+      "answer_identifiers": [
+        "49 CFR 1313.6"
+      ],
+      "answer_documents": [
+        "49 CFR Part 1313"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 06b4d7ec75c673296f8d5c8f368a0479 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us022",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Are banks required to use the model funds availability and substitute check disclosures in Regulation CC?",
+      "source": "12 CFR Appendix C to Part 229 — AVAILABILITY OF FUNDS AND COLLECTION OF CHECKS (REGULATION CC)",
+      "answer_identifiers": [
+        "12 CFR Appendix C to Part 229"
+      ],
+      "answer_documents": [
+        "12 CFR Part 229"
+      ],
+      "label_chunks": 12,
+      "provenance": "drafted 2026-11-27 from chunk eca261093a1c363337dba90bf229edca of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us023",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What discovery is available in proceedings over a violation of an antidumping administrative protective order?",
+      "source": "19 CFR 354.10 — PROCEDURES FOR IMPOSING SANCTIONS FOR VIOLATION OF AN ANTIDUMPING OR COUNTERVAILING DUTY ADMINISTRATIVE PROTECTIVE ORDER",
+      "answer_identifiers": [
+        "19 CFR 354.10"
+      ],
+      "answer_documents": [
+        "19 CFR Part 354"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 965f0d15cfce8190d6857bad412fa206 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us024",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Which tick species must be tested for a pesticide product that claims effectiveness against ticks?",
+      "source": "40 CFR 158.1718 — DATA REQUIREMENTS FOR PESTICIDES",
+      "answer_identifiers": [
+        "40 CFR 158.1718"
+      ],
+      "answer_documents": [
+        "40 CFR Part 158"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 8d234af62180e1b58d5402a73e2d3ce5 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us025",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Must Medicaid managed care contracts let the State and CMS inspect and audit the plan's records and facilities?",
+      "source": "42 CFR 438.3 — MANAGED CARE",
+      "answer_identifiers": [
+        "42 CFR 438.3"
+      ],
+      "answer_documents": [
+        "42 CFR Part 438"
+      ],
+      "label_chunks": 6,
+      "provenance": "drafted 2026-11-27 from chunk d9623cfba9282b84e030e0cf66e20c30 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us026",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "How is a credit derivative defined in FHFA's capital adequacy rules for Fannie Mae and Freddie Mac?",
+      "source": "12 CFR 1240.2 — CAPITAL ADEQUACY OF ENTERPRISES",
+      "answer_identifiers": [
+        "12 CFR 1240.2"
+      ],
+      "answer_documents": [
+        "12 CFR Part 1240"
+      ],
+      "label_chunks": 20,
+      "provenance": "drafted 2026-11-27 from chunk 670595a91b7da5f31c961c9ed44153e8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us027",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "When does the Department of Energy have to convene a public hearing during a rulemaking?",
+      "source": "10 CFR 205.173 — ADMINISTRATIVE PROCEDURES AND SANCTIONS",
+      "answer_identifiers": [
+        "10 CFR 205.173"
+      ],
+      "answer_documents": [
+        "10 CFR Part 205"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 89199398ec3d9cddae8245cd610ae2db of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us028",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "May a futures commission merchant use one customer's funds to margin another customer's trades?",
+      "source": "17 CFR 1.22 — GENERAL REGULATIONS UNDER THE COMMODITY EXCHANGE ACT",
+      "answer_identifiers": [
+        "17 CFR 1.22"
+      ],
+      "answer_documents": [
+        "17 CFR Part 1"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 3986c70c7246e5fb787675bbb871bc18 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us029",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "What counts as a liability or legal expense under the NCUA golden parachute and indemnification rules?",
+      "source": "12 CFR 750.1 — GOLDEN PARACHUTE AND INDEMNIFICATION PAYMENTS",
+      "answer_identifiers": [
+        "12 CFR 750.1"
+      ],
+      "answer_documents": [
+        "12 CFR Part 750"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-27 from chunk 3f5dfaa0428c7605091e2cb498a1a613 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us030",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "How is a nonprofit organization defined in the DFARS provision on competition for religious-related services?",
+      "source": "48 CFR 252.219-7012 — SOLICITATION PROVISIONS AND CONTRACT CLAUSES",
+      "answer_identifiers": [
+        "48 CFR 252.219-7012"
+      ],
+      "answer_documents": [
+        "48 CFR Part 252"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e1792bfe76a5c11d6f51d0e2e74836a0 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us031",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What is a State agency in the Senior Farmers' Market Nutrition Program?",
+      "source": "7 CFR 249.2 — SENIOR FARMERS' MARKET NUTRITION PROGRAM (SFMNP)",
+      "answer_identifiers": [
+        "7 CFR 249.2"
+      ],
+      "answer_documents": [
+        "7 CFR Part 249"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk 8f7eb755bd46daf5bc91b52cc9063c7b of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us032",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What qualifications must direct care staff in military child development programs meet?",
+      "source": "32 CFR 79.6 — CHILD DEVELOPMENT PROGRAMS (CDPs)",
+      "answer_identifiers": [
+        "32 CFR 79.6"
+      ],
+      "answer_documents": [
+        "32 CFR Part 79"
+      ],
+      "label_chunks": 13,
+      "provenance": "drafted 2026-11-27 from chunk 59412aaae997e73c117f2a11cc5fec46 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us033",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Who are the staff whose materials are covered by the rules on Nixon Administration presidential historical materials?",
+      "source": "36 CFR 1275.16 — PRESERVATION AND PROTECTION OF AND ACCESS TO THE PRESIDENTIAL HISTORICAL MATERIALS OF THE NIXON ADMINISTRATION",
+      "answer_identifiers": [
+        "36 CFR 1275.16"
+      ],
+      "answer_documents": [
+        "36 CFR Part 1275"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk c509139bc56cb88144ce56c0c8195ba3 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us034",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What information must a Federal order for quarantine, isolation or conditional release contain?",
+      "source": "42 CFR 70.14 — INTERSTATE QUARANTINE",
+      "answer_identifiers": [
+        "42 CFR 70.14"
+      ],
+      "answer_documents": [
+        "42 CFR Part 70"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 994aa735420e41af457ca631f2fde359 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us035",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "How must grounded and equipment grounding conductors be identified under OSHA electrical wiring rules?",
+      "source": "29 CFR 1910.304 — OCCUPATIONAL SAFETY AND HEALTH STANDARDS",
+      "answer_identifiers": [
+        "29 CFR 1910.304"
+      ],
+      "answer_documents": [
+        "29 CFR Part 1910"
+      ],
+      "label_chunks": 13,
+      "provenance": "drafted 2026-11-27 from chunk f92a45000ba45157c1f26721eb5404f5 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us036",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What do percent power and percent speed mean for the not-to-exceed zones of marine engines?",
+      "source": "40 CFR Appendix III to Part 1042 — CONTROL OF EMISSIONS FROM NEW AND IN-USE MARINE COMPRESSION-IGNITION ENGINES AND VESSELS",
+      "answer_identifiers": [
+        "40 CFR Appendix III to Part 1042"
+      ],
+      "answer_documents": [
+        "40 CFR Part 1042"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk f1d91ca582802ce2e2de8ec541f1b9d0 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us037",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Which agencies count as the agency in cases before the Foreign Service Grievance Board?",
+      "source": "22 CFR 901.11 — GENERAL",
+      "answer_identifiers": [
+        "22 CFR 901.11"
+      ],
+      "answer_documents": [
+        "22 CFR Part 901"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 91c0096062304d6e50f3434cf72ce3b3 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us038",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "What is an adversary adjudication under EPA's Equal Access to Justice Act rules?",
+      "source": "40 CFR 17.2 — IMPLEMENTATION OF THE EQUAL ACCESS TO JUSTICE ACT IN EPA ADMINISTRATIVE PROCEEDINGS",
+      "answer_identifiers": [
+        "40 CFR 17.2"
+      ],
+      "answer_documents": [
+        "40 CFR Part 17"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f055a4d1e63a99590d855bbe8eb5c867 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us039",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Which complaints about a State's use of block grant allotments does HHS have to consider?",
+      "source": "45 CFR 96.50 — BLOCK GRANTS",
+      "answer_identifiers": [
+        "45 CFR 96.50"
+      ],
+      "answer_documents": [
+        "45 CFR Part 96"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 9ee2b397381caaefabe844143b5084a6 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us040",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "At what temperature must PM filters and PUF plugs be stored after a semi-volatile organic compound emission test?",
+      "source": "40 CFR 1065.1109 — ENGINE-TESTING PROCEDURES",
+      "answer_identifiers": [
+        "40 CFR 1065.1109"
+      ],
+      "answer_documents": [
+        "40 CFR Part 1065"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-27 from chunk 24f5886adf67a17f4d5dc5e8f0202897 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us041",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "How is the replacement housing payment computed for a displaced homeowner who has a reverse mortgage?",
+      "source": "49 CFR 24.401 — UNIFORM RELOCATION ASSISTANCE AND REAL PROPERTY ACQUISITION FOR FEDERAL AND FEDERALLY ASSISTED PROGRAMS",
+      "answer_identifiers": [
+        "49 CFR 24.401"
+      ],
+      "answer_documents": [
+        "49 CFR Part 24"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-27 from chunk 6cc4675cb7410a0d2df697dbadfcc38b of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us042",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "How is the minimum distribution computed for a domestic corporation owning 60 percent of a controlled foreign corporation?",
+      "source": "26 CFR 1.963-2 — INCOME TAXES",
+      "answer_identifiers": [
+        "26 CFR 1.963-2"
+      ],
+      "answer_documents": [
+        "26 CFR Part 1"
+      ],
+      "label_chunks": 15,
+      "provenance": "drafted 2026-11-27 from chunk 995162cdb7430dd78a6c43c368c0ae97 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us043",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "When must a contracting officer insert the notice to offerors on protection of human subjects in HHS solicitations?",
+      "source": "48 CFR 370.303 — SPECIAL PROGRAMS AFFECTING ACQUISITION",
+      "answer_identifiers": [
+        "48 CFR 370.303"
+      ],
+      "answer_documents": [
+        "48 CFR Part 370"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk df0a75bd74669973bed03d9518af2b5f of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us044",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "How is the low-income housing credit computed when a building's qualified basis in its first year is below the amount allocated?",
+      "source": "26 CFR 1.42-1T — INCOME TAXES",
+      "answer_identifiers": [
+        "26 CFR 1.42-1T"
+      ],
+      "answer_documents": [
+        "26 CFR Part 1"
+      ],
+      "label_chunks": 17,
+      "provenance": "drafted 2026-11-27 from chunk 0af6552e94ee3744e5bb106af533fbcc of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us045",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "What medical and work history must an examination under the respirable crystalline silica standard include?",
+      "source": "29 CFR 1910.1053 — OCCUPATIONAL SAFETY AND HEALTH STANDARDS",
+      "answer_identifiers": [
+        "29 CFR 1910.1053"
+      ],
+      "answer_documents": [
+        "29 CFR Part 1910"
+      ],
+      "label_chunks": 20,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-27 from chunk 59fa7c2ddaaf243cf8fb82205bd97daa of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us046",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "When is a room holding a sealed radiation source exempt from posting a caution sign under Federal supply contract standards?",
+      "source": "41 CFR 50-204.25 — SAFETY AND HEALTH STANDARDS FOR FEDERAL SUPPLY CONTRACTS",
+      "answer_identifiers": [
+        "41 CFR 50-204.25"
+      ],
+      "answer_documents": [
+        "41 CFR Part 50-204"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 9798cd0785d6dc112dcb7615923051df of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us047",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "What price preference do agencies give historic properties when leasing space on a lowest price technically acceptable basis?",
+      "source": "41 CFR 102-73.120 — REAL ESTATE ACQUISITION",
+      "answer_identifiers": [
+        "41 CFR 102-73.120"
+      ],
+      "answer_documents": [
+        "41 CFR Part 102-73"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 206cee449c4cd4cfb5e60a167cc15540 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us048",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Who must receive a written route plan when a motor carrier hauls a highway route controlled quantity of radioactive material?",
+      "source": "49 CFR 397.101 — TRANSPORTATION OF HAZARDOUS MATERIALS; DRIVING AND PARKING RULES",
+      "answer_identifiers": [
+        "49 CFR 397.101"
+      ],
+      "answer_documents": [
+        "49 CFR Part 397"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk bd08318d58878dcb0e92d729d6d9658d of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us049",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What proof of newspaper publication must be filed in proceedings under the Act of July 23, 1955 on mining claims?",
+      "source": "43 CFR 3712.2-5 — PUBLIC LAW 167; ACT OF JULY 23, 1955",
+      "answer_identifiers": [
+        "43 CFR 3712.2-5"
+      ],
+      "answer_documents": [
+        "43 CFR Part 3710"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2d4567ee4a9b25534ade6bd7c263e49d of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us050",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What calibration must an owner perform when using a continuous monitoring system under the generic MACT source category requirements?",
+      "source": "40 CFR 63.1103 — NATIONAL EMISSION STANDARDS FOR HAZARDOUS AIR POLLUTANTS FOR SOURCE CATEGORIES",
+      "answer_identifiers": [
+        "40 CFR 63.1103"
+      ],
+      "answer_documents": [
+        "40 CFR Part 63"
+      ],
+      "label_chunks": 39,
+      "provenance": "drafted 2026-11-27 from chunk 74c2887d075db97f13eeb2d23597b730 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us051",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "How will the Secretary of the Interior use public comments on a proposed tribal energy resource agreement?",
+      "source": "25 CFR 224.68 — TRIBAL ENERGY RESOURCE AGREEMENTS UNDER THE INDIAN TRIBAL ENERGY DEVELOPMENT AND SELF DETERMINATION ACT",
+      "answer_identifiers": [
+        "25 CFR 224.68"
+      ],
+      "answer_documents": [
+        "25 CFR Part 224"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a87085a3d402e4632a0d47d31f39c759 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us052",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What must the Special Counsel's complaint to the Merit Systems Protection Board contain when seeking corrective action?",
+      "source": "5 CFR 1201.129 — PRACTICES AND PROCEDURES",
+      "answer_identifiers": [
+        "5 CFR 1201.129"
+      ],
+      "answer_documents": [
+        "5 CFR Part 1201"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 56134bf184d856fa02b525aeca237d44 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us053",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What may a health insurance Exchange not ask of household members who are not seeking coverage?",
+      "source": "45 CFR 155.310 — EXCHANGE ESTABLISHMENT STANDARDS AND OTHER RELATED STANDARDS UNDER THE AFFORDABLE CARE ACT",
+      "answer_identifiers": [
+        "45 CFR 155.310"
+      ],
+      "answer_documents": [
+        "45 CFR Part 155"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 0ac707bf3632bd2effea28ae126bc415 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us054",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "On what grounds may the FTA Administrator grant a request to treat records from a safety audit as confidential?",
+      "source": "49 CFR 670.13 — PUBLIC TRANSPORTATION SAFETY PROGRAM",
+      "answer_identifiers": [
+        "49 CFR 670.13"
+      ],
+      "answer_documents": [
+        "49 CFR Part 670"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 32724ebaa811854533369e1602d0693c of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us055",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "How does an offeror represent that it is a women-owned small business joint venture?",
+      "source": "48 CFR 52.219-1 — SOLICITATION PROVISIONS AND CONTRACT CLAUSES",
+      "answer_identifiers": [
+        "48 CFR 52.219-1"
+      ],
+      "answer_documents": [
+        "48 CFR Part 52"
+      ],
+      "label_chunks": 6,
+      "provenance": "drafted 2026-11-27 from chunk c2d73134388420c1d95fbe76a7ce40a8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us056",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "When do the periodic reporting provisions for continuous records not apply to low-throughput transfer racks?",
+      "source": "40 CFR 65.166 — CONSOLIDATED FEDERAL AIR RULE",
+      "answer_identifiers": [
+        "40 CFR 65.166"
+      ],
+      "answer_documents": [
+        "40 CFR Part 65"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 3eb1f0cc06a4610a916acc3f73461051 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us057",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What collection steps must VA take before discharging a delinquent debt?",
+      "source": "38 CFR 1.944 — GENERAL PROVISIONS",
+      "answer_identifiers": [
+        "38 CFR 1.944"
+      ],
+      "answer_documents": [
+        "38 CFR Part 1"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk b5850a82e3557de0623f2b7086885ed0 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us058",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "What must a State provide about its advisory group when applying for juvenile justice formula grants?",
+      "source": "28 CFR 31.302 — OJJDP GRANT PROGRAMS",
+      "answer_identifiers": [
+        "28 CFR 31.302"
+      ],
+      "answer_documents": [
+        "28 CFR Part 31"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4b94708462dfbca7408a5cb7c2075f32 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us059",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "How is the moment method computer model used to set antenna monitor parameters for a directional AM antenna?",
+      "source": "47 CFR 73.151 — RADIO BROADCAST SERVICES",
+      "answer_identifiers": [
+        "47 CFR 73.151"
+      ],
+      "answer_documents": [
+        "47 CFR Part 73"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-27 from chunk 5b40c0d86978bfca7b678cacea599ef0 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us060",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "When is a proceeding before the GAO Personnel Appeals Board terminated because the employee sued in district court?",
+      "source": "4 CFR 28.101 — GOVERNMENT ACCOUNTABILITY OFFICE PERSONNEL APPEALS BOARD; PROCEDURES APPLICABLE TO CLAIMS CONCERNING EMPLOYMENT PRACTICES AT THE GOVERNMENT ACCOUNTABILITY OFFICE",
+      "answer_identifiers": [
+        "4 CFR 28.101"
+      ],
+      "answer_documents": [
+        "4 CFR Part 28"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 0d293eda0220c77e24b6a1d6640029ff of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us061",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "What information about a musical work must monthly statements of account under the non-blanket compulsory license include?",
+      "source": "37 CFR 210.6 — COMPULSORY LICENSE FOR MAKING AND DISTRIBUTING PHYSICAL AND DIGITAL PHONORECORDS OF NONDRAMATIC MUSICAL WORKS",
+      "answer_identifiers": [
+        "37 CFR 210.6"
+      ],
+      "answer_documents": [
+        "37 CFR Part 210"
+      ],
+      "label_chunks": 7,
+      "provenance": "drafted 2026-11-27 from chunk 247a14287e3da775f1a9c0b449c2b711 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us062",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Which Interior and Commerce Department regional positions are placed in Schedule C?",
+      "source": "5 CFR 6.8 — EXCEPTIONS FROM THE COMPETITIVE SERVICE (RULE VI)",
+      "answer_identifiers": [
+        "5 CFR 6.8"
+      ],
+      "answer_documents": [
+        "5 CFR Part 6"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2e4986f69b54a9ee9a35b5dab7f1f123 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us063",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "How must circuit breakers protecting trailing cables in underground coal mines be set against short circuits?",
+      "source": "30 CFR 75.601-1 — MANDATORY SAFETY STANDARDS—UNDERGROUND COAL MINES",
+      "answer_identifiers": [
+        "30 CFR 75.601-1"
+      ],
+      "answer_documents": [
+        "30 CFR Part 75"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk b72af26921cae195f38b49e0e9a0dfb1 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us064",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Is the treatment of REMIC inducement fees a method of accounting, and can a taxpayer change it?",
+      "source": "26 CFR 1.446-6 — INCOME TAXES",
+      "answer_identifiers": [
+        "26 CFR 1.446-6"
+      ],
+      "answer_documents": [
+        "26 CFR Part 1"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk b8e0771cef3ca1d3780e06408a8b114c of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us065",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "What happens at the State Department after a final order suspends a former employee from practice before it?",
+      "source": "22 CFR 18.22 — REGULATIONS CONCERNING POST EMPLOYMENT CONFLICT OF INTEREST",
+      "answer_identifiers": [
+        "22 CFR 18.22"
+      ],
+      "answer_documents": [
+        "22 CFR Part 18"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 542bea38b8978d91f1e4e924e9af7f62 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us066",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "How may a public housing agency treat rental income gained from revised utility allowances under the energy conservation incentive?",
+      "source": "24 CFR 990.185 — THE PUBLIC HOUSING OPERATING FUND PROGRAM",
+      "answer_identifiers": [
+        "24 CFR 990.185"
+      ],
+      "answer_documents": [
+        "24 CFR Part 990"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 06ead122714b52e5e9424f6d11a0ee46 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us067",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "How does the Secretary of Labor refer a hearing request under the migrant and seasonal agricultural worker protection rules to an ALJ?",
+      "source": "29 CFR 500.224 — MIGRANT AND SEASONAL AGRICULTURAL WORKER PROTECTION",
+      "answer_identifiers": [
+        "29 CFR 500.224"
+      ],
+      "answer_documents": [
+        "29 CFR Part 500"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f9bb569d9e2d5cc842217e3e4f2d0de0 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us068",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Which military claims are not payable by the Coast Guard?",
+      "source": "33 CFR 25.405 — CLAIMS",
+      "answer_identifiers": [
+        "33 CFR 25.405"
+      ],
+      "answer_documents": [
+        "33 CFR Part 25"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 873cc3f30e7c87d1016b8b26d5556fe8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us069",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "What authority is delegated to the Chief of the FCC Wireless Telecommunications Bureau, and with what limits?",
+      "source": "47 CFR 0.331 — COMMISSION ORGANIZATION",
+      "answer_identifiers": [
+        "47 CFR 0.331"
+      ],
+      "answer_documents": [
+        "47 CFR Part 0"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk 15142c7026ae1cdae79cc5840e0ef626 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us070",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Who may apply the Coast Guard Symbol to pressure vessels, and which vessels need shop inspection?",
+      "source": "46 CFR 54.10-3 — PRESSURE VESSELS",
+      "answer_identifiers": [
+        "46 CFR 54.10-3"
+      ],
+      "answer_documents": [
+        "46 CFR Part 54"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f422c0675917ef1d641585a6c1d92e8d of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us071",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Where are undefined terms in the TVA power securities book-entry rules given their meaning?",
+      "source": "18 CFR 1314.2 — BOOK-ENTRY PROCEDURES FOR TVA POWER SECURITIES ISSUED THROUGH THE FEDERAL RESERVE BANKS",
+      "answer_identifiers": [
+        "18 CFR 1314.2"
+      ],
+      "answer_documents": [
+        "18 CFR Part 1314"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk c2fae347f36223252fa22b165357735e of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us072",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "How are terms such as consultant and excepted service defined for the National Language Service Corps?",
+      "source": "32 CFR 251.3 — NATIONAL LANGUAGE SERVICE CORPS (NLSC)",
+      "answer_identifiers": [
+        "32 CFR 251.3"
+      ],
+      "answer_documents": [
+        "32 CFR Part 251"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2e48bf1082b1129b7df82dddfea27ce8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us073",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "May certificated and foreign air carriers sell public charter flights directly to the public?",
+      "source": "14 CFR 212.7 — CHARTER RULES FOR U.S. AND FOREIGN DIRECT AIR CARRIERS",
+      "answer_identifiers": [
+        "14 CFR 212.7"
+      ],
+      "answer_documents": [
+        "14 CFR Part 212"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 68b1947610110afaed534dc1625a06d2 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us074",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "What may HOME program funds not be used for?",
+      "source": "24 CFR 92.214 — HOME INVESTMENT PARTNERSHIPS PROGRAM",
+      "answer_identifiers": [
+        "24 CFR 92.214"
+      ],
+      "answer_documents": [
+        "24 CFR Part 92"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk a77d25a9779c325043f3948c94973500 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us075",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "What record must be kept of a closed Legal Services Corporation board meeting under the Sunshine Act?",
+      "source": "45 CFR 1622.8 — PUBLIC ACCESS TO MEETINGS UNDER THE GOVERNMENT IN THE SUNSHINE ACT",
+      "answer_identifiers": [
+        "45 CFR 1622.8"
+      ],
+      "answer_documents": [
+        "45 CFR Part 1622"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 7d6f0fffcd1a57fc6e1a6db3c895e611 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us076",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "When is a railroad responsible for operating a high-speed trainset that has defects or was not inspected?",
+      "source": "49 CFR 299.7 — TEXAS CENTRAL RAILROAD HIGH-SPEED RAIL SAFETY STANDARDS",
+      "answer_identifiers": [
+        "49 CFR 299.7"
+      ],
+      "answer_documents": [
+        "49 CFR Part 299"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 07a0dbc54e4434b98b66f826d28ae1ed of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us077",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Why does the Joint Board for the Enrollment of Actuaries exempt investigatory records from Privacy Act access?",
+      "source": "20 CFR 903.8 — ACCESS TO RECORDS",
+      "answer_identifiers": [
+        "20 CFR 903.8"
+      ],
+      "answer_documents": [
+        "20 CFR Part 903"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk 6b16392290b5ab910df3be7ea8649038 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us078",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "When does DOE send an enforcement letter instead of a notice of violation for classified information security noncompliance?",
+      "source": "10 CFR Appendix A to Part 824 — PROCEDURAL RULES FOR THE ASSESSMENT OF CIVIL PENALTIES FOR CLASSIFIED INFORMATION SECURITY VIOLATIONS",
+      "answer_identifiers": [
+        "10 CFR Appendix A to Part 824"
+      ],
+      "answer_documents": [
+        "10 CFR Part 824"
+      ],
+      "label_chunks": 10,
+      "provenance": "drafted 2026-11-27 from chunk 851fdc067ee6f0b729ddad361e6784c3 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us079",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "When will EPA terminate a conditional exemption from a TSCA test rule?",
+      "source": "40 CFR 790.93 — PROCEDURES GOVERNING TESTING CONSENT AGREEMENTS AND TEST RULES",
+      "answer_identifiers": [
+        "40 CFR 790.93"
+      ],
+      "answer_documents": [
+        "40 CFR Part 790"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 8183f41566f46ac69f1a6bb9d8941e0a of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us080",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Which statutes should the Army consider for civil recovery in substantiated procurement fraud cases?",
+      "source": "32 CFR 516.65 — LITIGATION",
+      "answer_identifiers": [
+        "32 CFR 516.65"
+      ],
+      "answer_documents": [
+        "32 CFR Part 516"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f5114f63973d97aad68562fb7ab192c5 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us081",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "May a creditor keep information in its files that the Equal Credit Opportunity Act prohibits it from using?",
+      "source": "12 CFR 1002.12 — EQUAL CREDIT OPPORTUNITY ACT (REGULATION B)",
+      "answer_identifiers": [
+        "12 CFR 1002.12"
+      ],
+      "answer_documents": [
+        "12 CFR Part 1002"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 70f897cbb538c000f12b67f0e1b55694 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us082",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "How often must the Federal Maritime Commission adjust its civil monetary penalties for inflation?",
+      "source": "46 CFR 506.3 — CIVIL MONETARY PENALTY INFLATION ADJUSTMENT",
+      "answer_identifiers": [
+        "46 CFR 506.3"
+      ],
+      "answer_documents": [
+        "46 CFR Part 506"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 85891b3a5199b3279465f1a9eff74520 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us083",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "What can the NLRB do to a party who makes a prohibited ex parte communication?",
+      "source": "29 CFR 102.133 — RULES AND REGULATIONS, SERIES 8",
+      "answer_identifiers": [
+        "29 CFR 102.133"
+      ],
+      "answer_documents": [
+        "29 CFR Part 102"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2f7f9d359d3f27adea10be3dbcf41c74 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us084",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Will Treasury accept a claim to suspend transactions in bearer securities that are not overdue?",
+      "source": "31 CFR 306.106 — GENERAL REGULATIONS GOVERNING U.S. SECURITIES",
+      "answer_identifiers": [
+        "31 CFR 306.106"
+      ],
+      "answer_documents": [
+        "31 CFR Part 306"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 0b912a2ffc3537dc059734bef057d2ef of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us085",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "How are fraudulent statements in early reduction emissions submissions for hazardous air pollutants treated?",
+      "source": "40 CFR 63.80 — NATIONAL EMISSION STANDARDS FOR HAZARDOUS AIR POLLUTANTS FOR SOURCE CATEGORIES",
+      "answer_identifiers": [
+        "40 CFR 63.80"
+      ],
+      "answer_documents": [
+        "40 CFR Part 63"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f4dd0c19ee2e4d6516398213edbb17f9 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us086",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "What arrangement must a swap data repository have before giving swap data to a domestic or foreign regulator?",
+      "source": "17 CFR 49.18 — SWAP DATA REPOSITORIES",
+      "answer_identifiers": [
+        "17 CFR 49.18"
+      ],
+      "answer_documents": [
+        "17 CFR Part 49"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2d3e5082ad8c599cb6b2f0698a6928f1 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us087",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "How long must poultry processors retain records required by the poultry products inspection regulations?",
+      "source": "9 CFR 381.177 — POULTRY PRODUCTS INSPECTION REGULATIONS",
+      "answer_identifiers": [
+        "9 CFR 381.177"
+      ],
+      "answer_documents": [
+        "9 CFR Part 381"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 64bd384d090dadc910a32580a98eca86 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us088",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "How must NASA review its permanently valuable classified records for declassification?",
+      "source": "14 CFR 1203.603 — INFORMATION SECURITY PROGRAM",
+      "answer_identifiers": [
+        "14 CFR 1203.603"
+      ],
+      "answer_documents": [
+        "14 CFR Part 1203"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk b69b09216153c83e5f2a23f2aed075d4 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us089",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "For what purposes may the Fish and Wildlife Service issue a permit to import exotic birds?",
+      "source": "50 CFR 15.21 — WILD BIRD CONSERVATION ACT",
+      "answer_identifiers": [
+        "50 CFR 15.21"
+      ],
+      "answer_documents": [
+        "50 CFR Part 15"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2eee1886b17f8c8a00f2614701f39ad6 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us090",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Can a lender under the cooperative housing mortgage insurance program both foreclose on the security and claim insurance benefits for a supplementary loan?",
+      "source": "24 CFR 213.270 — COOPERATIVE HOUSING MORTGAGE INSURANCE",
+      "answer_identifiers": [
+        "24 CFR 213.270"
+      ],
+      "answer_documents": [
+        "24 CFR Part 213"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 8ec10125de1387b48e79244a63e30ff4 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us091",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "What must a written complaint about a possible violation of the bioengineered food disclosure standard include?",
+      "source": "7 CFR 66.402 — NATIONAL BIOENGINEERED FOOD DISCLOSURE STANDARD",
+      "answer_identifiers": [
+        "7 CFR 66.402"
+      ],
+      "answer_documents": [
+        "7 CFR Part 66"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 45f57802aedce7472794a3ede6101f5a of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us092",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "When must a revised prevailing wage determination be included in a service contract solicitation?",
+      "source": "48 CFR 22.1012-1 — APPLICATION OF LABOR LAWS TO GOVERNMENT ACQUISITIONS",
+      "answer_identifiers": [
+        "48 CFR 22.1012-1"
+      ],
+      "answer_documents": [
+        "48 CFR Part 22"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk ca15edf1c0e4cf7c8c8952125bbc2faf of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us093",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Under what procedures does BIS issue temporary denial orders against export violators?",
+      "source": "15 CFR 766.24 — ADMINISTRATIVE ENFORCEMENT PROCEEDINGS",
+      "answer_identifiers": [
+        "15 CFR 766.24"
+      ],
+      "answer_documents": [
+        "15 CFR Part 766"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk 43d0893db2b464f00a50c7b97ff376b3 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us094",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "How does a harvesting nation apply for a comparability finding for its fisheries under the Marine Mammal Protection Act import rules?",
+      "source": "50 CFR 216.24 — REGULATIONS GOVERNING THE TAKING AND IMPORTING OF MARINE MAMMALS",
+      "answer_identifiers": [
+        "50 CFR 216.24"
+      ],
+      "answer_documents": [
+        "50 CFR Part 216"
+      ],
+      "label_chunks": 34,
+      "provenance": "drafted 2026-11-27 from chunk 11c58f5b5bc373e20b8e04dbd023dae8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us095",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "When may a schedule I controlled substance be imported for transshipment through the United States?",
+      "source": "Drugs CFR 1312.31 — IMPORTATION AND EXPORTATION OF CONTROLLED SUBSTANCES",
+      "answer_identifiers": [
+        "Drugs CFR 1312.31"
+      ],
+      "answer_documents": [
+        "Drugs CFR Part 1312"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 91aeaf7a11c85c418d954e10675e7123 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us096",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Where must information and documents be sent for VA grants to recruit and retain nurses at State veterans homes?",
+      "source": "38 CFR 53.40 — PAYMENTS TO STATES FOR PROGRAMS TO PROMOTE THE HIRING AND RETENTION OF NURSES AT STATE VETERANS HOMES",
+      "answer_identifiers": [
+        "38 CFR 53.40"
+      ],
+      "answer_documents": [
+        "38 CFR Part 53"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 87c98e60cf3d92fffeb20998d0765df6 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us097",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "How does the Railroad Retirement Board charge unemployment benefits paid because of a strike?",
+      "source": "20 CFR 345.402 — EMPLOYERS' CONTRIBUTIONS AND CONTRIBUTION REPORTS",
+      "answer_identifiers": [
+        "20 CFR 345.402"
+      ],
+      "answer_documents": [
+        "20 CFR Part 345"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4e9a05f0ba2f64ee3116fd342ec50210 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us098",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "When is an Emergency Solutions Grant recipient exempt from the requirement to make shelter conditional on participant activities?",
+      "source": "24 CFR 576.401 — EMERGENCY SOLUTIONS GRANTS PROGRAM",
+      "answer_identifiers": [
+        "24 CFR 576.401"
+      ],
+      "answer_documents": [
+        "24 CFR Part 576"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk d8d789203ee15d6e9f2269714e582460 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us099",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "What must a CFIUS voluntary notice disclose about products the business supplies that are rebranded by others?",
+      "source": "31 CFR 800.502 — REGULATIONS PERTAINING TO CERTAIN INVESTMENTS IN THE UNITED STATES BY FOREIGN PERSONS",
+      "answer_identifiers": [
+        "31 CFR 800.502"
+      ],
+      "answer_documents": [
+        "31 CFR Part 800"
+      ],
+      "label_chunks": 8,
+      "provenance": "drafted 2026-11-27 from chunk c2d11637bfcf45c171bbcfd08b27ebbd of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us100",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "How do United States Trustees review applications for compensation of professionals in bankruptcy cases?",
+      "source": "28 CFR Appendix A to Part 58 — REGULATIONS RELATING TO THE BANKRUPTCY REFORM ACTS OF 1978 AND 1994",
+      "answer_identifiers": [
+        "28 CFR Appendix A to Part 58"
+      ],
+      "answer_documents": [
+        "28 CFR Part 58"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-27 from chunk 4dd70036674c722e0176cdb24fabfebb of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us101",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Does telling the Surface Transportation Board that an informal damages complaint will be filed later count as filing?",
+      "source": "49 CFR 1130.2 — INFORMAL COMPLAINTS",
+      "answer_identifiers": [
+        "49 CFR 1130.2"
+      ],
+      "answer_documents": [
+        "49 CFR Part 1130"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk c0c3375b7ca43a43657b963888f73c04 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us102",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Which financial assistance rules apply to a State or local government receiving a grant from the Navajo-Hopi relocation discretionary funds?",
+      "source": "25 CFR 700.477 — COMMISSION OPERATIONS AND RELOCATION PROCEDURES",
+      "answer_identifiers": [
+        "25 CFR 700.477"
+      ],
+      "answer_documents": [
+        "25 CFR Part 700"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 153fd88ab56f38b1ad3daf292cf67a13 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us103",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "What training must tank vessel crew complete before operating the vessel's vapor control system?",
+      "source": "46 CFR 39.1011 — VAPOR CONTROL SYSTEMS",
+      "answer_identifiers": [
+        "46 CFR 39.1011"
+      ],
+      "answer_documents": [
+        "46 CFR Part 39"
+      ],
+      "must_not_rank_first": [
+        "cb59a1ab5b932c2ab5aea12d422c07c1"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 71e4ebceef70717af8d3e9efca509db4 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us104",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "When does the FDIC rate a bank's community reinvestment investment performance as needs to improve?",
+      "source": "12 CFR Appendix G to Part 345 — COMMUNITY REINVESTMENT",
+      "answer_identifiers": [
+        "12 CFR Appendix G to Part 345"
+      ],
+      "answer_documents": [
+        "12 CFR Part 345"
+      ],
+      "must_not_rank_first": [
+        "2323fca06af79910f63503aeacb77565"
+      ],
+      "label_chunks": 24,
+      "provenance": "drafted 2026-11-27 from chunk bcdb642f37cf442aee70f897c001cf45 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us105",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "How often must a municipal solid waste landfill recalculate its NMOC emission rate under the federal air toxics standards?",
+      "source": "40 CFR 63.1959 — NATIONAL EMISSION STANDARDS FOR HAZARDOUS AIR POLLUTANTS FOR SOURCE CATEGORIES",
+      "answer_identifiers": [
+        "40 CFR 63.1959"
+      ],
+      "answer_documents": [
+        "40 CFR Part 63"
+      ],
+      "must_not_rank_first": [
+        "e49ff941ecd86b0fa71f7ee454036751"
+      ],
+      "label_chunks": 6,
+      "provenance": "drafted 2026-11-27 from chunk 82aa52331198134e95704868e2e0faed of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us106",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "What must I do under the federal plan for commercial and industrial solid waste incinerators if I miss an increment of progress?",
+      "source": "40 CFR 60.5105 — STANDARDS OF PERFORMANCE FOR NEW STATIONARY SOURCES",
+      "answer_identifiers": [
+        "40 CFR 60.5105"
+      ],
+      "answer_documents": [
+        "40 CFR Part 60"
+      ],
+      "must_not_rank_first": [
+        "8e471738e513e6c10e6df24affbc8aef"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk be608d2c0c3c8c39e66c5dad242f85d4 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us107",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Which changes to an approved human drug NDA need a supplement submitted at least 30 days before distribution?",
+      "source": "21 CFR 314.70 — APPLICATIONS FOR FDA APPROVAL TO MARKET A NEW DRUG",
+      "answer_identifiers": [
+        "21 CFR 314.70"
+      ],
+      "answer_documents": [
+        "21 CFR Part 314"
+      ],
+      "must_not_rank_first": [
+        "8ac31ec9141456ea91561b70caa68848"
+      ],
+      "label_chunks": 5,
+      "provenance": "drafted 2026-11-27 from chunk 84dc0d20c42fe7c7890bc9d783f3eaa8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us108",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Under USDA's Title IX rules, may a recipient classify jobs as for men or for women?",
+      "source": "7 CFR 15a.520 — EDUCATION PROGRAMS OR ACTIVITIES RECEIVING OR BENEFITTING FROM FEDERAL FINANCIAL ASSISTANCE",
+      "answer_identifiers": [
+        "7 CFR 15a.520"
+      ],
+      "answer_documents": [
+        "7 CFR Part 15a"
+      ],
+      "must_not_rank_first": [
+        "53d08385808856e4ce276bc786067ac8"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 7bed8c92c2d4d5ec2a480f129ddc2497 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "us109",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "When may the Department of the Interior's Indian Affairs deviate from the Buy Indian Act for an acquisition?",
+      "source": "48 CFR 1480.403 — ACQUISITIONS UNDER THE BUY INDIAN ACT",
+      "answer_identifiers": [
+        "48 CFR 1480.403"
+      ],
+      "answer_documents": [
+        "48 CFR Part 1480"
+      ],
+      "must_not_rank_first": [
+        "4ff25341ce51fa3100d497ef652c77b3"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 4d5afe7fd1eabda595469466b7ea1f6b of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us110",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "When will FERC close its meetings to the public under the Sunshine Act?",
+      "source": "18 CFR 375.205 — THE COMMISSION",
+      "answer_identifiers": [
+        "18 CFR 375.205"
+      ],
+      "answer_documents": [
+        "18 CFR Part 375"
+      ],
+      "must_not_rank_first": [
+        "1e6811cdc9bb356b1e2af3f94df95f80"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk ef7371884d40c2162be84cbb8db18a43 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us111",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Does the ban on using appropriated funds for lobbying apply to payments for professional or technical services?",
+      "source": "31 CFR 21.300 — NEW RESTRICTIONS ON LOBBYING",
+      "answer_identifiers": [
+        "31 CFR 21.300",
+        "15 CFR 28.300",
+        "34 CFR 82.300",
+        "43 CFR 18.300",
+        "29 CFR 93.300",
+        "22 CFR 138.300",
+        "10 CFR 601.300",
+        "28 CFR 69.300",
+        "49 CFR 20.300"
+      ],
+      "answer_documents": [
+        "31 CFR Part 21",
+        "15 CFR Part 28",
+        "34 CFR Part 82",
+        "43 CFR Part 18",
+        "29 CFR Part 93",
+        "22 CFR Part 138",
+        "10 CFR Part 601",
+        "28 CFR Part 69",
+        "49 CFR Part 20"
+      ],
+      "label_chunks": 9,
+      "provenance": "drafted 2026-11-27 from chunk 20fe82e64cb0701c7ca4d8143ca65959 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us112",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "What does Title IX prohibit in federally assisted education programs?",
+      "source": "41 CFR 101-4.400 — NONDISCRIMINATION ON THE BASIS OF SEX IN EDUCATION PROGRAMS OR ACTIVITIES RECEIVING FEDERAL FINANCIAL ASSISTANCE",
+      "answer_identifiers": [
+        "41 CFR 101-4.400",
+        "43 CFR 41.400",
+        "44 CFR 19.400",
+        "10 CFR 1042.400",
+        "40 CFR 5.400",
+        "15 CFR 8a.400",
+        "31 CFR 28.400",
+        "36 CFR 1211.400",
+        "24 CFR 3.400"
+      ],
+      "answer_documents": [
+        "41 CFR Part 101-4",
+        "43 CFR Part 41",
+        "44 CFR Part 19",
+        "10 CFR Part 1042",
+        "40 CFR Part 5",
+        "15 CFR Part 8a",
+        "31 CFR Part 28",
+        "36 CFR Part 1211",
+        "24 CFR Part 3"
+      ],
+      "label_chunks": 9,
+      "provenance": "drafted 2026-11-27 from chunk fde9d55496abfdd691f0ea555a8c40af of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us113",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "What conditions apply to a foreign banking organization's covered fund activities under the Volcker rule?",
+      "source": "12 CFR 351.13 — PROPRIETARY TRADING AND CERTAIN INTERESTS IN AND RELATIONSHIPS WITH COVERED FUNDS",
+      "answer_identifiers": [
+        "12 CFR 351.13",
+        "12 CFR 248.13",
+        "12 CFR 44.13",
+        "17 CFR 255.13",
+        "17 CFR 75.13"
+      ],
+      "answer_documents": [
+        "12 CFR Part 351",
+        "12 CFR Part 248",
+        "12 CFR Part 44",
+        "17 CFR Part 255",
+        "17 CFR Part 75"
+      ],
+      "label_chunks": 15,
+      "provenance": "drafted 2026-11-27 from chunk ae179ca0f0f9e819f5d9362b1ea1f1b0 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us114",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "How are foreign banking entities treated for permitted investments in covered funds under the Volcker rule?",
+      "source": "17 CFR 255.12 — PROPRIETARY TRADING AND CERTAIN INTERESTS IN AND RELATIONSHIPS WITH COVERED FUNDS",
+      "answer_identifiers": [
+        "17 CFR 255.12",
+        "17 CFR 75.12",
+        "12 CFR 44.12",
+        "12 CFR 351.12",
+        "12 CFR 248.12"
+      ],
+      "answer_documents": [
+        "17 CFR Part 255",
+        "17 CFR Part 75",
+        "12 CFR Part 44",
+        "12 CFR Part 351",
+        "12 CFR Part 248"
+      ],
+      "label_chunks": 30,
+      "provenance": "drafted 2026-11-27 from chunk 2d21c1107dbe7f21669e5b6a89ffcf2e of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "us115",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "How many crew may share a sleeping room on a passenger vessel?",
+      "source": "46 CFR 72.20-20 — CONSTRUCTION AND ARRANGEMENT",
+      "answer_identifiers": [
+        "46 CFR 72.20-20",
+        "46 CFR 92.20-20",
+        "46 CFR 32.40-20",
+        "46 CFR 190.20-20"
+      ],
+      "answer_documents": [
+        "46 CFR Part 72",
+        "46 CFR Part 92",
+        "46 CFR Part 32",
+        "46 CFR Part 190"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-27 from chunk 0a495e42e957737f4aa462d24359b3e8 of us_cfr; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "uso01",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I get rid of fruit flies in my kitchen?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso02",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "What is the best way to learn to play the guitar as an adult?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso03",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How long should I boil an egg for a runny yolk?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "uso04",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Why is the sky blue?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso05",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Which planet in the solar system has the most moons?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "uso06",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I change a flat tire on a bicycle?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "uso07",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "What are good houseplants for a room with little light?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "uso08",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Who wrote the novel One Hundred Years of Solitude?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso09",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What is the minimum wage in Australia under the Fair Work Act?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso10",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "How long is parental leave in Sweden?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "uso11",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What does the Brazilian Consumer Defense Code say about product returns?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso12",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "How do I register a private limited company in Singapore?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso13",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What is the penalty for drunk driving in South Korea?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso14",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Under India's Right to Information Act, how long does a public authority have to reply?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso15",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What are the rules for owning a firearm in Switzerland?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "uso16",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "How does South Africa's Protection of Personal Information Act define a responsible party?",
+      "answer_chunks": [],
+      "source": "not answerable from us_cfr",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    }
+  ]
+}

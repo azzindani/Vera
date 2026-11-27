@@ -269,8 +269,12 @@ def main():
             ood_refused += 1 if not ids else 0
             if ids:
                 misses.append(f"  ! {q['id']} answered an out-of-domain query")
+            # `served_by`: off-topic for its own corpus, but another corpus in the
+            # unified database holds it (a French Civil Code question in the Canada
+            # set). The aggregate scores it as answered by that domain, ✗ refused.
             per_case.append({"id": q["id"], "type": q["type"], "refused": not ids,
-                             "domain": answered_by, "own": own})
+                             "domain": answered_by, "own": own,
+                             "served_by": q.get("served_by")})
             continue
 
         targets = resolve_targets(cur, q)
