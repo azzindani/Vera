@@ -1,0 +1,2173 @@
+{
+  "_README": [
+    "A citation-labelled set on de_gii (EVAL_QUERIES), drafted from sample_corpus.py clauses and machine-checked by check_citation.py. Labels are citations read back from the database; NOT reviewed by a domain expert."
+  ],
+  "queries": [
+    {
+      "id": "de001",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Wann hebt das Insolvenzgericht nach § 272 InsO die Anordnung der Eigenverwaltung wieder auf?",
+      "source": "§ 272 InsO — Insolvenzordnung",
+      "answer_identifiers": [
+        "§ 272 InsO"
+      ],
+      "answer_documents": [
+        "InsO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk c8988d263c61ea2bc57d248699190cec of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de002",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Welche Disziplinarbefugnisse werden nach der BDGMinIAnO den Behördenleitern im Geschäftsbereich des Innenministeriums übertragen?",
+      "source": "I. BDGMinIAnO — Anordnung zur Durchführung des Bundesdisziplinargesetzes für den Geschäftsbereich des Bundesministeriums des Innern und für Heimat",
+      "answer_identifiers": [
+        "I. BDGMinIAnO"
+      ],
+      "answer_documents": [
+        "BDGMinIAnO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 499db21cbe6be0cc9a30a6112347a092 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de003",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Welche Verstöße sind nach § 28 SeeUmwVerhV Ordnungswidrigkeiten beim umweltgerechten Verhalten in der Seeschifffahrt?",
+      "source": "§ 28 SeeUmwVerhV — Verordnung über das umweltgerechte Verhalten in der Seeschifffahrt",
+      "answer_identifiers": [
+        "§ 28 SeeUmwVerhV"
+      ],
+      "answer_documents": [
+        "SeeUmwVerhV"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk 4ff9d7bc35fc2b91f37d095a84cef351 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de004",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Wie wird das Honorar eines gerichtlichen Sachverständigen nach § 9 JVEG bemessen?",
+      "source": "§ 9 JVEG — Gesetz über die Vergütung von Sachverständigen, Dolmetscherinnen, Dolmetschern, Übersetzerinnen und Übersetzern sowie die Entschädigung von ehrenamtlichen Richterinnen, ehrenamtlichen Richtern, Zeuginnen, Zeugen und Dritten",
+      "answer_identifiers": [
+        "§ 9 JVEG"
+      ],
+      "answer_documents": [
+        "JVEG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4bd690c433630737a2efc4e22d8cedd1 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de005",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Wie können wesentliche Unterschiede bei der Anerkennung ausländischer Abschlüsse nach § 48 MTBG ausgeglichen werden?",
+      "source": "§ 48 MTBG — Gesetz über die Berufe in der medizinischen Technologie",
+      "answer_identifiers": [
+        "§ 48 MTBG"
+      ],
+      "answer_documents": [
+        "MTBG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4caca51c675c272c83431ab5465e409c of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de006",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Welche Ziele muss eine Erzeugerorganisation nach § 8 AgrarOLkV verfolgen?",
+      "source": "§ 8 AgrarOLkV — Verordnung zur Stärkung der Organisationen und Lieferketten im Agrarbereich",
+      "answer_identifiers": [
+        "§ 8 AgrarOLkV"
+      ],
+      "answer_documents": [
+        "AgrarOLkV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk fac1b1d08e78469d944e962105e91bd8 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de007",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Wer gehört nach § 478 HGB zur Schiffsbesatzung?",
+      "source": "§ 478 HGB — Handelsgesetzbuch",
+      "answer_identifiers": [
+        "§ 478 HGB"
+      ],
+      "answer_documents": [
+        "HGB"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk d22667361c62344c2ce50348e37fab88 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de008",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Wann kann ein Verbraucher nach § 48 ZKG bei der BaFin ein Verwaltungsverfahren gegen eine Bank wegen des Basiskontos beantragen?",
+      "source": "§ 48 ZKG — Gesetz über die Vergleichbarkeit von Zahlungskontoentgelten, den Wechsel von Zahlungskonten sowie den Zugang zu Zahlungskonten mit grundlegenden Funktionen",
+      "answer_identifiers": [
+        "§ 48 ZKG"
+      ],
+      "answer_documents": [
+        "ZKG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e3818c8e474e0457649c5d694dbb3b48 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de009",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Darf die Transplantationsregisterstelle nach § 15g TPG Daten zu Forschungszwecken an Dritte übermitteln?",
+      "source": "§ 15g TPG — Gesetz über die Spende, Entnahme und Übertragung von Organen und Geweben",
+      "answer_identifiers": [
+        "§ 15g TPG"
+      ],
+      "answer_documents": [
+        "TPG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f1525ed5c07a30a548f9743d612e0073 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de010",
+      "type": "exact_ref",
+      "difficulty": "medium",
+      "query": "Wie erlangt man nach § 53b BBiG den Abschluss Geprüfter Berufsspezialist?",
+      "source": "§ 53b BBiG — Berufsbildungsgesetz",
+      "answer_identifiers": [
+        "§ 53b BBiG"
+      ],
+      "answer_documents": [
+        "BBiG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 6fcf64fafbbe922c5df8e465a0026c57 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de011",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Muss ein Auszubildender zum Straßenwärter ein Berichtsheft führen, und wer kontrolliert es?",
+      "source": "§ 7 StrWAusbV 2002 — Verordnung über die Berufsausbildung zum Straßenwärter/zur Straßenwärterin",
+      "answer_identifiers": [
+        "§ 7 StrWAusbV 2002"
+      ],
+      "answer_documents": [
+        "StrWAusbV 2002"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 333d1327ae901d45ea1401a0557cdaa2 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de012",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wer muss für ein Fahrgastschiff ein Notfall- und Rettungskonzept erstellen und was muss darin stehen?",
+      "source": "Anlage 1a SchSV — Schiffssicherheitsverordnung",
+      "answer_identifiers": [
+        "Anlage 1a SchSV"
+      ],
+      "answer_documents": [
+        "SchSV"
+      ],
+      "label_chunks": 106,
+      "provenance": "drafted 2026-11-27 from chunk 580b947ba489c1c2102283206a3f6135 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de013",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Welche Anordnungen kann die Behörde gegenüber Schweinehaltungen zum Schutz vor Tierseuchen treffen?",
+      "source": "§ 11 SchHaltHygV — Verordnung über hygienische Anforderungen beim Halten von Schweinen",
+      "answer_identifiers": [
+        "§ 11 SchHaltHygV"
+      ],
+      "answer_documents": [
+        "SchHaltHygV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2cc4ac19a02da2c1916f9c29cee45f2d of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de014",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Was gilt für Arbeitnehmer und Auszubildende, die zum Fernstraßen-Bundesamt oder zur Autobahngesellschaft übergehen?",
+      "source": "§ 5 FernstrÜG — Gesetz zu Überleitungsregelungen zum Infrastrukturgesellschaftserrichtungsgesetz und zum Fernstraßen-Bundesamt-Errichtungsgesetz sowie steuerliche Vorschriften",
+      "answer_identifiers": [
+        "§ 5 FernstrÜG"
+      ],
+      "answer_documents": [
+        "FernstrÜG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk fe940b7c7415d53c48696f85fc7cf3e4 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de015",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wann wird ein Eintrag im Schuldnerverzeichnis gelöscht?",
+      "source": "§ 882e ZPO — Zivilprozessordnung",
+      "answer_identifiers": [
+        "§ 882e ZPO"
+      ],
+      "answer_documents": [
+        "ZPO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk db91e56ed98dc5118179462dba125d1f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de016",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Nach welchem Recht richten sich die Rechtsfähigkeit und Geschäftsfähigkeit einer Person im internationalen Privatrecht?",
+      "source": "Art 7 BGBEG — Einführungsgesetz zum Bürgerlichen Gesetzbuche",
+      "answer_identifiers": [
+        "Art 7 BGBEG"
+      ],
+      "answer_documents": [
+        "BGBEG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e0f5cc22ef0a2250582df4feca4fbbaa of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de017",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Darf ein Anbieter beim Mautdienst Rechte aus der Vereinbarung ohne Zustimmung des Mauterhebers an Dritte abtreten?",
+      "source": "§ 9 EEMD-ZVAnl I — Vereinbarung über die Durchführung des Prüfverfahrens zur Erbringung mautdienstbezogener Leistungen",
+      "answer_identifiers": [
+        "§ 9 EEMD-ZVAnl I"
+      ],
+      "answer_documents": [
+        "EEMD-ZVAnl I"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f22e0e8b70aa8d86a46d8e5b9d3eb2e0 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de018",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wie wird die Bewertung einer Prüfungsleistung in der staatlichen Abschlussprüfung der Fachangestellten im öffentlichen Dienst dokumentiert?",
+      "source": "§ 33 ÖDAPrV — Verordnung über die Durchführung der Abschlussprüfung in den staatlich anerkannten Ausbildungsberufen des öffentlichen Dienstes",
+      "answer_identifiers": [
+        "§ 33 ÖDAPrV"
+      ],
+      "answer_documents": [
+        "ÖDAPrV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 3533bd9c6a3a50cc3972d4c447e31f22 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de019",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wer trägt bei einer Leihe die Kosten für die Erhaltung der geliehenen Sache, zum Beispiel Futter für ein geliehenes Tier?",
+      "source": "§ 601 BGB — Bürgerliches Gesetzbuch",
+      "answer_identifiers": [
+        "§ 601 BGB"
+      ],
+      "answer_documents": [
+        "BGB"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk fcb3fde24b0cf8c107cf9e7675a80fa4 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de020",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wer trägt die Kosten der Meisterprüfung im Handwerk?",
+      "source": "§ 50 HwO — Gesetz zur Ordnung des Handwerks",
+      "answer_identifiers": [
+        "§ 50 HwO"
+      ],
+      "answer_documents": [
+        "HwO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk ffe334d779f2551f1d1d215a3e3685f5 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de021",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Müssen die Prüfer bei der Steuerberaterprüfung ihre Bewertung auf Einwendungen eines durchgefallenen Bewerbers überdenken?",
+      "source": "§ 29 DVStB — Verordnung zur Durchführung der Vorschriften über Steuerberater, Steuerbevollmächtigte und Berufsausübungsgesellschaften",
+      "answer_identifiers": [
+        "§ 29 DVStB"
+      ],
+      "answer_documents": [
+        "DVStB"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk d9d52a22bacfc5cc3fcdd109c920bcf4 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de022",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wann darf das Bundeskriminalamt heimlich in informationstechnische Systeme eingreifen (Online-Durchsuchung)?",
+      "source": "§ 49 BKAG — Gesetz über das Bundeskriminalamt und die Zusammenarbeit des Bundes und der Länder in kriminalpolizeilichen Angelegenheiten",
+      "answer_identifiers": [
+        "§ 49 BKAG"
+      ],
+      "answer_documents": [
+        "BKAG"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 49cb5aa2d7122e50871a408bd6a12ea9 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de023",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Was gilt als Vergütung bei den aufsichtsrechtlichen Vorgaben für Vergütungssysteme von Wertpapierinstituten?",
+      "source": "§ 2 WpIVergV — Verordnung über die aufsichtsrechtlichen Vorgaben an Vergütungssysteme von Mittleren Wertpapierinstituten",
+      "answer_identifiers": [
+        "§ 2 WpIVergV"
+      ],
+      "answer_documents": [
+        "WpIVergV"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 56688b43a25f1405bd080aa179c0d2e3 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de024",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Müssen Bieter in den Ausschreibungen für erneuerbare Energien eine Sicherheit bei der Bundesnetzagentur leisten?",
+      "source": "§ 31 EEG 2023 — Gesetz für den Ausbau erneuerbarer Energien",
+      "answer_identifiers": [
+        "§ 31 EEG 2023"
+      ],
+      "answer_documents": [
+        "EEG 2023"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 07704179a7c38ebe627aecbee24f77a6 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de025",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wann evaluiert die Bundesregierung die Kosten des Ganztagsausbaus für Grundschulkinder?",
+      "source": "Art 6 GaFöG — Gesetz zur ganztägigen Förderung von Kindern im Grundschulalter",
+      "answer_identifiers": [
+        "Art 6 GaFöG"
+      ],
+      "answer_documents": [
+        "GaFöG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 5b99077fef9c40843f9902c905a67a9b of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de026",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Wie rechnen Kieferchirurgen oder HNO-Ärzte Leistungen ab, die nur im zahnärztlichen Gebührenverzeichnis stehen?",
+      "source": "§ 6 GOÄ — Gebührenordnung für Ärzte",
+      "answer_identifiers": [
+        "§ 6 GOÄ"
+      ],
+      "answer_documents": [
+        "GOÄ"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk d91ee73e79a0365ee7ac3528e8b872de of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de027",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Was gilt, wenn ein Prüfling bei der Prüfung zum Geprüften Gerüstbau-Kolonnenführer von einzelnen Prüfungsteilen befreit wird?",
+      "source": "§ 6 GerüstbPrV — Verordnung über die Prüfung zum anerkannten Abschluß Geprüfter Gerüstbau-Kolonnenführer",
+      "answer_identifiers": [
+        "§ 6 GerüstbPrV"
+      ],
+      "answer_documents": [
+        "GerüstbPrV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f52f820d5728897c8adcb503428773e1 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de028",
+      "type": "conceptual",
+      "difficulty": "medium",
+      "query": "Was ist ein bebautes Grundstück im Sinne des Bewertungsrechts?",
+      "source": "§ 180 BewG — Bewertungsgesetz",
+      "answer_identifiers": [
+        "§ 180 BewG"
+      ],
+      "answer_documents": [
+        "BewG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 9444501e13f5e7f6b5250e5150b5a5f4 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de029",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Wie wird bei Bußgeldern gegen eine Kapitalverwaltungsgesellschaft der Gesamtumsatz bestimmt, wenn sie Teil eines Konzerns ist?",
+      "source": "§ 340 KAGB — Kapitalanlagegesetzbuch",
+      "answer_identifiers": [
+        "§ 340 KAGB"
+      ],
+      "answer_documents": [
+        "KAGB"
+      ],
+      "label_chunks": 10,
+      "provenance": "drafted 2026-11-27 from chunk cbae97732d774cc538fd8626eb5c1e6a of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de030",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Wie wird die Solvabilitätskapitalanforderung für Pensionsfonds berechnet?",
+      "source": "§ 25 PFAV — Verordnung betreffend die Aufsicht über Pensionsfonds und über die Durchführung reiner Beitragszusagen in der betrieblichen Altersversorgung",
+      "answer_identifiers": [
+        "§ 25 PFAV"
+      ],
+      "answer_documents": [
+        "PFAV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 73a2b63ea0dbf5122e35f3af59160b0c of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de031",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Werden Beitragszeiten vor 1995 auf die Wartezeit der Rente an Landwirte angerechnet?",
+      "source": "§ 90 ALG — Gesetz über die Alterssicherung der Landwirte",
+      "answer_identifiers": [
+        "§ 90 ALG"
+      ],
+      "answer_documents": [
+        "ALG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e61972eec2fdd56589746f43ea5ebd6e of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de032",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Für welche Versicherten erbringt die gesetzliche Rentenversicherung keine Leistungen zur Teilhabe?",
+      "source": "§ 12 SGB 6 — Sozialgesetzbuch (SGB) Sechstes Buch (VI) - Gesetzliche Rentenversicherung - (Artikel 1 des Gesetzes v. 18. Dezember 1989, BGBl. I S. 2261, 1990 I S. 1337)",
+      "answer_identifiers": [
+        "§ 12 SGB 6"
+      ],
+      "answer_documents": [
+        "SGB 6"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 149d4313548defff3ba4d75723919236 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de033",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Bekommt man Arbeitslosengeld weiter, wenn man während des Bezugs krank und arbeitsunfähig wird?",
+      "source": "§ 146 SGB 3 — Sozialgesetzbuch (SGB) Drittes Buch (III) - Arbeitsförderung - (Artikel 1 des Gesetzes vom 24. März 1997, BGBl. I S. 594)",
+      "answer_identifiers": [
+        "§ 146 SGB 3"
+      ],
+      "answer_documents": [
+        "SGB 3"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 91bcd7c98f0af72ef69600c026ec88a5 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de034",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Für welche Fahrzeuge ist auf Bundesautobahnen und Bundesstraßen eine Maut zu zahlen?",
+      "source": "§ 1 BFStrMG — Gesetz über die Erhebung von streckenbezogenen Gebühren für die Benutzung von Bundesautobahnen und Bundesstraßen",
+      "answer_identifiers": [
+        "§ 1 BFStrMG"
+      ],
+      "answer_documents": [
+        "BFStrMG"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk cbb43ff2a5372f66977f407efd87838a of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de035",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Welche Verstöße gegen die Schifffahrtsordnung in der Emsmündung sind Ordnungswidrigkeiten?",
+      "source": "§ 14 EmsSchEV — Verordnung zur Einführung der Schiffahrtsordnung Emsmündung",
+      "answer_identifiers": [
+        "§ 14 EmsSchEV"
+      ],
+      "answer_documents": [
+        "EmsSchEV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e87e1fea5676239a50545e83a66dd95b of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de036",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Wie wird bei der Kriegsschadenrente im Lastenausgleich der Schadensbetrag ermittelt?",
+      "source": "§ 266 LAG — Gesetz über den Lastenausgleich",
+      "answer_identifiers": [
+        "§ 266 LAG"
+      ],
+      "answer_documents": [
+        "LAG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk cf68f704a5949dfe1345053b31e48b35 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de037",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Welche Behörde ist in Deutschland für die Amtshilfe in Steuersachen nach der EU-Amtshilferichtlinie zuständig?",
+      "source": "§ 3 EUAHiG — Gesetz über die Durchführung der gegenseitigen Amtshilfe in Steuersachen zwischen den Mitgliedstaaten der Europäischen Union",
+      "answer_identifiers": [
+        "§ 3 EUAHiG"
+      ],
+      "answer_documents": [
+        "EUAHiG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a633d827c35ae22281e8e044cbf46952 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de038",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Wer kann bei der Regulierungsbehörde ein Missbrauchsverfahren gegen einen Energienetzbetreiber beantragen?",
+      "source": "§ 31 EnWG — Gesetz über die Elektrizitäts- und Gasversorgung",
+      "answer_identifiers": [
+        "§ 31 EnWG"
+      ],
+      "answer_documents": [
+        "EnWG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 3e0192886aa139038f8517c72881af8a of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de039",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Was ist der Bauschutzbereich eines Flughafens?",
+      "source": "§ 12 LuftVG — Luftverkehrsgesetz",
+      "answer_identifiers": [
+        "§ 12 LuftVG"
+      ],
+      "answer_documents": [
+        "LuftVG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk d668faa1a95623b87870e02004af6585 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de040",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Welche Übergangsregelung galt bis Ende 2008 für Endmastbetriebe bei der Salmonellenbekämpfung in Schweinen?",
+      "source": "§ 10 SchwSalmoV — Verordnung zur Verminderung der Salmonellenverbreitung durch Schlachtschweine",
+      "answer_identifiers": [
+        "§ 10 SchwSalmoV"
+      ],
+      "answer_documents": [
+        "SchwSalmoV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk dcba3d29559e04aa6a24f4fc25c596c8 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de041",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Kann sich der Restrukturierungsfonds an der Rekapitalisierung eines Wertpapierinstituts beteiligen?",
+      "source": "§ 7 RStruktFG — Gesetz zur Errichtung eines Restrukturierungsfonds für Kreditinstitute",
+      "answer_identifiers": [
+        "§ 7 RStruktFG"
+      ],
+      "answer_documents": [
+        "RStruktFG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 1eaf7dab756d2079c8d8ef410b9a5a75 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de042",
+      "type": "definitional",
+      "difficulty": "medium",
+      "query": "Wer hat im Entschädigungsfall einen Anspruch gegen die Entschädigungseinrichtung der Wertpapierhandelsunternehmen, und wer nicht?",
+      "source": "§ 3 AnlEntG — Anlegerentschädigungsgesetz",
+      "answer_identifiers": [
+        "§ 3 AnlEntG"
+      ],
+      "answer_documents": [
+        "AnlEntG"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk edce8ca6a9fabc641d4a97f692fa85f7 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de043",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Welche Beschäftigungen von Ausländern, etwa im Freiwilligendienst, brauchen keine Zustimmung der Bundesagentur für Arbeit?",
+      "source": "§ 14 BeschV — Verordnung über die Beschäftigung von Ausländerinnen und Ausländern",
+      "answer_identifiers": [
+        "§ 14 BeschV"
+      ],
+      "answer_documents": [
+        "BeschV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk b872cf0568942dadc484d993fa816063 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de044",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Was muss ein Graveur-Lehrling in Teil 1 der Gesellenprüfung nachweisen?",
+      "source": "§ 9 GrAusbV — Verordnung über die Berufsausbildung zum Graveur und zur Graveurin",
+      "answer_identifiers": [
+        "§ 9 GrAusbV"
+      ],
+      "answer_documents": [
+        "GrAusbV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 311759c02d5a3591ca8dbe8f02f2beb5 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de045",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Welche Förderung der schulischen und beruflichen Bildung erhält ein Berufssoldat, der wegen einer Wehrdienstbeschädigung dienstunfähig wird?",
+      "source": "§ 54 SVG — Gesetz über die Versorgung der früheren Soldatinnen und früheren Soldaten und ihrer Hinterbliebenen",
+      "answer_identifiers": [
+        "§ 54 SVG"
+      ],
+      "answer_documents": [
+        "SVG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2c8a56a2a6579f2bf388d48e294e3a48 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de046",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Wie hoch ist die Grundzulage bei der Riester-Rente pro Jahr?",
+      "source": "§ 84 EStG — Einkommensteuergesetz",
+      "answer_identifiers": [
+        "§ 84 EStG"
+      ],
+      "answer_documents": [
+        "EStG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 410aebfba0d4ae009daeb8aa2b2d91ae of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de047",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Wie hoch darf die Geldbuße gegen ein Versicherungsunternehmen bei schweren Verstößen höchstens sein?",
+      "source": "§ 332 VAG — Gesetz über die Beaufsichtigung der Versicherungsunternehmen",
+      "answer_identifiers": [
+        "§ 332 VAG"
+      ],
+      "answer_documents": [
+        "VAG"
+      ],
+      "label_chunks": 7,
+      "provenance": "drafted 2026-11-27 from chunk 48ee24ed98725d88ccc57f5134d1d301 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de048",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Welche zusätzlichen Informationen muss ein Lebensversicherer dem Versicherungsnehmer vor Vertragsschluss geben?",
+      "source": "§ 2 VVG-InfoV — Verordnung über Informationspflichten bei Versicherungsverträgen",
+      "answer_identifiers": [
+        "§ 2 VVG-InfoV"
+      ],
+      "answer_documents": [
+        "VVG-InfoV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk fb11996932f45c4a890eb22450b91517 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de049",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Welche Gebühren erhebt das BfArM für Auskünfte im Verfahren zu digitalen Pflegeanwendungen?",
+      "source": "§ 28 DiPAV — Verordnung zur Prüfung der Erstattungsfähigkeit digitaler Pflegeanwendungen nach dem Elften Buch Sozialgesetzbuch",
+      "answer_identifiers": [
+        "§ 28 DiPAV"
+      ],
+      "answer_documents": [
+        "DiPAV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 3687a1a3b853e5b9141a4e35d4f65897 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de050",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Was kann derjenige, der einen Scheck eingelöst hat, von seinen Vormännern verlangen, und wie hoch sind die Zinsen?",
+      "source": "Art 46 ScheckG — Scheckgesetz",
+      "answer_identifiers": [
+        "Art 46 ScheckG"
+      ],
+      "answer_documents": [
+        "ScheckG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4a4f70af112eb5be6fae07341042afd7 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de051",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Wie wird bei der Barwertdeckung von Pfandbriefen mit Fremdwährungspositionen umgegangen?",
+      "source": "§ 6 PfandBarwertV — Verordnung über die Sicherstellung der jederzeitigen Deckung von Hypothekenpfandbriefen, Öffentlichen Pfandbriefen, Schiffspfandbriefen und Flugzeugpfandbriefen nach dem Barwert und dessen Berechnung bei Pfandbriefbanken",
+      "answer_identifiers": [
+        "§ 6 PfandBarwertV"
+      ],
+      "answer_documents": [
+        "PfandBarwertV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 25392badf8267aa9fd475a6126a86086 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de052",
+      "type": "numeric",
+      "difficulty": "medium",
+      "query": "Was bedeutet die zeitlich gestreckte Stilllegung von Braunkohleanlagen beim Kohleausstieg?",
+      "source": "§ 50 KVBG — Gesetz zur Reduzierung und zur Beendigung der Kohleverstromung",
+      "answer_identifiers": [
+        "§ 50 KVBG"
+      ],
+      "answer_documents": [
+        "KVBG"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 2d3b1c60a36544f2806777fb867f3c4f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de053",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Bis wann muss das Gesuch um Zulassung zur zahnärztlichen Vorprüfung eingereicht werden?",
+      "source": "§ 18 ZHG§10PrO — Prüfungsordnung nach § 10 des Gesetzes über die Ausübung der Zahnheilkunde",
+      "answer_identifiers": [
+        "§ 18 ZHG§10PrO"
+      ],
+      "answer_documents": [
+        "ZHG§10PrO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk c9bfc93e372a52282f3fa196b6fec472 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de054",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Wie wird beim automatisierten Meldedatenabruf in Nordrhein-Westfalen nach Personen gesucht?",
+      "source": "Anlage BMeldDAV — Verordnung zu Voraussetzungen von automatisierten Meldedatenabrufen durch Behörden oder sonstige öffentliche Stellen des Bundes und der Länder",
+      "answer_identifiers": [
+        "Anlage BMeldDAV"
+      ],
+      "answer_documents": [
+        "BMeldDAV"
+      ],
+      "label_chunks": 27,
+      "provenance": "drafted 2026-11-27 from chunk a1ba6bcc8ad5a813920238479b56a040 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de055",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Wer kann einen Verpfändungsvertrag nach dem Pachtkreditgesetz beim Amtsgericht niederlegen?",
+      "source": "§ 15 PachtkredG — Pachtkreditgesetz",
+      "answer_identifiers": [
+        "§ 15 PachtkredG"
+      ],
+      "answer_documents": [
+        "PachtkredG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 274efbc0cf488ca80c4b04099b2bfc74 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de056",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Was muss ein Oberlandesgericht tun, wenn es bei der Therapieunterbringung von der Rechtsprechung eines anderen Gerichts abweichen will?",
+      "source": "§ 18 ThUG — Gesetz zur Therapierung und Unterbringung psychisch gestörter Gewalttäter",
+      "answer_identifiers": [
+        "§ 18 ThUG"
+      ],
+      "answer_documents": [
+        "ThUG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e93a036a0825952e1cbdebc664600030 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de057",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Für welchen Zeitraum werden freiwillige Rentenversicherungsbeiträge gebucht, und wie viele pro Monat sind erlaubt?",
+      "source": "§ 8 RV-BZV — Verordnung über die Zahlung von Beiträgen zur gesetzlichen Rentenversicherung",
+      "answer_identifiers": [
+        "§ 8 RV-BZV"
+      ],
+      "answer_documents": [
+        "RV-BZV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a7a392f363d00f34403d00f6bbfee73c of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de058",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Muss ein Abgabeschuldner dem Deutschen Weinfonds Auskunft über die abgegebenen Weinmengen geben?",
+      "source": "§ 3 WeinfondsV — Verordnung über die Erhebung der Abgabe für den Deutschen Weinfonds",
+      "answer_identifiers": [
+        "§ 3 WeinfondsV"
+      ],
+      "answer_documents": [
+        "WeinfondsV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 9fa84e9345d80b75c29847bc7ef8d18d of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de059",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Wie beantragt ein Sponsor die Stellungnahme der Ethik-Kommission für eine klinische Prüfung eines Medizinprodukts?",
+      "source": "§ 33 MPDG — Gesetz zur Durchführung unionsrechtlicher Vorschriften betreffend Medizinprodukte",
+      "answer_identifiers": [
+        "§ 33 MPDG"
+      ],
+      "answer_documents": [
+        "MPDG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk dfdbf82c5060865609105822d7f5cf36 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de060",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Innerhalb welcher Frist muss die Beschwerde gegen einen Widerspruchsbescheid der BaFin im Übernahmerecht eingelegt werden?",
+      "source": "§ 51 WpÜG — Wertpapiererwerbs- und Übernahmegesetz",
+      "answer_identifiers": [
+        "§ 51 WpÜG"
+      ],
+      "answer_documents": [
+        "WpÜG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a7d3b2f774da7814e7d5a700d2163de2 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de061",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Werden Studienleistungen anderer Hochschulen im Vorbereitungsdienst des gehobenen nichttechnischen Dienstes anerkannt?",
+      "source": "§ 18 GntDSVVDV — Verordnung über den Vorbereitungsdienst für den gehobenen nichttechnischen Dienst des Bundes in der Sozialversicherung",
+      "answer_identifiers": [
+        "§ 18 GntDSVVDV"
+      ],
+      "answer_documents": [
+        "GntDSVVDV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 29afdfffd93d28602884fb60c6059fbc of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de062",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Innerhalb welcher Frist muss die Behörde über einen Antrag auf Genehmigung eines Tierversuchs entscheiden?",
+      "source": "§ 32 TierSchVersV — Verordnung zum Schutz von zu Versuchszwecken oder zu anderen wissenschaftlichen Zwecken verwendeten Tieren",
+      "answer_identifiers": [
+        "§ 32 TierSchVersV"
+      ],
+      "answer_documents": [
+        "TierSchVersV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a405cfd8f2627410ea45ac08be78aab4 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de063",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Wann darf ein Betreiber ein festes Gemisch als nicht wassergefährdend einstufen?",
+      "source": "§ 10 AwSV — Verordnung über Anlagen zum Umgang mit wassergefährdenden Stoffen",
+      "answer_identifiers": [
+        "§ 10 AwSV"
+      ],
+      "answer_documents": [
+        "AwSV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 3885d7e0e4182fbe64aeeec9b1168bcd of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de064",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Welche Meldepflichten haben Unternehmen der Fettwirtschaft über Marktordnungswaren?",
+      "source": "§ 4 MarktOWMeldV — Verordnung über Meldepflichten über Marktordnungswaren",
+      "answer_identifiers": [
+        "§ 4 MarktOWMeldV"
+      ],
+      "answer_documents": [
+        "MarktOWMeldV"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 8f38d495ad3ceec062dd12cb623fad5a of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de065",
+      "type": "procedural",
+      "difficulty": "medium",
+      "query": "Wer betreibt Versandhandel mit Bier im Sinne des Biersteuerrechts?",
+      "source": "§ 21 BierStG — Biersteuergesetz",
+      "answer_identifiers": [
+        "§ 21 BierStG"
+      ],
+      "answer_documents": [
+        "BierStG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 1594939c4906fb7760999094cdff4b13 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de066",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Wie müssen Eichnormale bei der Beförderung als gefährliches Gut gekennzeichnet werden?",
+      "source": "Anlage GGAV 2002 — Verordnung über Ausnahmen von den Vorschriften über die Beförderung gefährlicher Güter",
+      "answer_identifiers": [
+        "Anlage GGAV 2002"
+      ],
+      "answer_documents": [
+        "GGAV 2002"
+      ],
+      "label_chunks": 21,
+      "provenance": "drafted 2026-11-27 from chunk 12f50c9f6ec45b8dfe502933a4514f18 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de067",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Wer legt die Mindestbesatzung für Binnenschiffe fest, die keiner besonderen Regel unterliegen?",
+      "source": "§ 115 BinSchPersV — Verordnung über die Besatzung und über die Befähigungen der Besatzung von Fahrzeugen in der Binnenschifffahrt",
+      "answer_identifiers": [
+        "§ 115 BinSchPersV"
+      ],
+      "answer_documents": [
+        "BinSchPersV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk fe7eb9c2cf75ea977d035ca556ac9b31 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de068",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Müssen Auszubildende zum Werkfeuerwehrmann einen schriftlichen Ausbildungsnachweis führen?",
+      "source": "§ 6 WFAusbV — Verordnung über die Berufsausbildung zum Werkfeuerwehrmann und zur Werkfeuerwehrfrau",
+      "answer_identifiers": [
+        "§ 6 WFAusbV"
+      ],
+      "answer_documents": [
+        "WFAusbV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 8726a9683e44ebc7af2697c5bd9829a9 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de069",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Wie oft sollen Arbeitgeber und Betriebsrat sich zu einer Besprechung treffen?",
+      "source": "§ 74 BetrVG — Betriebsverfassungsgesetz",
+      "answer_identifiers": [
+        "§ 74 BetrVG"
+      ],
+      "answer_documents": [
+        "BetrVG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2736016201266706e681bb934fce6fb2 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de070",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Welche Anforderungen muss die Satzung eines gemeinnützigen Vereins für Steuervergünstigungen erfüllen?",
+      "source": "§ 60 AO — Abgabenordnung",
+      "answer_identifiers": [
+        "§ 60 AO"
+      ],
+      "answer_documents": [
+        "AO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk b5ce55ea184ee326580333cd96a3261b of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de071",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Wem bewilligt das Hauptzollamt einen Kennzeichnungsbetrieb für Heizöl?",
+      "source": "§ 6 EnergieStV — Verordnung zur Durchführung des Energiesteuergesetzes",
+      "answer_identifiers": [
+        "§ 6 EnergieStV"
+      ],
+      "answer_documents": [
+        "EnergieStV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2964a89fa652d0ad5e435c066bd72f42 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de072",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Welche Flugzeuge müssen mit einem Cockpit-Stimmenrekorder ausgerüstet sein?",
+      "source": "§ 17 3. DV LuftBO — Dritte Durchführungsverordnung zur Betriebsordnung für Luftfahrtgerät (Ausrüstung und Betrieb des Luftfahrtgerätes außerhalb von Luftfahrtunternehmen)",
+      "answer_identifiers": [
+        "§ 17 3. DV LuftBO"
+      ],
+      "answer_documents": [
+        "3. DV LuftBO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 26259bc3539bbf137f6a9030ee879f0c of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de073",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Können Berufsausübungsgesellschaften von Rechtsanwälten als Prozessbevollmächtigte beauftragt werden?",
+      "source": "§ 59l BRAO — Bundesrechtsanwaltsordnung",
+      "answer_identifiers": [
+        "§ 59l BRAO"
+      ],
+      "answer_documents": [
+        "BRAO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 5a392fd3f653439b48b13e050ffd481a of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de074",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Wer muss bei der Ausbildung zum Betonfertigteilbauer den Ausbildungsnachweis durchsehen?",
+      "source": "§ 6 BetonFBAusbV — Verordnung über die Berufsausbildung zum Betonfertigteilbauer und zur Betonfertigteilbauerin",
+      "answer_identifiers": [
+        "§ 6 BetonFBAusbV"
+      ],
+      "answer_documents": [
+        "BetonFBAusbV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2bc257b323d1eae0759572dc6acafad8 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de075",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Darf ein Auftraggeber im Sektorenbereich Nebenangebote zulassen oder ausschließen?",
+      "source": "§ 33 SektVO — Verordnung über die Vergabe von öffentlichen Aufträgen im Bereich des Verkehrs, der Trinkwasserversorgung, der Postdienste und der Energieversorgung",
+      "answer_identifiers": [
+        "§ 33 SektVO"
+      ],
+      "answer_documents": [
+        "SektVO"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk d81b78f8bcc17ce13d30f5c866886402 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de076",
+      "type": "obligation",
+      "difficulty": "medium",
+      "query": "Wozu ermächtigt das Bergrecht das Wirtschaftsministerium bei der Umweltverträglichkeitsprüfung bergbaulicher Vorhaben?",
+      "source": "§ 57c BBergG — Bundesberggesetz",
+      "answer_identifiers": [
+        "§ 57c BBergG"
+      ],
+      "answer_documents": [
+        "BBergG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a776fdf062261e8fdc044ce1d48db628 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de077",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Wann ist die Vergütung für den Einzug der Insolvenzgeldumlage fällig?",
+      "source": "§ 5 InsoGeldEinzPV — Verordnung zur Höhe der Pauschale für die Kosten des Einzugs der Umlage für das Insolvenzgeld und der Prüfung der Arbeitgeber",
+      "answer_identifiers": [
+        "§ 5 InsoGeldEinzPV"
+      ],
+      "answer_documents": [
+        "InsoGeldEinzPV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk f951874d1aa00079f167f822be8d3523 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de078",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Wird ins Fahreignungsregister eingetragen, wenn ein Bußgeld wegen der wirtschaftlichen Verhältnisse vom Regelsatz abweicht?",
+      "source": "§ 28a StVG — Straßenverkehrsgesetz",
+      "answer_identifiers": [
+        "§ 28a StVG"
+      ],
+      "answer_documents": [
+        "StVG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 1a1839f779b43d21bf0d7f195570a4ba of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de079",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Wann ist die Vollstreckung einer ausländischen Einziehungsanordnung aus einem EU-Staat in Deutschland zulässig?",
+      "source": "§ 88a IRG — Gesetz über die internationale Rechtshilfe in Strafsachen",
+      "answer_identifiers": [
+        "§ 88a IRG"
+      ],
+      "answer_documents": [
+        "IRG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 51c29a11c954b03aaba12e5af5a0a436 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de080",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Für welche Aufträge gilt die Vergabeverordnung für Verteidigung und Sicherheit?",
+      "source": "§ 2 VSVgV — Vergabeverordnung für die Bereiche Verteidigung und Sicherheit zur Umsetzung der Richtlinie 2009/81/EG des Europäischen Parlaments und des Rates vom 13. Juli 2009 über die Koordinierung der Verfahren zur Vergabe bestimmter Bau-, Liefer- und Dienstleistungsaufträge in den Bereichen Verteidigung und Sicherheit und zur Änderung der Richtlinien 2004/17/EG und 2004/18/EG",
+      "answer_identifiers": [
+        "§ 2 VSVgV"
+      ],
+      "answer_documents": [
+        "VSVgV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 9186231d9ae7b7cab7e1191e76a31f4b of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de081",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Wer ist Reeder und wer ist Besatzungsmitglied im Seearbeitsrecht?",
+      "source": "§ 2 SeeArbG — Seearbeitsgesetz",
+      "answer_identifiers": [
+        "§ 2 SeeArbG"
+      ],
+      "answer_documents": [
+        "SeeArbG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 90ff4935f3d26db55bb249bb0857654c of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de082",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Wer kann Pflegegeld statt häuslicher Pflegehilfe beantragen?",
+      "source": "§ 37 SGB 11 — Sozialgesetzbuch (SGB) - Elftes Buch (XI) - Soziale Pflegeversicherung (Artikel 1 des Gesetzes vom 26. Mai 1994, BGBl. I S. 1014)",
+      "answer_identifiers": [
+        "§ 37 SGB 11"
+      ],
+      "answer_documents": [
+        "SGB 11"
+      ],
+      "label_chunks": 3,
+      "provenance": "drafted 2026-11-27 from chunk 70547aa90f7f841bff6ac090a4deaa30 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de083",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Dürfen Versicherungskennzeichen für Mofas aus einer Kennzeichenfolie mit Trägerplatte bestehen?",
+      "source": "§ 53a FZV — Verordnung über die Zulassung von Fahrzeugen zum Straßenverkehr",
+      "answer_identifiers": [
+        "§ 53a FZV"
+      ],
+      "answer_documents": [
+        "FZV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4f7d3b6b10ce2a70f6e2ecde52685842 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de084",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Darf man mehr als einen gültigen deutschen Personalausweis besitzen, und wem gehört der Ausweis?",
+      "source": "§ 4 PAuswG — Gesetz über Personalausweise und den elektronischen Identitätsnachweis",
+      "answer_identifiers": [
+        "§ 4 PAuswG"
+      ],
+      "answer_documents": [
+        "PAuswG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 8faa6732ae225cae6440610e9e4f64da of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de085",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Welcher Preis gilt bei der Abgabe von Fertigarzneimitteln aus Bevorratung der Länder?",
+      "source": "§ 11 AMPreisV — Arzneimittelpreisverordnung",
+      "answer_identifiers": [
+        "§ 11 AMPreisV"
+      ],
+      "answer_documents": [
+        "AMPreisV"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk a85c639ddc0721a97f9f53fb7dec2d71 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de086",
+      "type": "exception",
+      "difficulty": "medium",
+      "query": "Wann sind Dienstvereinbarungen in der Bundespersonalvertretung zulässig?",
+      "source": "§ 63 BPersVG — Bundespersonalvertretungsgesetz",
+      "answer_identifiers": [
+        "§ 63 BPersVG"
+      ],
+      "answer_documents": [
+        "BPersVG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e08eff93e2d26590898f1b74be081789 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de087",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Wann kann einem Jäger die Jagdausübung verboten werden?",
+      "source": "§ 41a BJagdG — Bundesjagdgesetz",
+      "answer_identifiers": [
+        "§ 41a BJagdG"
+      ],
+      "answer_documents": [
+        "BJagdG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk adceed334962351420051f71fffab00a of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de088",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Ist es strafbar, jemandem in einer Entziehungskur heimlich Alkohol zu geben?",
+      "source": "§ 323b StGB — Strafgesetzbuch",
+      "answer_identifiers": [
+        "§ 323b StGB"
+      ],
+      "answer_documents": [
+        "StGB"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 7a3b3175d092cc70b1f04743eeaf9ff9 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de089",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Wann erlöschen die Versorgungsbezüge eines Ruhestandsbeamten wegen einer Verurteilung?",
+      "source": "§ 59 BeamtVG — Gesetz über die Versorgung der Beamten und Richter des Bundes",
+      "answer_identifiers": [
+        "§ 59 BeamtVG"
+      ],
+      "answer_documents": [
+        "BeamtVG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 02de1da4bef97a6e4f5e2e48a8b2cb8c of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de090",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Welche Verstöße gegen das Fleischgesetz sind Ordnungswidrigkeiten?",
+      "source": "§ 16 FlG — Fleischgesetz",
+      "answer_identifiers": [
+        "§ 16 FlG"
+      ],
+      "answer_documents": [
+        "FlG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 766b5e3b97a1180e6b4700b2d11aa034 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de091",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Wann wird eine Verletzung des Mutterschutzes durch den Arbeitgeber als Straftat bestraft?",
+      "source": "§ 33 MuSchG — Gesetz zum Schutz von Müttern bei der Arbeit, in der Ausbildung und im Studium",
+      "answer_identifiers": [
+        "§ 33 MuSchG"
+      ],
+      "answer_documents": [
+        "MuSchG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 6f62a79cafaf9922db20ae3d616d119b of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de092",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Wann kann das Gericht Erzwingungshaft anordnen, wenn eine Geldbuße nicht bezahlt wird?",
+      "source": "§ 96 OWiG — Gesetz über Ordnungswidrigkeiten",
+      "answer_identifiers": [
+        "§ 96 OWiG"
+      ],
+      "answer_documents": [
+        "OWiG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 5537101703f30cb4f545d565414ba46f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de093",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Welche Strafe droht bei beharrlich wiederholten Verstößen gegen die EU-Gasgeräteverordnung?",
+      "source": "§ 9 GasgeräteDG — Gesetz zur Durchführung der Verordnung (EU) 2016/426 des Europäischen Parlaments und des Rates vom 9. März 2016 über Geräte zur Verbrennung gasförmiger Brennstoffe und zur Aufhebung der Richtlinie 2009/142/EG",
+      "answer_identifiers": [
+        "§ 9 GasgeräteDG"
+      ],
+      "answer_documents": [
+        "GasgeräteDG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 57db2187c2a04e7a53d292446f137970 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de094",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Muss der Pilot eines zivilen Flugzeugs Anweisungen ausländischer Stellen beim Abfangen befolgen?",
+      "source": "Art 2 IntZLuftAbkProtG — Gesetz zu dem Protokoll vom 10. Mai 1984 zur Änderung des Abkommens vom 7. Dezember 1944 über die Internationale Zivilluftfahrt (9. Änderung des Abkommens über die Internationale Zivilluftfahrt)",
+      "answer_identifiers": [
+        "Art 2 IntZLuftAbkProtG"
+      ],
+      "answer_documents": [
+        "IntZLuftAbkProtG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 1fc6cd2c3e5fc77e4d787a685d237470 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de095",
+      "type": "sanction",
+      "difficulty": "medium",
+      "query": "Wie werden Rechtshilfeersuchen polnischer Behörden wegen Ordnungswidrigkeiten in Deutschland behandelt?",
+      "source": "Art 2 EuRHiÜbkErgVtrPOLG — Gesetz zu dem Vertrag vom 17. Juli 2003 zwischen der Bundesrepublik Deutschland und der Republik Polen über die Ergänzung des Europäischen Übereinkommens vom 20. April 1959 über die Rechtshilfe in Strafsachen und die Erleichterung seiner Anwendung",
+      "answer_identifiers": [
+        "Art 2 EuRHiÜbkErgVtrPOLG"
+      ],
+      "answer_documents": [
+        "EuRHiÜbkErgVtrPOLG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 4b4c97c985f3ddde4cc856a18bea02bf of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de096",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Wer bestimmt das Verfahren für das Register für Pfandrechte an Luftfahrzeugen?",
+      "source": "§ 97 LuftFzgG — Gesetz über Rechte an Luftfahrzeugen",
+      "answer_identifiers": [
+        "§ 97 LuftFzgG"
+      ],
+      "answer_documents": [
+        "LuftFzgG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 5dd56b2ea80fc9b32bdbe85936d78aac of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de097",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Wozu kann das Innenministerium im Asylrecht Rechtsverordnungen erlassen?",
+      "source": "§ 88 AsylG — Asylgesetz",
+      "answer_identifiers": [
+        "§ 88 AsylG"
+      ],
+      "answer_documents": [
+        "AsylG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 827e95634753875fc9baffafc6d95a6f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de098",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Darf das Ministerium durch Verordnung die alten Bezeichnungen der Bundesanstalt für Landwirtschaft und Ernährung in Gesetzen berichtigen?",
+      "source": "§ 16 BLEG — Gesetz über die Errichtung einer Bundesanstalt für Landwirtschaft und Ernährung",
+      "answer_identifiers": [
+        "§ 16 BLEG"
+      ],
+      "answer_documents": [
+        "BLEG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk ec8680bb2ee6c7d87283999b418bc344 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de099",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Was sind Kriegswaffen, und wer kann die Kriegswaffenliste ändern?",
+      "source": "§ 1 KrWaffKontrG — Ausführungsgesetz zu Artikel 26 Abs. 2 des Grundgesetzes",
+      "answer_identifiers": [
+        "§ 1 KrWaffKontrG"
+      ],
+      "answer_documents": [
+        "KrWaffKontrG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk ae45c1d124f3b843196cc8b9dc34fb86 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de100",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Was unterliegt bei Tabakwaren der Steueraufsicht?",
+      "source": "§ 33 TabStG — Tabaksteuergesetz",
+      "answer_identifiers": [
+        "§ 33 TabStG"
+      ],
+      "answer_documents": [
+        "TabStG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk da0af94b18407ade95117f04eedd5d17 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de101",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Braucht man eine Erlaubnis, um mit unversteuerten Waren als Schiffsbedarf zu handeln?",
+      "source": "§ 25 ZollVG — Zollverwaltungsgesetz",
+      "answer_identifiers": [
+        "§ 25 ZollVG"
+      ],
+      "answer_documents": [
+        "ZollVG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk b921286d9b33d9f47adfdba875c5b067 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de102",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Welche Verordnungen kann die Bundesregierung zur Sicherung der Energieversorgung in einer Versorgungskrise erlassen?",
+      "source": "§ 1 EnSiG — Gesetz zur Sicherung der Energieversorgung",
+      "answer_identifiers": [
+        "§ 1 EnSiG"
+      ],
+      "answer_documents": [
+        "EnSiG"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk a81cac6b456953b6a0c10846ade54001 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de103",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Wann können Bürgergeld-Empfänger bei Aufnahme einer Arbeit ein Einstiegsgeld bekommen?",
+      "source": "§ 16b SGB 2 — Sozialgesetzbuch (SGB) Zweites Buch (II) - Grundsicherung für Arbeitsuchende",
+      "answer_identifiers": [
+        "§ 16b SGB 2"
+      ],
+      "answer_documents": [
+        "SGB 2"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 2f38a0cb8b6d9577ed859d36f1649418 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de104",
+      "type": "authority",
+      "difficulty": "medium",
+      "query": "Werden bei Kindern unter sechs Jahren Fingerabdrücke im Reisepass gespeichert?",
+      "source": "§ 4 PassG — Passgesetz",
+      "answer_identifiers": [
+        "§ 4 PassG"
+      ],
+      "answer_documents": [
+        "PassG"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk c31c94cf2ebc20d9cb2033f2f1b7f575 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de105",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Dürfen Steuerberaterkammern und Finanzbehörden personenbezogene Daten verarbeiten, und zu welchen Zwecken?",
+      "source": "§ 11 StBerG — Steuerberatungsgesetz",
+      "answer_identifiers": [
+        "§ 11 StBerG"
+      ],
+      "answer_documents": [
+        "StBerG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk ed04a38778173ed4de58b18178fef780 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de106",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Wofür ist das Jugendschöffengericht sachlich zuständig?",
+      "source": "§ 40 JGG — Jugendgerichtsgesetz",
+      "answer_identifiers": [
+        "§ 40 JGG"
+      ],
+      "answer_documents": [
+        "JGG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 39f8a5aa8a8b663280a716e465815ec2 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de107",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Welches Trennungsgeld bekommen Bundesbeamte, die ohne Umzugszusage an einen anderen Ort abgeordnet werden?",
+      "source": "§ 15 BRKG — Bundesreisekostengesetz",
+      "answer_identifiers": [
+        "§ 15 BRKG"
+      ],
+      "answer_documents": [
+        "BRKG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 6dddc30d230d8a85a2b5abd050c23265 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de108",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Welches Gericht ist für Straftaten durch Piratensender außerhalb staatlicher Hoheitsgebiete zuständig, wenn kein Gerichtsstand besteht?",
+      "source": "Art 4 EuRFVerhÜbkG — Gesetz zu dem Europäischen Übereinkommen vom 22. Januar 1965 zur Verhütung von Rundfunksendungen, die von Sendestellen außerhalb der staatlichen Hoheitsgebiete gesendet werden",
+      "answer_identifiers": [
+        "Art 4 EuRFVerhÜbkG"
+      ],
+      "answer_documents": [
+        "EuRFVerhÜbkG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk e2d0dcef5972affbe5d36729c1e14d9f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de109",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Welche Verurteilungen werden immer ins Führungszeugnis aufgenommen, etwa bei Sexualstraftaten?",
+      "source": "§ 32 BZRG — Gesetz über das Zentralregister und das Erziehungsregister",
+      "answer_identifiers": [
+        "§ 32 BZRG"
+      ],
+      "answer_documents": [
+        "BZRG"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 1d519920cfbf421bf5a5c8c63f7fefb5 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de110",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Welche Aufgaben hat die zuständige Behörde bei der staatlichen geologischen Landesaufnahme?",
+      "source": "§ 5 GeolDG — Gesetz zur staatlichen geologischen Landesaufnahme sowie zur Übermittlung, Sicherung und öffentlichen Bereitstellung geologischer Daten und zur Zurverfügungstellung geologischer Daten zur Erfüllung öffentlicher Aufgaben",
+      "answer_identifiers": [
+        "§ 5 GeolDG"
+      ],
+      "answer_documents": [
+        "GeolDG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 9b667e5c3fdaa4d9f73b1134fb645e7f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de111",
+      "type": "multi_tier",
+      "difficulty": "medium",
+      "query": "Was muss im Antrag auf ein notarielles Vermittlungsverfahren bei der Sachenrechtsbereinigung stehen?",
+      "source": "§ 90 SachenRBerG — Gesetz zur Sachenrechtsbereinigung im Beitrittsgebiet",
+      "answer_identifiers": [
+        "§ 90 SachenRBerG"
+      ],
+      "answer_documents": [
+        "SachenRBerG"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk fcebac8d9ceb90cde1f8c07198fe8231 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de112",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Welche Verstöße bei der Einstufung von Rinderschlachtkörpern in Handelsklassen sind Ordnungswidrigkeiten?",
+      "source": "§ 4 RindHKlV — Verordnung über gesetzliche Handelsklassen und Kategorien für Rinderschlachtkörper",
+      "answer_identifiers": [
+        "§ 4 RindHKlV"
+      ],
+      "answer_documents": [
+        "RindHKlV"
+      ],
+      "must_not_rank_first": [
+        "655aa67fe8615aca318a2bb9e70800c1"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk d009fbaff41f6fa721884fabec352422 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de113",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Was muss der Prüfling in der Ausbildung zum Kunststoff- und Kautschuktechnologen im Bereich Wirtschafts- und Sozialkunde nachweisen?",
+      "source": "§ 46 KStoffTechAusbV — Verordnung über die Berufsausbildung zum Kunststoff- und Kautschuktechnologen und zur Kunststoff- und Kautschuktechnologin",
+      "answer_identifiers": [
+        "§ 46 KStoffTechAusbV"
+      ],
+      "answer_documents": [
+        "KStoffTechAusbV"
+      ],
+      "must_not_rank_first": [
+        "22aaaa6b284b72ab409a3f5b1c32d964"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 15d853d27c89954207a5a74efa856298 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de114",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Welche Deutschen erhalten nach der Durchführungsverordnung zum Flüchtlingshilfegesetz Leistungen wegen Aufenthalts im sowjetischen Sektor Berlins?",
+      "source": "§ 1 FlüHGDV 2 — Zweite Verordnung zur Durchführung des Gesetzes über Hilfsmaßnahmen für Deutsche aus der sowjetischen Besatzungszone Deutschlands und dem sowjetisch besetzten Sektor von Berlin",
+      "answer_identifiers": [
+        "§ 1 FlüHGDV 2"
+      ],
+      "answer_documents": [
+        "FlüHGDV 2"
+      ],
+      "must_not_rank_first": [
+        "eea78d8ea31405ccec1b5ff5f4cda403"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 59eda2f417ed99c79e2844a8d5c30a83 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de115",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Was ist Gegenstand der Berufsausbildung zum Elektroniker im Handwerk?",
+      "source": "§ 3 ElekAusbV — Verordnung über die Berufsausbildung zum Elektroniker und zur Elektronikerin",
+      "answer_identifiers": [
+        "§ 3 ElekAusbV"
+      ],
+      "answer_documents": [
+        "ElekAusbV"
+      ],
+      "must_not_rank_first": [
+        "4b450ddbcd26077cd5c32db96348ef27"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 801e8b4295da1b83bd5aea9e4d70f92d of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de116",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Wie hoch waren 2018 die Mindestversicherungssummen der Berufshaftpflicht für Versicherungsvermittler?",
+      "source": "MindVersSHBek 2018 — Bekanntmachung über die Höhe der Mindestversicherungssummen gemäß § 9 Absatz 2 und § 12 Absatz 4 der Versicherungsvermittlungsverordnung sowie § 9 Absatz 2 der Finanzanlagenvermittlungsverordnung",
+      "answer_identifiers": [
+        "MindVersSHBek 2018"
+      ],
+      "answer_documents": [
+        "MindVersSHBek 2018"
+      ],
+      "must_not_rank_first": [
+        "31a0378032d3e5fd6104998cfdddf862"
+      ],
+      "label_chunks": 2,
+      "provenance": "drafted 2026-11-27 from chunk 370c957d25cbb0b13200da8785b6c04f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de117",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Was prüft der Prüfungsbereich zur elektrotechnischen Betriebsstörung beim Umwelttechnologen für Abwasserbewirtschaftung?",
+      "source": "§ 11 AbwUTechAusbV — Verordnung über die Berufsausbildung zum Umwelttechnologen für Abwasserbewirtschaftung und zur Umwelttechnologin für Abwasserbewirtschaftung",
+      "answer_identifiers": [
+        "§ 11 AbwUTechAusbV"
+      ],
+      "answer_documents": [
+        "AbwUTechAusbV"
+      ],
+      "must_not_rank_first": [
+        "b499b8921e652b4685b2c2a6ae04228e"
+      ],
+      "label_chunks": 1,
+      "near_duplicates": 1,
+      "provenance": "drafted 2026-11-27 from chunk 688d1125a5fda416e0088042290a9479 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de118",
+      "type": "hard_negative",
+      "difficulty": "medium",
+      "query": "Welche Strafe droht für die Verwertung von Geschäftsgeheimnissen bei der Arbeitnehmerbeteiligung in einer Europäischen Genossenschaft?",
+      "source": "§ 47 SCEBG — Gesetz über die Beteiligung der Arbeitnehmer und Arbeitnehmerinnen in einer Europäischen Genossenschaft",
+      "answer_identifiers": [
+        "§ 47 SCEBG"
+      ],
+      "answer_documents": [
+        "SCEBG"
+      ],
+      "must_not_rank_first": [
+        "cf17fce1d8665776f7dd855207621582"
+      ],
+      "label_chunks": 1,
+      "provenance": "drafted 2026-11-27 from chunk 8b403049847d869e3b3a0b5f4af4f47e of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de119",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Welche Regeln gelten für die Aufhebung der Immunität von Bundestagsabgeordneten?",
+      "source": "BTGO1980Anl6Bek 2010 — Bekanntmachung über die Übernahme des Beschlusses des Deutschen Bundestages betr. Aufhebung der Immunität von Mitgliedern des Bundestages und der Grundsätze in Immunitätsangelegenheiten",
+      "answer_identifiers": [
+        "BTGO1980Anl6Bek 2010",
+        "BTGO1980Anl6Bek 2002",
+        "BTGO1980Anl6Bek 2018",
+        "BTGO1980Anl6Bek 2005",
+        "BTGO1980Anl6Bek 2014",
+        "BTGO1980Anl6Bek 2022"
+      ],
+      "answer_documents": [
+        "BTGO1980Anl6Bek 2010",
+        "BTGO1980Anl6Bek 2002",
+        "BTGO1980Anl6Bek 2018",
+        "BTGO1980Anl6Bek 2005",
+        "BTGO1980Anl6Bek 2014",
+        "BTGO1980Anl6Bek 2022"
+      ],
+      "label_chunks": 12,
+      "provenance": "drafted 2026-11-27 from chunk 55d1372d50aec18587879cb7fe394348 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "de120",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Braucht eine Änderung der Verleihungsbedingungen eines genehmigten Ehrenzeichens eine Genehmigung?",
+      "source": "Art 4 OrdenErl 7 — Siebter Erlaß über die Genehmigung der Stiftung und Verleihung von Orden und Ehrenzeichen",
+      "answer_identifiers": [
+        "Art 4 OrdenErl 7",
+        "Art 4 OrdenErl 6",
+        "Art 4 OrdenErl 2",
+        "Art 4 OrdenErl 5"
+      ],
+      "answer_documents": [
+        "OrdenErl 7",
+        "OrdenErl 6",
+        "OrdenErl 2",
+        "OrdenErl 5"
+      ],
+      "label_chunks": 4,
+      "provenance": "drafted 2026-11-27 from chunk 1ad14775d741dd6e31f3be751b78fa93 of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": false
+    },
+    {
+      "id": "de121",
+      "type": "underspecified",
+      "difficulty": "medium",
+      "query": "Wie wurden die Renten nach den Rentenversicherungs-Neuregelungsgesetzen in den Rentenanpassungsgesetzen angepasst?",
+      "source": "§ 3 10. RAG — Zehntes Gesetz über die Anpassung der Renten aus den gesetzlichen Rentenversicherungen sowie über die Anpassung der Geldleistungen aus der gesetzlichen Unfallversicherung",
+      "answer_identifiers": [
+        "§ 3 10. RAG",
+        "§ 3 9. RAG",
+        "§ 3 12. RAG",
+        "§ 3 11. RAG",
+        "§ 3 7. RAG",
+        "§ 3 13. RAG",
+        "§ 3 8. RAG",
+        "§ 3 14. RAG",
+        "Art I § 3 6. RAG"
+      ],
+      "answer_documents": [
+        "10. RAG",
+        "9. RAG",
+        "12. RAG",
+        "11. RAG",
+        "7. RAG",
+        "13. RAG",
+        "8. RAG",
+        "14. RAG",
+        "6. RAG"
+      ],
+      "label_chunks": 18,
+      "provenance": "drafted 2026-11-27 from chunk da9e53372d7b4bf2a68756cbc012274f of de_gii; machine-checked; NOT reviewed by a domain expert",
+      "holdout": true
+    },
+    {
+      "id": "deo01",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Wie backe ich ein gutes Roggenbrot?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "deo02",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Was ist die beste Zeit, um Tomaten im Garten zu pflanzen?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "deo03",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Wie wechsle ich einen Fahrradschlauch?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo04",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Warum färben sich Blätter im Herbst?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo05",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Welche Programmiersprache eignet sich für Anfänger?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo06",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Wer hat die Fußball-Weltmeisterschaft 2014 gewonnen?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo07",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "How do I clean a cast iron pan?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo08",
+      "type": "out_of_domain",
+      "subtype": "general",
+      "difficulty": "easy",
+      "query": "Wie entferne ich Kalk aus dem Wasserkocher?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "deo09",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Wie hoch ist der Mindestlohn in Österreich?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo10",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Welche Kündigungsfristen gelten nach dem Schweizer Obligationenrecht?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo11",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Wie gründet man eine Gesellschaft in den Niederlanden?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo12",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Wie lange dauert der Elternurlaub in Schweden?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo13",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Welche Strafe droht in Italien für Trunkenheit am Steuer?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    },
+    {
+      "id": "deo14",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Wie funktioniert das Erbrecht in Polen?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo15",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "What is the corporate tax rate in Ireland?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": false
+    },
+    {
+      "id": "deo16",
+      "type": "out_of_domain",
+      "subtype": "other_jurisdiction",
+      "difficulty": "hard",
+      "query": "Welche Regeln gelten für Waffenbesitz in Österreich?",
+      "answer_chunks": [],
+      "source": "not answerable from de_gii",
+      "provenance": "written 2026-11-27",
+      "holdout": true
+    }
+  ]
+}
