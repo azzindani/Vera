@@ -25,6 +25,7 @@ that is not listed.
 | `queries.json` | the Indonesian set, 604 cases with out-of-domain ones (its `_README`) |
 | `queries_fresh.json` | the Indonesian fresh set, drafted after the levers were chosen; nothing is tuned on it (`EVAL.md` §2d) |
 | `queries_ca_laws.json` | Canada, citation-labelled |
+| `queries_us_cfr.json` | the US CFR, citation-labelled; 115 + 16, gate calibrated on its training split (floor 0.48) |
 | `review/` | the legal reviewers' sheets and their instructions (`review/README.md`) |
 | `draft/` | drafting a set: `sample.py` / `sample_corpus.py` (+ `corpus_*.json`, one per corpus) sample clauses, `check.py` / `check_citation.py` label and merge, `review.py` and `alternatives.py` export and import domain review |
 
