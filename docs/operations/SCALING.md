@@ -290,6 +290,14 @@ labelled one, 71.3 / 81.4 / 86.7 / 89.3 / 91.3 over 884. Neither widening carrie
 number. ! The rewording writer saw only questions, but the question drafters had seen
 the clauses, as every hand-drafted set has.
 
+**A wider search** (2026-11-28, `unified_all_wide` in `corpora.json`: `CLUSTERS_PROBED` 5 →
+12, `CANDIDATE_POOL` 60 → 200, blind rewordings): all 1078 read **73.6 / 83.2 / 88.1 / 91.0 /
+92.6**, MRR 0.607; per set @25 Indonesia 92.1, Canada 97.4, US CFR 96.5, Japan 91.1, Germany
+97.5, France 83.2. Case by case against probe 5 and pool 60: 12 misses never pooled and 7
+ranked 26-60 move into the top 25, 4 move out. **48 are never pooled at either width**, so
+they are not routing: the arms do not find them at any probe width this measured. The
+latency of the wider search is ✗ measured here: the GPU was shared with an extraction run.
+
 "Served elsewhere": an off-topic question another loaded corpus holds (`served_by`), right
 when that domain answers it.
 

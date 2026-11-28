@@ -236,6 +236,47 @@
         }
       ],
       "measured": "2026-11-28, six schemas, one engine, domains selected by nearest chunk: ALL 1078, Recall 73.2/82.6/85.0/86.5/91.0, MRR 0.600, right domain 1073/1078, off-topic refused 67/124, served elsewhere 6/11 (SCALING.md §4a)"
+    },
+    "unified_all_wide": {
+      "bundle": "work/bundle_id_reg_markdown_v6",
+      "db": {
+        "container": "vera-db",
+        "volume": "vera-v6",
+        "port": 25432,
+        "user": "vera",
+        "name": "unified"
+      },
+      "domains": "domains.unified.json",
+      "algorithms": "algorithms.json",
+      "engine": {
+        "TOP_K": "60",
+        "CANDIDATE_POOL": "200",
+        "MAX_CONCURRENCY": "6",
+        "CLUSTERS_PROBED": "12"
+      },
+      "sets": [
+        {
+          "corpus": "unified_id_reg",
+          "split": "fresh"
+        },
+        {
+          "corpus": "unified_ca_laws"
+        },
+        {
+          "corpus": "unified_us_cfr"
+        },
+        {
+          "corpus": "unified_jp_egov"
+        },
+        {
+          "corpus": "unified_de_gii"
+        },
+        {
+          "corpus": "unified_fr_legi"
+        }
+      ],
+      "measured": "2026-11-28 with blind rewordings: 73.6/83.2/88.1/91.0/92.6 (probe 12, pool 200) vs 70.8/80.9/86.4/89.1/91.0 at probe 5, pool 60; 48 misses never pooled either way; latency not measured (GPU shared)",
+      "_doc": "unified_all with routing probe 5 -> 12 and the candidate pool 60 -> 200: separates a routing/pool miss from a ranking miss"
     }
   }
 }
