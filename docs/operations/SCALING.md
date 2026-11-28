@@ -151,7 +151,7 @@ Two deployments, one engine:
 | for | production: corpora on different machines, scaled and replaced apart | local and personal: every corpus on one box |
 | storage | one database per corpus, its tables in `public` | one database, one **schema** per corpus (`id_reg`, `ca_laws`, `fr_legi` …) |
 | containers | one Postgres per corpus, one engine over all | one Postgres, one volume, one engine |
-| today | ✓ `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✓ database `unified`, six schemas (`id_reg`, `ca_laws`, `us_cfr`, `jp_egov`, `de_gii`, `fr_legi`), one engine (`config/domains.unified.json`): with two, each corpus scores as it does alone; with six, 91.0% at @25 over all (below) |
+| today | ✓ `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✓ database `unified`, six schemas (`id_reg`, `ca_laws`, `us_cfr`, `jp_egov`, `de_gii`, `fr_legi`), one engine (`config/domains.unified.json`): with two, each corpus scores as it does alone; with six, 91.0% at @25 over all with blind rewordings, 87.7% plain (below) |
 
 **A domain is `(database, schema)`.** Each domain keeps everything it has today, in its own
 schema: `chunks`, `corpus_meta`, centroids, the sparse vocabulary, the scoring vocabulary,
@@ -259,6 +259,36 @@ were reworded, same ids and holdout flags, and the gate recalibrated on the 102 
 questions (floor 0.60, 0/84 real refused, 9/12 off-topic refused, AUC 0.985). Before the
 rewording the row read 57.8 / 72.6 / 75.6 / 77.8 / 87.4 and all 73.0 / … / 90.9; rewording
 removed a copy, so the rise is not a leak (`--label jpfix`).
+
+! **The table above is not the honest headline.** Its Indonesia row reads rewordings
+(`rw_fresh_AQ.json`) written by a drafter who had seen the labelled clauses, and only
+Indonesia had any. Re-measured 2026-11-28 with every method the engine has and nothing
+that knows an answer: `plain` sends each question as asked; `blind` adds one HyDE-style
+rewording per question, for all six sets, written from the question alone
+(`.test/blind/rw_blind_hyde.json`, 1078/1078); `allmethods` adds `expand: [siblings]` to
+that. The engine has no case ids, the harness sends only query + args + rewordings, and
+the gate is calibrated on the training split.
+
+```
+EVAL_DB_PASSWORD=vera-local python -X utf8 dev_tools/eval/eval_corpus.py unified_all --label plain
+EVAL_REWRITES=.test/blind/rw_blind_hyde.json ... --label blind
+EVAL_REWRITES=.test/blind/rw_blind_hyde.json EVAL_ARGS='{"expand":["siblings"]}' ... --label allmethods
+```
+
+| run | Indonesia | Canada | US CFR | Japan | Germany | France | **all (1078)** @5/@10/@15/@20/@25 | MRR |
+|---|---|---|---|---|---|---|---|---|
+| plain | 87.4 | 88.6 | 93.9 | 88.1 | 94.2 | 75.2 | 69.0 / 78.5 / 81.6 / 83.3 / 87.7 | 0.568 |
+| **blind** | 91.5 | 94.7 | 93.9 | 89.6 | 95.9 | 80.0 | **70.8 / 80.9 / 86.4 / 89.1 / 91.0** | 0.583 |
+| allmethods | 90.6 | 94.7 | 94.8 | 89.6 | 95.9 | 79.2 | 71.4 / 80.9 / 85.5 / 88.6 / 90.6 | 0.583 |
+
+(per-set columns are @25). So **91.0% at @25 is honest without the leaked file**: a blind
+rewording gains 3.3 points over plain, and siblings add nothing at @25 (+0.6 at @5, −0.4
+at @25: they crowd the pool). Without the 120 `exact_ref` questions, which name their
+instrument, blind reads 69.4 / 79.9 / 85.5 / 88.4 / 90.4 over 958; without the 74
+`underspecified` as well, whose hit is widened to a chunk within cosine 0.03 of a
+labelled one, 71.3 / 81.4 / 86.7 / 89.3 / 91.3 over 884. Neither widening carries the
+number. ! The rewording writer saw only questions, but the question drafters had seen
+the clauses, as every hand-drafted set has.
 
 "Served elsewhere": an off-topic question another loaded corpus holds (`served_by`), right
 when that domain answers it.
