@@ -156,7 +156,7 @@
         "MAX_CONCURRENCY": "6"
       },
       "algorithms": "algorithms.no_prior.json",
-      "measured": "2026-11-28 in unified_all: 57.8/72.6/75.6/77.8/87.4, right domain 133/135"
+      "measured": "2026-11-28 in unified_all, after 21 rewordings: 59.3/72.6/75.6/78.5/88.1, right domain 133/135; gate floor 0.60, AUC 0.985"
     },
     "unified_de_gii": {
       "bundle": "work/bundle_de_gii_v1",
@@ -235,7 +235,7 @@
           "corpus": "unified_fr_legi"
         }
       ],
-      "measured": "2026-11-28, six schemas, one engine, domains selected by nearest chunk: ALL 1078, Recall 73.0/82.6/85.0/86.4/90.9, MRR 0.599, right domain 1073/1078, off-topic refused 67/124, served elsewhere 6/11 (SCALING.md §4a)"
+      "measured": "2026-11-28, six schemas, one engine, domains selected by nearest chunk: ALL 1078, Recall 73.2/82.6/85.0/86.5/91.0, MRR 0.600, right domain 1073/1078, off-topic refused 67/124, served elsewhere 6/11 (SCALING.md §4a)"
     }
   }
 }

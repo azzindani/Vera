@@ -151,7 +151,7 @@ Two deployments, one engine:
 | for | production: corpora on different machines, scaled and replaced apart | local and personal: every corpus on one box |
 | storage | one database per corpus, its tables in `public` | one database, one **schema** per corpus (`id_reg`, `ca_laws`, `fr_legi` …) |
 | containers | one Postgres per corpus, one engine over all | one Postgres, one volume, one engine |
-| today | ✓ `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✓ database `unified`, six schemas (`id_reg`, `ca_laws`, `us_cfr`, `jp_egov`, `de_gii`, `fr_legi`), one engine (`config/domains.unified.json`): with two, each corpus scores as it does alone; with six, 90.9% at @25 over all (below) |
+| today | ✓ `vera-v6` (Indonesia, 15 GB), `vera-ca` (Canada, 1.5 GB) | ✓ database `unified`, six schemas (`id_reg`, `ca_laws`, `us_cfr`, `jp_egov`, `de_gii`, `fr_legi`), one engine (`config/domains.unified.json`): with two, each corpus scores as it does alone; with six, 91.0% at @25 over all (below) |
 
 **A domain is `(database, schema)`.** Each domain keeps everything it has today, in its own
 schema: `chunks`, `corpus_meta`, centroids, the sparse vocabulary, the scoring vocabulary,
@@ -248,10 +248,17 @@ domains selected by nearest chunk (below):
 | Indonesia (fresh) | 468 | 79.7 / 88.7 / 92.1 / 93.6 / 95.1 | 0.670 | 468/468 | 24/49 | 1/6 |
 | Canada | 114 | 71.9 / 81.6 / 84.2 / 85.1 / 88.6 | 0.575 | 112/114 | 9/11 | 5/5 |
 | US CFR | 115 | 80.9 / 87.0 / 88.7 / 89.6 / 93.9 | 0.653 | 114/115 | 11/16 | 0/0 |
-| Japan | 135 | 57.8 / 72.6 / 75.6 / 77.8 / 87.4 | 0.474 | 133/135 | 7/16 | 0/0 |
+| Japan | 135 | 59.3 / 72.6 / 75.6 / 78.5 / 88.1 | 0.485 | 133/135 | 7/16 | 0/0 |
 | Germany | 121 | 77.7 / 86.8 / 87.6 / 89.3 / 94.2 | 0.616 | 121/121 | 8/16 | 0/0 |
 | France | 125 | 53.6 / 63.2 / 63.2 / 64.0 / 75.2 | 0.425 | 125/125 | 8/16 | 0/0 |
-| **all** | **1078** | **73.0 / 82.6 / 85.0 / 86.4 / 90.9** | **0.599** | 1073/1078 | 67/124 | 6/11 |
+| **all** | **1078** | **73.2 / 82.6 / 85.0 / 86.5 / 91.0** | **0.600** | 1073/1078 | 67/124 | 6/11 |
+
+The Japan row is the set after the leakage check learned to read Japanese (`draft/check.py`,
+a CJK character counted as half a word): 21 questions that copied a run of their clause
+were reworded, same ids and holdout flags, and the gate recalibrated on the 102 training
+questions (floor 0.60, 0/84 real refused, 9/12 off-topic refused, AUC 0.985). Before the
+rewording the row read 57.8 / 72.6 / 75.6 / 77.8 / 87.4 and all 73.0 / … / 90.9; rewording
+removed a copy, so the rise is not a leak (`--label jpfix`).
 
 "Served elsewhere": an off-topic question another loaded corpus holds (`served_by`), right
 when that domain answers it.
@@ -267,7 +274,7 @@ checked once on the holdout (398): 372 → 394. Through the engine, Canada now e
 separated score case for case at every cut. Cost: one more dense query per domain, `LIMIT 1`
 over the probed clusters; ! its latency is not yet measured.
 
-! Open: France is weakest (75.2 at @25, 53.6 at @5) and Japan's @5 is 57.8, both with the
+! Open: France is weakest (75.2 at @25, 53.6 at @5) and Japan's @5 is 59.3, both with the
 right domain chosen nearly every time: retrieval, ✗ selection. Neither has a separated run
 to compare against yet.
 

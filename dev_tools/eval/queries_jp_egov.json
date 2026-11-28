@@ -7,7 +7,7 @@
       "id": "jp001",
       "type": "exact_ref",
       "difficulty": "medium",
-      "query": "人事院規則一―三四の平成十八年改正附則では、改正前に作られた人事管理文書の保存期間はどう扱われますか？",
+      "query": "人事院規則一―三四の平成十八年改正附則によると、改正前からある人事管理文書の保存期間はどうなりますか？",
       "source": "人事院規則一―三四(人事管理文書の保存期間及び保存期間が満了したときの措置)附則（平成一八年一二月一五日人事院規則一―三四―五） — 人事院規則一―三四(人事管理文書の保存期間及び保存期間が満了したときの措置)",
       "answer_identifiers": [
         "人事院規則一―三四(人事管理文書の保存期間及び保存期間が満了したときの措置)附則（平成一八年一二月一五日人事院規則一―三四―五）"
@@ -16,7 +16,7 @@
         "平成十三年人事院規則一―三四"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk dd8e55137dffecddc037174f686b39e7 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk dd8e55137dffecddc037174f686b39e7 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -183,7 +183,7 @@
       "id": "jp012",
       "type": "conceptual",
       "difficulty": "medium",
-      "query": "新住宅市街地開発法による不動産登記の手続に関する省令などは、どの省令の附則で廃止されましたか？",
+      "query": "新住宅市街地開発法に基づく登記手続の省令などを廃止したのは、どの省令の附則ですか？",
       "source": "不動産登記令第四条の特例等を定める省令附則（制定時）第二条 — 不動産登記令第四条の特例等を定める省令",
       "answer_identifiers": [
         "不動産登記令第四条の特例等を定める省令附則（制定時）第二条"
@@ -192,7 +192,7 @@
         "平成十七年法務省令第二十二号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 2b954f60375b0b6851928aabac27bef8 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 2b954f60375b0b6851928aabac27bef8 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -247,7 +247,7 @@
       "id": "jp016",
       "type": "conceptual",
       "difficulty": "medium",
-      "query": "鉄道事業再構築実施計画に基づいて不動産を取得した鉄道事業者が登録免許税の軽減を受けるには、どんな証明書が必要ですか？",
+      "query": "再構築実施計画に沿って鉄道事業者が取得した不動産について、登録免許税の軽減を受けるにはどんな証明書が必要ですか？",
       "source": "租税特別措置法施行規則第三十一条の五の三 — 租税特別措置法施行規則",
       "answer_identifiers": [
         "租税特別措置法施行規則第三十一条の五の三"
@@ -256,7 +256,7 @@
         "昭和三十二年大蔵省令第十五号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 00b8b00efd0100cd59c13d6738d11501 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 00b8b00efd0100cd59c13d6738d11501 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -327,7 +327,7 @@
       "id": "jp021",
       "type": "conceptual",
       "difficulty": "medium",
-      "query": "SC-FDMA方式の携帯無線通信の陸上移動局対向器の空中線電力の総和の上限はいくらですか？",
+      "query": "SC-FDMA方式の携帯無線通信で、陸上移動局対向器が出せる空中線電力は合計で最大いくつですか？",
       "source": "無線設備規則第四十九条の六の十 — 無線設備規則",
       "answer_identifiers": [
         "無線設備規則第四十九条の六の十"
@@ -336,14 +336,14 @@
         "昭和二十五年電波監理委員会規則第十八号"
       ],
       "label_chunks": 7,
-      "provenance": "drafted 2026-11-27 from chunk 864b1a383f6807422338ccb50d96efaa of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 864b1a383f6807422338ccb50d96efaa of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
       "id": "jp022",
       "type": "conceptual",
       "difficulty": "medium",
-      "query": "二十年を超える組合員期間がある更新組合員の公務による障害年金の額を改定するとき、控除期間はどう扱われますか？",
+      "query": "組合員期間が二十年より長い更新組合員について、公務障害年金の額を見直す際の控除期間の扱いはどうなりますか？",
       "source": "国家公務員等共済組合法等の一部を改正する法律の施行に伴う経過措置に関する政令第五十四条 — 国家公務員等共済組合法等の一部を改正する法律の施行に伴う経過措置に関する政令",
       "answer_identifiers": [
         "国家公務員等共済組合法等の一部を改正する法律の施行に伴う経過措置に関する政令第五十四条"
@@ -352,7 +352,7 @@
         "昭和六十一年政令第五十六号"
       ],
       "label_chunks": 2,
-      "provenance": "drafted 2026-11-27 from chunk 1b9f8e3c2ea59ee5300d4a0e3c5888d5 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 1b9f8e3c2ea59ee5300d4a0e3c5888d5 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
@@ -391,7 +391,7 @@
       "id": "jp025",
       "type": "conceptual",
       "difficulty": "medium",
-      "query": "電気事業法等の改正後に締結される熱供給契約について、熱供給事業者の供給条件の説明義務の経過措置はどうなっていますか？",
+      "query": "電気事業法等の改正の施行後に結ばれた熱供給契約では、熱供給事業者の供給条件説明義務の経過措置はどうなりますか？",
       "source": "電気事業法等の一部を改正する等の法律の施行に伴う経過措置に関する政令第十五条 — 電気事業法等の一部を改正する等の法律の施行に伴う経過措置に関する政令",
       "answer_identifiers": [
         "電気事業法等の一部を改正する等の法律の施行に伴う経過措置に関する政令第十五条"
@@ -400,14 +400,14 @@
         "平成二十八年政令第四十九号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 7944e91825148030f9a742aa21c601ad of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 7944e91825148030f9a742aa21c601ad of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
       "id": "jp026",
       "type": "conceptual",
       "difficulty": "medium",
-      "query": "社会福祉法の重層的支援体制整備事業で、包括的かつ計画的な支援として省令が定めるものは何ですか？",
+      "query": "社会福祉法の重層的支援体制整備事業において、省令で定める包括的・計画的な支援とは何ですか？",
       "source": "社会福祉法施行規則第三十四条の八 — 社会福祉法施行規則",
       "answer_identifiers": [
         "社会福祉法施行規則第三十四条の八"
@@ -416,7 +416,7 @@
         "昭和二十六年厚生省令第二十八号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 3e6344eaecb8dd25f55d5df2d39038d8 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 3e6344eaecb8dd25f55d5df2d39038d8 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
@@ -456,7 +456,7 @@
       "id": "jp029",
       "type": "definitional",
       "difficulty": "medium",
-      "query": "沖縄振興開発金融公庫の農林漁業向け貸付で、食品等の取引の適正化に関わる事業者に貸し付けられる資金はどんなものですか？",
+      "query": "沖縄振興開発金融公庫の農林漁業向け貸付で、食品等の取引適正化に関係する事業者への貸付資金はどのようなものですか？",
       "source": "沖縄振興開発金融公庫法施行令第二条 — 沖縄振興開発金融公庫法施行令",
       "answer_identifiers": [
         "沖縄振興開発金融公庫法施行令第二条"
@@ -465,7 +465,7 @@
         "昭和四十七年政令第百八十六号"
       ],
       "label_chunks": 13,
-      "provenance": "drafted 2026-11-27 from chunk 570d51a611d334aa78f29c571a3cab8c of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 570d51a611d334aa78f29c571a3cab8c of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -600,7 +600,7 @@
       "id": "jp038",
       "type": "definitional",
       "difficulty": "medium",
-      "query": "国の各省各庁の長は、所掌事務に係る環境配慮等の状況を毎年どのように公表しますか？",
+      "query": "国の各省各庁の長は、自らの所掌事務での環境配慮の状況を毎年どう公表しますか？",
       "source": "環境情報の提供の促進等による特定事業者等の環境に配慮した事業活動の促進に関する法律第六条 — 環境情報の提供の促進等による特定事業者等の環境に配慮した事業活動の促進に関する法律",
       "answer_identifiers": [
         "環境情報の提供の促進等による特定事業者等の環境に配慮した事業活動の促進に関する法律第六条"
@@ -609,7 +609,7 @@
         "平成十六年法律第七十七号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 250ce8be9f95f9a691300841b57c477c of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 250ce8be9f95f9a691300841b57c477c of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -824,7 +824,7 @@
       "id": "jp052",
       "type": "numeric",
       "difficulty": "medium",
-      "query": "有害液体物質の登録確認機関は、毎事業年度の財務諸表をいつまでに作成し備え付けなければなりませんか？",
+      "query": "有害液体物質の登録確認機関が毎事業年度作成すべき財務諸表は、いつまでに作成し備え付けますか？",
       "source": "海洋汚染等及び海上災害の防止に関する法律第九条の十四 — 海洋汚染等及び海上災害の防止に関する法律",
       "answer_identifiers": [
         "海洋汚染等及び海上災害の防止に関する法律第九条の十四"
@@ -833,7 +833,7 @@
         "昭和四十五年法律第百三十六号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk d10ea76ab3fd24d28455a66b86645b0a of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk d10ea76ab3fd24d28455a66b86645b0a of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -1032,7 +1032,7 @@
       "id": "jp065",
       "type": "procedural",
       "difficulty": "medium",
-      "query": "自立生活援助の指定障害福祉サービス事業者の指定更新の申請で、都道府県知事が書類の提出を省略させられるのはどんな場合ですか？",
+      "query": "自立生活援助の事業者が指定の更新を申請するとき、都道府県知事が書類の提出を省略させられるのはどんな場合ですか？",
       "source": "障害者の日常生活及び社会生活を総合的に支援するための法律施行規則第三十四条の十八の三 — 障害者の日常生活及び社会生活を総合的に支援するための法律施行規則",
       "answer_identifiers": [
         "障害者の日常生活及び社会生活を総合的に支援するための法律施行規則第三十四条の十八の三"
@@ -1041,14 +1041,14 @@
         "平成十八年厚生労働省令第十九号"
       ],
       "label_chunks": 2,
-      "provenance": "drafted 2026-11-27 from chunk fe1679667e21392ca6ff33b92f185384 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk fe1679667e21392ca6ff33b92f185384 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
       "id": "jp066",
       "type": "procedural",
       "difficulty": "medium",
-      "query": "司法書士法で公共の利益となる事業を行う者として登記申請ができるのはどのような者ですか？",
+      "query": "司法書士法施行令で、公共の利益になる事業を営む者として登記申請ができるのはどのような者ですか？",
       "source": "司法書士法施行令第四条 — 司法書士法施行令",
       "answer_identifiers": [
         "司法書士法施行令第四条"
@@ -1057,7 +1057,7 @@
         "昭和五十三年政令第三百七十九号"
       ],
       "label_chunks": 2,
-      "provenance": "drafted 2026-11-27 from chunk 86299db25c296954ff9b1b892faa6253 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 86299db25c296954ff9b1b892faa6253 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
@@ -1112,7 +1112,7 @@
       "id": "jp070",
       "type": "procedural",
       "difficulty": "medium",
-      "query": "青少年雇用対策基本方針を定めるため、厚生労働大臣はどのような調査や協力要請ができますか？",
+      "query": "青少年雇用対策基本方針の策定にあたり、厚生労働大臣はどのような調査や協力要請ができますか？",
       "source": "青少年の雇用の促進等に関する法律第三十条 — 青少年の雇用の促進等に関する法律",
       "answer_identifiers": [
         "青少年の雇用の促進等に関する法律第三十条"
@@ -1121,7 +1121,7 @@
         "昭和四十五年法律第九十八号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 80505dde51cd34b0303e80eb57d35e72 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 80505dde51cd34b0303e80eb57d35e72 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
@@ -1160,7 +1160,7 @@
       "id": "jp073",
       "type": "obligation",
       "difficulty": "medium",
-      "query": "研究開発段階のナトリウム冷却型高速炉には、どのような事項を計測する装置を設けなければなりませんか？",
+      "query": "研究開発段階の高速炉のうちナトリウム冷却型のものには、どんな事項の計測装置を設ける必要がありますか？",
       "source": "研究開発段階発電用原子炉及びその附属施設の技術基準に関する規則第三十三条 — 研究開発段階発電用原子炉及びその附属施設の技術基準に関する規則",
       "answer_identifiers": [
         "研究開発段階発電用原子炉及びその附属施設の技術基準に関する規則第三十三条"
@@ -1169,14 +1169,14 @@
         "平成二十五年原子力規制委員会規則第十号"
       ],
       "label_chunks": 3,
-      "provenance": "drafted 2026-11-27 from chunk 313bfe3dff62ae27755bbcaaca976d0d of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 313bfe3dff62ae27755bbcaaca976d0d of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
       "id": "jp074",
       "type": "obligation",
       "difficulty": "medium",
-      "query": "流行初期医療確保措置関係業務に係る事業報告書には何を記載しなければなりませんか？",
+      "query": "診療報酬の審査支払機構が流行初期の医療確保措置の業務について作る事業報告書には、何を書かなければなりませんか？",
       "source": "医療情報基盤・診療報酬審査支払機構の流行初期医療確保措置関係業務に係る財務及び会計に関する省令第十二条 — 医療情報基盤・診療報酬審査支払機構の流行初期医療確保措置関係業務に係る財務及び会計に関する省令",
       "answer_identifiers": [
         "医療情報基盤・診療報酬審査支払機構の流行初期医療確保措置関係業務に係る財務及び会計に関する省令第十二条"
@@ -1185,7 +1185,7 @@
         "令和六年厚生労働省令第六号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 24fc10016fabdffdb57e1eef63d7d752 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 24fc10016fabdffdb57e1eef63d7d752 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
@@ -1672,7 +1672,7 @@
       "id": "jp105",
       "type": "authority",
       "difficulty": "medium",
-      "query": "不動産の登記の登録免許税の課税標準となる不動産の価額は、当分の間何を基礎として決められますか？",
+      "query": "登録免許税で不動産登記の課税標準になる不動産価額は、当面は何を基礎に定められますか？",
       "source": "登録免許税法附則（制定時）第七条 — 登録免許税法",
       "answer_identifiers": [
         "登録免許税法附則（制定時）第七条"
@@ -1681,7 +1681,7 @@
         "昭和四十二年法律第三十五号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk c929a4a16ca2c53e8dfb48d7482d4f85 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk c929a4a16ca2c53e8dfb48d7482d4f85 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -1736,7 +1736,7 @@
       "id": "jp109",
       "type": "authority",
       "difficulty": "medium",
-      "query": "感染症の予防の総合的な推進のための基本指針は誰が定め、どんな事項を含みますか？",
+      "query": "感染症予防を総合的に進めるための基本指針は、誰が定め、どんな事項を含みますか？",
       "source": "感染症の予防及び感染症の患者に対する医療に関する法律第九条 — 感染症の予防及び感染症の患者に対する医療に関する法律",
       "answer_identifiers": [
         "感染症の予防及び感染症の患者に対する医療に関する法律第九条"
@@ -1745,7 +1745,7 @@
         "平成十年法律第百十四号"
       ],
       "label_chunks": 2,
-      "provenance": "drafted 2026-11-27 from chunk 6d0954161e074bd5f0a8cafbb87091ef of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 6d0954161e074bd5f0a8cafbb87091ef of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
@@ -1768,7 +1768,7 @@
       "id": "jp111",
       "type": "authority",
       "difficulty": "medium",
-      "query": "第二号基礎的電気通信役務の提供の確保が著しく困難と見込まれる場合として、総務省令はどのような事項を定めていますか？",
+      "query": "基礎的電気通信役務（第二号）を確保するのがかなり難しくなりそうな場合として、総務省令はどんな事項を挙げていますか？",
       "source": "電気通信事業法施行規則第四十条の八の五 — 電気通信事業法施行規則",
       "answer_identifiers": [
         "電気通信事業法施行規則第四十条の八の五"
@@ -1777,7 +1777,7 @@
         "昭和六十年郵政省令第二十五号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk c485f95b86d4917b4c19f40de9991a35 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk c485f95b86d4917b4c19f40de9991a35 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": true
     },
     {
@@ -1800,7 +1800,7 @@
       "id": "jp113",
       "type": "authority",
       "difficulty": "medium",
-      "query": "流域下水道の事業計画のうち、都道府県知事に協議しなければならないのはどれですか？",
+      "query": "流域下水道の事業計画で、都道府県知事との協議が必要になるのはどの部分ですか？",
       "source": "下水道法施行令第十七条の八 — 下水道法施行令",
       "answer_identifiers": [
         "下水道法施行令第十七条の八"
@@ -1809,7 +1809,7 @@
         "昭和三十四年政令第百四十七号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 54ecb32617a8c93b7e9c5797c28bc3a1 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 54ecb32617a8c93b7e9c5797c28bc3a1 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
@@ -1928,7 +1928,7 @@
       "id": "jp121",
       "type": "multi_tier",
       "difficulty": "medium",
-      "query": "ホルムアルデヒド等に係る機械等の設置計画の届出について、平成十九年の労働安全衛生規則改正の経過措置はどうなっていますか？",
+      "query": "ホルムアルデヒド関係の機械を設置する計画を届け出る義務について、平成十九年の労働安全衛生規則改正の経過措置はどうなっていますか？",
       "source": "労働安全衛生規則附則（平成一九年一二月二八日厚生労働省令第一五五号）第五条 — 労働安全衛生規則",
       "answer_identifiers": [
         "労働安全衛生規則附則（平成一九年一二月二八日厚生労働省令第一五五号）第五条"
@@ -1937,14 +1937,14 @@
         "昭和四十七年労働省令第三十二号"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk a75a89e210cbf506eadd538c14e3b1b9 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk a75a89e210cbf506eadd538c14e3b1b9 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
       "id": "jp122",
       "type": "hard_negative",
       "difficulty": "medium",
-      "query": "電気用品安全法の平成十一年改正附則で、施行日前にされた国等の事務に係る処分への不服申立てはどう扱われますか？",
+      "query": "電気用品安全法の平成十一年改正附則では、施行前に国などが行った事務処分への不服申立てはどう扱われますか？",
       "source": "電気用品安全法附則（平成一一年七月一六日法律第八七号）第百六十一条 — 電気用品安全法",
       "answer_identifiers": [
         "電気用品安全法附則（平成一一年七月一六日法律第八七号）第百六十一条"
@@ -1956,7 +1956,7 @@
         "c8b4a15d0d799bcc47faea61fed7ae58"
       ],
       "label_chunks": 1,
-      "provenance": "drafted 2026-11-27 from chunk 5f4e692a4d276b54a55ce704f829c420 of jp_egov; machine-checked; NOT reviewed by a domain expert",
+      "provenance": "drafted 2026-11-28 from chunk 5f4e692a4d276b54a55ce704f829c420 of jp_egov; machine-checked; NOT reviewed by a domain expert",
       "holdout": false
     },
     {
