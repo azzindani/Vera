@@ -102,3 +102,7 @@ articles), `doc_rescore_sim.py` and `doc_support_sim.py` (regulation-level evide
 `beir/`: `sources.py` turns a BEIR corpus into Ravel's input, `bench.py` runs Vera,
 pgvector and Qdrant on it with `algorithms.json`, and `results/` holds what they scored
 (`BEIR.md`).
+
+`rewrites/unified_all_blind_hyde.json`: one HyDE-style rewording per real question of
+`unified_all` (1078/1078), written from the question text alone, never the clause, for
+`EVAL_REWRITES` (`SCALING.md` §4a: 87.7 → 91.0 at @25).

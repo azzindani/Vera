@@ -265,14 +265,14 @@ removed a copy, so the rise is not a leak (`--label jpfix`).
 Indonesia had any. Re-measured 2026-11-28 with every method the engine has and nothing
 that knows an answer: `plain` sends each question as asked; `blind` adds one HyDE-style
 rewording per question, for all six sets, written from the question alone
-(`.test/blind/rw_blind_hyde.json`, 1078/1078); `allmethods` adds `expand: [siblings]` to
+(`dev_tools/eval/rewrites/unified_all_blind_hyde.json`, 1078/1078); `allmethods` adds `expand: [siblings]` to
 that. The engine has no case ids, the harness sends only query + args + rewordings, and
 the gate is calibrated on the training split.
 
 ```
 EVAL_DB_PASSWORD=vera-local python -X utf8 dev_tools/eval/eval_corpus.py unified_all --label plain
-EVAL_REWRITES=.test/blind/rw_blind_hyde.json ... --label blind
-EVAL_REWRITES=.test/blind/rw_blind_hyde.json EVAL_ARGS='{"expand":["siblings"]}' ... --label allmethods
+EVAL_REWRITES=dev_tools/eval/rewrites/unified_all_blind_hyde.json ... --label blind
+EVAL_REWRITES=dev_tools/eval/rewrites/unified_all_blind_hyde.json EVAL_ARGS='{"expand":["siblings"]}' ... --label allmethods
 ```
 
 | run | Indonesia | Canada | US CFR | Japan | Germany | France | **all (1078)** @5/@10/@15/@20/@25 | MRR |
